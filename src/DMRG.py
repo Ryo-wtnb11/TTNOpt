@@ -10,11 +10,17 @@ class DMRG(PhysicsEngine):
         psi,
         physical_spin_nums,
         hamiltonians,
+        init_bond_dim=4,
         max_bond_dim=100,
         max_truncation_err=1e-11,
     ):
         super().__init__(
-            psi, physical_spin_nums, hamiltonians, max_bond_dim, max_truncation_err
+            psi,
+            physical_spin_nums,
+            hamiltonians,
+            init_bond_dim,
+            max_bond_dim,
+            max_truncation_err,
         )
 
     def run(
@@ -72,7 +78,11 @@ class DMRG(PhysicsEngine):
                 )
 
                 u, s, v, edge_order = self.decompose_two_tensors(
-                    ground_state, opt_structure=opt_structure, operate_degeneracy=True
+                    ground_state,
+                    self.max_bond_dim,
+                    self.max_truncation_err,
+                    opt_structure=opt_structure,
+                    operate_degeneracy=True,
                 )
 
                 self.psi.tensors[selected_tensor_id] = u
@@ -97,7 +107,7 @@ class DMRG(PhysicsEngine):
 
                 energy = self.energy()
                 print(energy)
-                ee = self.entanglement_entropy()
+                ee = self.entanglement_entropy(self.max_truncation_err)
                 _energy_at_edge[self.psi.canonical_center_edge_id] = energy
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
 

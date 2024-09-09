@@ -10,14 +10,14 @@ class TwoSiteUpdater:
         self.flag = self.initial_flag()
         self.distance = self.initial_distance()
 
-    def entanglement_entropy(self, probability=None):
+    def entanglement_entropy(self, max_truncation_err, probability=None):
         if probability is None:
             psi = self.contract_central_tensors()
             (_, s, _, _) = tn.split_node_full_svd(
                 psi,
                 [psi[0], psi[1]],
                 [psi[2], psi[3]],
-                max_truncation_err=self.max_truncation_err,
+                max_truncation_err=max_truncation_err,
             )
             probability = np.diagonal(s.get_tensor())
         el = probability**2 / np.sum(probability**2)
@@ -25,14 +25,21 @@ class TwoSiteUpdater:
         ee = -np.sum(el * np.log2(el))
         return np.real(ee)
 
-    def decompose_two_tensors(self, psi, opt_structure=False, operate_degeneracy=False):
+    def decompose_two_tensors(
+        self,
+        psi,
+        max_bond_dim,
+        max_truncation_err,
+        opt_structure=False,
+        operate_degeneracy=False,
+    ):
         if opt_structure is False:
             a = psi[0]
             b = psi[1]
             c = psi[2]
             d = psi[3]
             (u, s, v, terr) = tn.split_node_full_svd(
-                psi, [a, b], [c, d], max_truncation_err=self.max_truncation_err
+                psi, [a, b], [c, d], max_truncation_err=max_truncation_err
             )
             p = np.diagonal(s.get_tensor())
             edge_order = [0, 1, 2, 3]
@@ -49,10 +56,12 @@ class TwoSiteUpdater:
                     psi_,
                     [a, b],
                     [c, d],
-                    max_truncation_err=self.max_truncation_err,
+                    max_truncation_err=max_truncation_err,
                 )
                 p_ = np.diagonal(s_.get_tensor())
-                ee_tmp = self.entanglement_entropy(probability=p_)
+                ee_tmp = self.entanglement_entropy(
+                    self.max_truncation_err, probability=p_
+                )
                 if ee_tmp < ee:
                     u = u_
                     s = s_
@@ -61,7 +70,7 @@ class TwoSiteUpdater:
                     edge_order = edges
                     p = p_
         # 縮退を解消
-        ind = np.min([self.max_bond_dim, len(p)])
+        ind = np.min([max_bond_dim, len(p)])
         if operate_degeneracy:
             if ind < len(p):
                 while ind > 1:

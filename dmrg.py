@@ -54,23 +54,37 @@ def heisenberg_hamiltonian(d):
     return observables
 
 
+def magnetic_field_hamiltonian(d, c):
+    observables = []
+    for i in range(2**d):
+        indices = [i]
+        operators_list = ["Sz"]
+        coef_list = [c]
+        ob = Observable(indices, operators_list, coef_list)
+        observables.append(ob)
+    return observables
+
+
 if __name__ == "__main__":
-    d = 7
+    d = 6
     size = 2**d
     physical_edges, edges, top_edge_id = init_structure_mps(size)
     psi = TreeTensorNetwork(edges, top_edge_id)
     hamiltonians = hierarchical_chain_hamiltonian(d)
+    magnetic_field = magnetic_field_hamiltonian(d, 1.5)
+    hamiltonians += magnetic_field  # list of Observable objects
     physical_spin_nums = {i: "S=1/2" for i in psi.physical_edges}
-    max_bond_dim = 4
+
+    max_bond_dim = 32
     dmrg = DMRG(
         psi,
         physical_spin_nums,
         hamiltonians,
+        init_bond_dim=4,
         max_bond_dim=max_bond_dim,
     )
     dmrg.run(opt_structure=True)
-    plt = psi.visualize()
 
     # each id of indices must be in physical_edges of TTN
-    dmrg.calculate_expval(0, "Sx")
-    dmrg.calculate_expval([0, 1], ["Sx", "Sx"])
+    print(dmrg.calculate_expval(0, "Sz"))
+    print(dmrg.calculate_expval([0, 1], ["Sz", "Sz"]))
