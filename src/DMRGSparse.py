@@ -1,6 +1,11 @@
 import tensornetwork as tn
 import numpy as np
-from src.PhysicsEngineSparse import PhysicsEngineSparse
+from src.PhysicsEngineSparse import (
+    PhysicsEngineSparse,
+    decompose_two_tensors,
+    inner_product,
+    entanglement_entropy,
+)
 import copy
 
 
@@ -12,6 +17,7 @@ class DMRGSparse(PhysicsEngineSparse):
         physical_spin_nums,
         hamiltonians,
         u1_num,
+        init_bond_dim=4,
         max_bond_dim=100,
         max_truncation_err=1e-11,
     ):
@@ -20,6 +26,7 @@ class DMRGSparse(PhysicsEngineSparse):
             physical_spin_nums,
             hamiltonians,
             u1_num,
+            init_bond_dim,
             max_bond_dim,
             max_truncation_err,
         )
@@ -48,7 +55,8 @@ class DMRGSparse(PhysicsEngineSparse):
             self.flag = self.initial_flag()
 
             print("Sweep count: " + str(sweep_num))
-            while self.candidate_edge_ids() != []:
+            do_sweep = True
+            while do_sweep:
                 (
                     edge_id,
                     selected_tensor_id,
@@ -59,9 +67,15 @@ class DMRGSparse(PhysicsEngineSparse):
                 # absorb gauge tensor
                 iso = tn.Node(self.psi.tensors[selected_tensor_id])
                 gauge = tn.Node(self.psi.gauge_tensor)
-                iso[2] ^ gauge[0]
+
+                if iso.tensor.flat_flows[2]:
+                    out = gauge[1]
+                    iso[2] ^ gauge[0]
+                else:
+                    out = gauge[0]
+                    iso[2] ^ gauge[1]
                 iso = tn.contractors.auto(
-                    [iso, gauge], output_edge_order=[iso[0], iso[1], gauge[1]]
+                    [iso, gauge], output_edge_order=[iso[0], iso[1], out, iso[3]]
                 )
                 self.psi.tensors[selected_tensor_id] = iso.get_tensor()
 
@@ -69,17 +83,31 @@ class DMRGSparse(PhysicsEngineSparse):
 
                 self.set_ttn_properties_at_one_tensor(edge_id, selected_tensor_id)
 
-                self._set_edge_spin(not_selected_tensor_id)
                 self._set_block_hamiltonian(not_selected_tensor_id)
 
                 ground_state = self.lanczos([selected_tensor_id, connected_tensor_id])
+                ground_state = ground_state / np.sqrt(
+                    inner_product(ground_state, ground_state)
+                )
                 psi_edges = (
                     self.psi.edges[selected_tensor_id][:2]
                     + self.psi.edges[connected_tensor_id][:2]
                 )
 
-                u, s, v, edge_order = self.decompose_two_tensors(
-                    ground_state, opt_structure=opt_structure, operate_degeneracy=True
+                if self.candidate_edge_ids() == []:
+                    do_sweep = False
+                    self.distance = self.initial_distance()
+                    self.flag = self.initial_flag()
+                _, new_selected_tensor_id, _, _ = self.local_two_tensor()
+
+                side = 0 if new_selected_tensor_id == selected_tensor_id else 1
+                u, s, v, edge_order, ee = decompose_two_tensors(
+                    ground_state,
+                    self.max_bond_dim,
+                    self.max_truncation_err,
+                    side,
+                    opt_structure=opt_structure,
+                    operate_degeneracy=True,
                 )
 
                 self.psi.tensors[selected_tensor_id] = u
@@ -104,7 +132,6 @@ class DMRGSparse(PhysicsEngineSparse):
 
                 energy = self.energy()
                 print(energy)
-                ee = self.entanglement_entropy()
                 _energy_at_edge[self.psi.canonical_center_edge_id] = energy
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
 
@@ -132,3 +159,24 @@ class DMRGSparse(PhysicsEngineSparse):
                     ) and all([ee < ee_threshold for ee in diff_ee]):
                         converged_num += 1
         print("Converged")
+
+    def set_ttn_properties_at_one_tensor(self, edge_id, selected_tensor_id):
+        # update_ttn_properties
+        self.psi.canonical_center_edge_id = edge_id
+        out_selected_inds = []
+        for i, e in enumerate(self.psi.edges[selected_tensor_id]):
+            if e == edge_id:
+                canonical_center_ind = i
+            else:
+                out_selected_inds.append(i)
+        self.psi.tensors[selected_tensor_id] = self.psi.tensors[
+            selected_tensor_id
+        ].transpose(
+            out_selected_inds + [canonical_center_ind] + [3],
+        )
+        self.psi.edges[selected_tensor_id] = [
+            self.psi.edges[selected_tensor_id][i] for i in out_selected_inds
+        ] + [edge_id]
+        for i, e in enumerate(self.psi.edges[selected_tensor_id]):
+            self.psi.edge_dims[e] = self.psi.tensors[selected_tensor_id].shape[i]
+        return

@@ -34,7 +34,7 @@ def hierarchical_chain_hamiltonian(d, coef_j=1.0, alpha=0.5):
     coefs = [coef_j * (alpha**coef) for coef in coefs]
     observables = []
     for i, coef in enumerate(coefs):
-        indices = adjacent_indices[i]
+        indices = adjacent_indices[i]  # [0, 1]
         operators_list = [["S+", "S-"], ["S-", "S+"], ["Sz", "Sz"]]
         coef_list = [coef / 2.0, coef / 2.0, coef]
         ob = Observable(indices, operators_list, coef_list)
@@ -42,29 +42,26 @@ def hierarchical_chain_hamiltonian(d, coef_j=1.0, alpha=0.5):
     return observables
 
 
-def heisenberg_hamiltonian(d):
-    adjacent_indices = open_adjacent_indexs(d)
+def magnetic_field(d):
     observables = []
-    for ind in adjacent_indices:
-        indices = ind
-        operators_list = [["S+", "S-"], ["S-", "S+"], ["Sz", "Sz"]]
-        coef_list = [1 / 2.0, 1 / 2.0, 1]
+    for i in range(2**d):
+        indices = [i]  # [0], ...
+        operators_list = ["Sz"]
+        coef_list = [1.0]
         ob = Observable(indices, operators_list, coef_list)
         observables.append(ob)
     return observables
 
 
 if __name__ == "__main__":
-    d = 4
+    d = 7
     size = 2**d
     physical_edges, edges, top_edge_id = init_structure_mps(size)
     psi = TreeTensorNetwork(edges, top_edge_id)
     hamiltonians = hierarchical_chain_hamiltonian(d)
-    # hamiltonians = heisenberg_hamiltonian(d)
     physical_spin_nums = {i: "S=1/2" for i in psi.physical_edges}
-    max_bond_dim = 20
+    max_bond_dim = 100
     u1_num = 0
-
     dmrg = DMRGSparse(
         psi,
         physical_spin_nums,

@@ -7,7 +7,7 @@ from src.functionTTN import get_renormalization_sequence, get_bare_edges
 from scipy.sparse.linalg import expm
 from tensornetwork import U1Charge, Index, BlockSparseTensor
 
-np.set_printoptions(precision=3, suppress=True)
+np.set_printoptions(precision=4, suppress=True)
 tn.set_default_backend("symmetric")
 
 
@@ -18,6 +18,7 @@ class PhysicsEngineSparse(TwoSiteUpdater):
         physical_spin_nums,
         hamiltonians,
         u1_num,
+        init_bond_dim=4,
         max_bond_dim=100,
         max_truncation_err=1e-11,
     ):
@@ -33,6 +34,7 @@ class PhysicsEngineSparse(TwoSiteUpdater):
         super().__init__(psi)
         self.hamiltonians = hamiltonians
         self.physical_spin_nums = physical_spin_nums
+        self.init_bond_dim = init_bond_dim
         self.max_bond_dim = max_bond_dim
         self.max_truncation_err = max_truncation_err
         self.u1_num = u1_num
@@ -175,7 +177,7 @@ class PhysicsEngineSparse(TwoSiteUpdater):
         psi_ = self.contract_central_tensors()
         psi_h = psi_.copy()
         psi_h = self._apply_ham_psi(psi_h, central_tensor_ids)
-        return np.real(inner_product(psi_, psi_h))
+        return inner_product(psi_, psi_h)
 
     def move_center(self):
         (
@@ -208,7 +210,7 @@ class PhysicsEngineSparse(TwoSiteUpdater):
             [psi1, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
         )
 
-        u, s, v, edge_order = self.decompose_two_tensors(psi)
+        u, s, v, edge_order, _ = self.decompose_two_tensors(psi)
         psi_edges = (
             self.psi.edges[selected_tensor_id][:2]
             + self.psi.edges[connected_tensor_id][:2]
@@ -233,7 +235,7 @@ class PhysicsEngineSparse(TwoSiteUpdater):
         )
         self.distance = self.initial_distance()
 
-    def lanczos(self, central_tensor_ids, tol=1e-10):
+    def lanczos(self, central_tensor_ids, tol=1e-12):
         psi_1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
         psi_2 = tn.Node(self.psi.tensors[central_tensor_ids[1]])
         psi_1[2] ^ psi_2[2]
@@ -242,7 +244,7 @@ class PhysicsEngineSparse(TwoSiteUpdater):
             output_edge_order=[psi_1[0], psi_1[1], psi_2[0], psi_2[1], psi_1[3]],
         )
         # normalization
-        psi = psi / np.linalg.norm(psi.get_tensor().todense())
+        psi = psi / np.sqrt(inner_product(psi, psi))
         psi_ = psi.copy()
         psi_0 = psi.copy()
         dim_n = np.prod(psi.shape)
@@ -278,6 +280,7 @@ class PhysicsEngineSparse(TwoSiteUpdater):
                     if np.abs(e - e_old) < tol:
                         break
                     e_old = e
+
         v_tilda = np.array(v_tilda.flatten(), dtype=np.complex128)
         v = v_tilda[0] * psi_0.tensor
         psi = psi_0
@@ -418,24 +421,23 @@ class PhysicsEngineSparse(TwoSiteUpdater):
         )
         self.psi.tensors[central_tensor_ids[0]] = iso.get_tensor()
         ground_state = self.lanczos(central_tensor_ids)
-        #
-        u, s, v, _ = self.decompose_two_tensors(ground_state)
+        ground_state = ground_state / np.sqrt(inner_product(ground_state, ground_state))
+        (_, selected_tensor_id, _, _) = self.local_two_tensor()
+        side = 0 if selected_tensor_id == central_tensor_ids[0] else 1
+        u, s, v, _, _ = decompose_two_tensors(
+            ground_state, self.max_bond_dim, self.max_truncation_err, side
+        )
         self.psi.tensors[central_tensor_ids[0]] = u
         self.psi.tensors[central_tensor_ids[1]] = v
         self.psi.gauge_tensor = s
 
     def _apply_ham_psi(self, psi, central_tensor_ids):
         psi_tensor = psi.get_tensor().copy()
-        c_ll = psi_tensor.charges[0][0].charges.flatten()
-        c_l = psi_tensor.charges[1][0].charges.flatten()
-        c_r = psi_tensor.charges[2][0].charges.flatten()
-        c_rr = psi_tensor.charges[3][0].charges.flatten()
-        c = psi_tensor.charges[4][0].charges.flatten()
-        i_ll = Index(U1Charge(c_ll), flow=True)
-        i_l = Index(U1Charge(c_l), flow=True)
-        i_r = Index(U1Charge(c_r), flow=True)
-        i_rr = Index(U1Charge(c_rr), flow=True)
-        i = Index(U1Charge(c), flow=False)
+        i_ll = Index(psi_tensor.flat_charges[0], flow=psi_tensor.flat_flows[0])
+        i_l = Index(psi_tensor.flat_charges[1], flow=psi_tensor.flat_flows[1])
+        i_r = Index(psi_tensor.flat_charges[2], flow=psi_tensor.flat_flows[2])
+        i_rr = Index(psi_tensor.flat_charges[3], flow=psi_tensor.flat_flows[3])
+        i = Index(psi_tensor.flat_charges[4], flow=psi_tensor.flat_flows[4])
 
         psi_tensor = BlockSparseTensor.zeros([i_ll, i_l, i_r, i_rr, i])
 
@@ -523,31 +525,36 @@ class PhysicsEngineSparse(TwoSiteUpdater):
         return psi_tensor
 
     def _ham_psi(self, psi, edge_ids, apply_ids, central_tensor_ids):
-        psi_tensor = psi.get_tensor().copy()
-        c_ll = psi_tensor.charges[0][0].charges.flatten()
-        c_l = psi_tensor.charges[1][0].charges.flatten()
-        c_r = psi_tensor.charges[2][0].charges.flatten()
-        c_rr = psi_tensor.charges[3][0].charges.flatten()
-        c = psi_tensor.charges[4][0].charges.flatten()
-        i_ll = Index(U1Charge(c_ll), flow=True)
-        i_l = Index(U1Charge(c_l), flow=True)
-        i_r = Index(U1Charge(c_r), flow=True)
-        i_rr = Index(U1Charge(c_rr), flow=True)
-        i = Index(U1Charge(c), flow=False)
-        psi_tensor = BlockSparseTensor.zeros([i_ll, i_l, i_r, i_rr, i])
+        if len(psi.shape) == 5:
+            psi_tensor = psi.get_tensor().copy()
+            i_ll = Index(psi_tensor.flat_charges[0], flow=psi_tensor.flat_flows[0])
+            i_l = Index(psi_tensor.flat_charges[1], flow=psi_tensor.flat_flows[1])
+            i_r = Index(psi_tensor.flat_charges[2], flow=psi_tensor.flat_flows[2])
+            i_rr = Index(psi_tensor.flat_charges[3], flow=psi_tensor.flat_flows[3])
+            i = Index(psi_tensor.flat_charges[4], flow=psi_tensor.flat_flows[4])
+            psi_tensor = BlockSparseTensor.zeros([i_ll, i_l, i_r, i_rr, i])
+            out_order = [0, 1, 2, 3, 4]
+        if len(psi.shape) == 3:
+            psi_tensor = psi.get_tensor().copy()
+            i_l = Index(psi_tensor.flat_charges[0], flow=psi_tensor.flat_flows[0])
+            i_r = Index(psi_tensor.flat_charges[1], flow=psi_tensor.flat_flows[1])
+            i = Index(psi_tensor.flat_charges[2], flow=psi_tensor.flat_flows[2])
+            psi_tensor = BlockSparseTensor.zeros([i_l, i_r, i])
+            out_order = [0, 1, 2]
 
         ham_infos = self._get_ham_infos(edge_ids)
         for ham_info in ham_infos:
+            edge_order = ham_info["edge_order"]
             edges = ham_info["edges"]
             observable = ham_info["observable"]
             ham = self._effective_hamiltonian(edges, observable, central_tensor_ids)
             ham = tn.Node(ham)
             psi_ = psi.copy()
-            output_edges_order = [psi_[0], psi_[1], psi_[2], psi_[3], psi_[4]]
-            psi_[apply_ids[0]] ^ ham[0]
-            output_edges_order[apply_ids[0]] = ham[2]
-            psi_[apply_ids[1]] ^ ham[1]
-            output_edges_order[apply_ids[1]] = ham[3]
+            output_edges_order = [psi_[i] for i in out_order]
+            psi_[apply_ids[edge_order[0]]] ^ ham[0]
+            output_edges_order[apply_ids[edge_order[0]]] = ham[2]
+            psi_[apply_ids[edge_order[1]]] ^ ham[1]
+            output_edges_order[apply_ids[edge_order[1]]] = ham[3]
             psi_ = tn.contractors.auto(
                 [psi_, ham], output_edge_order=output_edges_order
             ).get_tensor()
@@ -557,13 +564,22 @@ class PhysicsEngineSparse(TwoSiteUpdater):
     def _get_block_hamiltonian(self, tensor_id):
         block_hams = []
         ham_infos = self._get_ham_infos(self.psi.edges[tensor_id][:2])
-
-        b_l = Index(
-            U1Charge(self.edge_u1_charges[self.psi.edges[tensor_id][0]]), flow=False
-        )
-        b_r = Index(
-            U1Charge(self.edge_u1_charges[self.psi.edges[tensor_id][1]]), flow=False
-        )
+        if self.psi.tensors[tensor_id] is None:
+            b_l = Index(
+                U1Charge(self.edge_u1_charges[self.psi.edges[tensor_id][0]]), flow=False
+            )
+            b_r = Index(
+                U1Charge(self.edge_u1_charges[self.psi.edges[tensor_id][1]]), flow=False
+            )
+        else:
+            b_l = Index(
+                self.psi.tensors[tensor_id].flat_charges[0],
+                flow=self.psi.tensors[tensor_id].flat_flows[0],
+            )
+            b_r = Index(
+                self.psi.tensors[tensor_id].flat_charges[1],
+                flow=self.psi.tensors[tensor_id].flat_flows[1],
+            )
         k_l = b_l.copy().flip_flow()
         k_r = b_r.copy().flip_flow()
 
@@ -635,7 +651,7 @@ class PhysicsEngineSparse(TwoSiteUpdater):
         bond_dim = np.prod(lower_edge_dims)
         ham = ham.reshape((bond_dim, bond_dim))
         eta, iso = tn.block_sparse.eigh(ham)
-        ind = np.min([self.max_bond_dim, bond_dim])
+        ind = np.min([self.init_bond_dim, bond_dim])
         eigenvalues = eta.data
         indices = np.argsort(eigenvalues)
         if ind < len(eigenvalues):
@@ -705,14 +721,22 @@ class PhysicsEngineSparse(TwoSiteUpdater):
             )
         else:
             bra = self.psi.tensors[tensor_id]
-            bra_tensor = np.zeros(bra.shape, dtype=np.complex128)
+            bra_tensor = BlockSparseTensor.zeros(
+                [
+                    Index(bra.flat_charges[0], flow=bra.flat_flows[0]),
+                    Index(bra.flat_charges[1], flow=bra.flat_flows[1]),
+                    Index(bra.flat_charges[2], flow=bra.flat_flows[2]),
+                ]
+            )
             bra = tn.Node(bra)
             ket = bra.copy(conjugate=True)
             if self.psi.edges[tensor_id][0] in self.block_hamiltonians.keys():
                 bra_tensor += self._block_ham_psi(bra, self.psi.edges[tensor_id][0], 0)
             if self.psi.edges[tensor_id][1] in self.block_hamiltonians.keys():
                 bra_tensor += self._block_ham_psi(bra, self.psi.edges[tensor_id][1], 1)
-            bra_tensor += self._ham_psi(bra, self.psi.edges[tensor_id][:2], [0, 1])
+            bra_tensor += self._ham_psi(
+                bra, self.psi.edges[tensor_id][:2], [0, 1], [tensor_id, tensor_id]
+            )
             bra_h = tn.Node(bra_tensor)
             bra_h[0] ^ ket[0]
             bra_h[1] ^ ket[1]
@@ -805,16 +829,16 @@ class PhysicsEngineSparse(TwoSiteUpdater):
         self,
         initial_edge_ids,
     ):
-        causal_cone_ids = {}
+        causal_cone_ids = []
         remain_rule = {}
         connect_rule = {}
 
-        for j, initial_edge_id in enumerate(initial_edge_ids):
+        for initial_edge_id in initial_edge_ids:
             if initial_edge_id is None:
                 continue
             for i, edge_id in enumerate(self.psi.edges):
                 if initial_edge_id in edge_id[:2]:
-                    causal_cone_ids[j] = i
+                    causal_cone_ids.append(i)
                     for ii in range(2):
                         if initial_edge_id == edge_id[ii]:
                             connect_rule[i] = ii
@@ -825,12 +849,12 @@ class PhysicsEngineSparse(TwoSiteUpdater):
 
     def _effective_hamiltonian(self, edges, ham, tensor_ids):
         causal_cone_ids, connect_rule, remain_rule = self._contraction_rule(edges)
-        if all([value == tensor_ids[key] for key, value in causal_cone_ids.items()]):
+        if set(causal_cone_ids) == set(tensor_ids):
             return ham
         else:
             edges_ = [None, None]
             v0 = causal_cone_ids[0]
-            if v0 != tensor_ids[0]:
+            if v0 not in tensor_ids:
                 ham = tn.Node(ham)
                 bra = tn.Node(self.psi.tensors[v0])
                 ket = bra.copy(conjugate=True)
@@ -842,7 +866,7 @@ class PhysicsEngineSparse(TwoSiteUpdater):
                 ).get_tensor()
                 edges_[0] = self.psi.edges[v0][2]
             v1 = causal_cone_ids[1]
-            if v1 != tensor_ids[1]:
+            if v1 not in tensor_ids:
                 ham = tn.Node(ham)
                 bra = tn.Node(self.psi.tensors[v1])
                 ket = bra.copy(conjugate=True)
@@ -861,6 +885,31 @@ class PhysicsEngineSparse(TwoSiteUpdater):
                 edges_[1] = self.psi.edges[v1][2]
             return self._effective_hamiltonian(edges_, ham, tensor_ids)
 
+    def contract_central_tensors(self):
+        central_tensor_ids = self.psi.central_tensor_ids()
+
+        psi1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
+        psi2 = tn.Node(self.psi.tensors[central_tensor_ids[1]])
+        gauge = tn.Node(self.psi.gauge_tensor)
+
+        if len(psi1.shape) == 4:
+            out = psi1[3]
+        if len(psi2.shape) == 4:
+            out = psi2[3]
+
+        if psi1.tensor.flows[2][0] and not psi2.tensor.flows[2][0]:
+            psi1[2] ^ gauge[0]
+            gauge[1] ^ psi2[2]
+        if not psi1.tensor.flows[2][0] and psi2.tensor.flows[2][0]:
+            psi2[2] ^ gauge[0]
+            gauge[1] ^ psi1[2]
+
+        psi = tn.contractors.auto(
+            [psi1, gauge, psi2],
+            output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1], out],
+        )
+        return psi
+
 
 def inner_product(u, v):
     u = u.copy(conjugate=True)
@@ -869,7 +918,120 @@ def inner_product(u, v):
     u[2] ^ v[2]
     u[3] ^ v[3]
     u[4] ^ v[4]
-    return np.real(tn.contractors.auto([u, v]).get_tensor().todense())[0]
+    prod = tn.contractors.auto([u, v]).tensor.todense()
+    return np.real(prod)[0]
+
+
+def decompose_two_tensors(
+    psi,
+    max_bond_dim,
+    max_truncation_err,
+    side,
+    opt_structure=False,
+    operate_degeneracy=False,
+):
+    psi_last = psi.copy()
+    if opt_structure is False:
+        a = psi[0]
+        b = psi[1]
+        c = psi[2]
+        d = psi[3]
+        e = psi[4]
+        if side == 0:
+            (u, s, v, terr) = tn.split_node_full_svd(psi, [e, a, b], [c, d])
+        elif side == 1:
+            (u, s, v, terr) = tn.split_node_full_svd(psi, [a, b], [e, c, d])
+
+        p = np.diagonal(s.tensor.todense())
+        ee = entanglement_entropy(p)
+
+        edge_order = [0, 1, 2, 3]
+    else:
+        candidates = [[0, 1, 2, 3], [0, 2, 1, 3], [1, 2, 3, 0]]
+        ee = 1e10
+        for edges in candidates:
+            psi_ = psi.copy()
+            a = psi_[edges[0]]
+            b = psi_[edges[1]]
+            c = psi_[edges[2]]
+            d = psi_[edges[3]]
+            e = psi_[4]
+            if side == 0:
+                (u_, s_, v_, terr) = tn.split_node_full_svd(psi, [e, a, b], [c, d])
+            elif side == 1:
+                (u_, s_, v_, terr) = tn.split_node_full_svd(psi, [a, b], [e, c, d])
+
+            p_ = np.diagonal(s_.tensor.todense())
+            ee_tmp = entanglement_entropy(p_)
+            if ee_tmp < ee:
+                u = u_
+                s = s_
+                v = v_
+                ee = ee_tmp
+                edge_order = edges
+                p = p_
+    # 縮退を解消
+    ind = np.min([max_bond_dim, len(p)])
+    indices = np.argsort(-p)
+    if operate_degeneracy:
+        if ind < len(p):
+            while ind > 1:
+                if (
+                    np.abs(p[indices[ind]] - p[indices[ind] - 1]) / p[indices[ind]]
+                ) * 100 < 0.1:
+                    ind -= 1
+                else:
+                    break
+    if side == 0:
+        a = psi_last[edge_order[0]]
+        b = psi_last[edge_order[1]]
+        c = psi_last[edge_order[2]]
+        d = psi_last[edge_order[3]]
+        e = psi_last[4]
+        (u, s, v, terr) = tn.split_node_full_svd(
+            psi_last, [e, a, b], [c, d], max_singular_values=ind
+        )
+        u = u.reorder_edges([u[1], u[2], u[3], u[0]])
+        u_tensor = u.tensor
+        s_data = s.tensor.data
+        s_tensor = s.tensor / np.linalg.norm(s_data)
+        v = v.reorder_edges([v[1], v[2], v[0]])
+        v_tensor = v.tensor
+    elif side == 1:
+        a = psi_last[edge_order[0]]
+        b = psi_last[edge_order[1]]
+        c = psi_last[edge_order[2]]
+        d = psi_last[edge_order[3]]
+        e = psi_last[4]
+        (u, s, v, terr) = tn.split_node_full_svd(
+            psi_last, [a, b], [e, c, d], max_singular_values=ind
+        )
+        u_tensor = u.tensor
+        s_data = s.tensor.data
+        s_tensor = s.tensor / np.linalg.norm(s_data)
+        v = v.reorder_edges(
+            [
+                v[2],
+                v[3],
+                v[0],
+                v[1],
+            ]
+        )
+        v_tensor = v.tensor
+    return (
+        u_tensor,
+        s_tensor,
+        v_tensor,
+        edge_order,
+        ee,
+    )
+
+
+def entanglement_entropy(probability):
+    el = probability**2 / np.sum(probability**2)
+    el = el[el > 0.0]
+    ee = -np.sum(el * np.log2(el))
+    return np.real(ee)
 
 
 def _output_edges_order(bare_edges, left_bare_edges, right_bare_edges):

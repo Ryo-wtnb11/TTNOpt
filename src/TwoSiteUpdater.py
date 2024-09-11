@@ -59,9 +59,7 @@ class TwoSiteUpdater:
                     max_truncation_err=max_truncation_err,
                 )
                 p_ = np.diagonal(s_.get_tensor())
-                ee_tmp = self.entanglement_entropy(
-                    self.max_truncation_err, probability=p_
-                )
+                ee_tmp = self.entanglement_entropy(max_truncation_err, probability=p_)
                 if ee_tmp < ee:
                     u = u_
                     s = s_
@@ -178,8 +176,9 @@ class TwoSiteUpdater:
                 canonical_center_ind = i
             else:
                 out_selected_inds.append(i)
-        self.psi.tensors[selected_tensor_id] = np.transpose(
-            self.psi.tensors[selected_tensor_id],
+        self.psi.tensors[selected_tensor_id] = self.psi.tensors[
+            selected_tensor_id
+        ].transpose(
             out_selected_inds + [canonical_center_ind],
         )
         self.psi.edges[selected_tensor_id] = [
@@ -191,6 +190,7 @@ class TwoSiteUpdater:
 
     def contract_central_tensors(self):
         central_tensor_ids = self.psi.central_tensor_ids()
+
         psi1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
         psi2 = tn.Node(self.psi.tensors[central_tensor_ids[1]])
         gauge = tn.Node(self.psi.gauge_tensor)
@@ -199,6 +199,7 @@ class TwoSiteUpdater:
         gauge[1] ^ psi2[2]
 
         psi = tn.contractors.auto(
-            [psi1, gauge, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
+            [psi1, gauge, psi2],
+            output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]],
         )
         return psi

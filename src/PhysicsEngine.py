@@ -19,7 +19,7 @@ class PhysicsEngine(TwoSiteUpdater):
         hamiltonians,
         init_bond_dim=4,
         max_bond_dim=100,
-        max_truncation_err=1e-11,
+        max_truncation_err=1e-15,
     ):
         """_summary_
         Args:
