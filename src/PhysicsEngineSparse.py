@@ -423,9 +423,8 @@ class PhysicsEngineSparse(TwoSiteUpdater):
         ground_state = self.lanczos(central_tensor_ids)
         ground_state = ground_state / np.sqrt(inner_product(ground_state, ground_state))
         (_, selected_tensor_id, _, _) = self.local_two_tensor()
-        side = 0 if selected_tensor_id == central_tensor_ids[0] else 1
         u, s, v, _, _ = decompose_two_tensors(
-            ground_state, self.max_bond_dim, self.max_truncation_err, side
+            ground_state, self.max_bond_dim, self.max_truncation_err
         )
         self.psi.tensors[central_tensor_ids[0]] = u
         self.psi.tensors[central_tensor_ids[1]] = v
@@ -847,9 +846,12 @@ class PhysicsEngineSparse(TwoSiteUpdater):
 
         return causal_cone_ids, connect_rule, remain_rule
 
-    def _effective_hamiltonian(self, edges, ham, tensor_ids):
+    def _effective_hamiltonian(self, edges, ham, tensor_ids, finish=0):
         causal_cone_ids, connect_rule, remain_rule = self._contraction_rule(edges)
-        if set(causal_cone_ids) == set(tensor_ids):
+        for causal_cone_ids_ in causal_cone_ids:
+            if causal_cone_ids_ in tensor_ids:
+                finish += 1
+        if finish == 2:
             return ham
         else:
             edges_ = [None, None]
@@ -883,7 +885,7 @@ class PhysicsEngineSparse(TwoSiteUpdater):
                     ],
                 ).get_tensor()
                 edges_[1] = self.psi.edges[v1][2]
-            return self._effective_hamiltonian(edges_, ham, tensor_ids)
+            return self._effective_hamiltonian(edges_, ham, tensor_ids, finish=finish)
 
     def contract_central_tensors(self):
         central_tensor_ids = self.psi.central_tensor_ids()
@@ -891,11 +893,6 @@ class PhysicsEngineSparse(TwoSiteUpdater):
         psi1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
         psi2 = tn.Node(self.psi.tensors[central_tensor_ids[1]])
         gauge = tn.Node(self.psi.gauge_tensor)
-
-        if len(psi1.shape) == 4:
-            out = psi1[3]
-        if len(psi2.shape) == 4:
-            out = psi2[3]
 
         if psi1.tensor.flows[2][0] and not psi2.tensor.flows[2][0]:
             psi1[2] ^ gauge[0]
@@ -906,7 +903,7 @@ class PhysicsEngineSparse(TwoSiteUpdater):
 
         psi = tn.contractors.auto(
             [psi1, gauge, psi2],
-            output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1], out],
+            output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1], gauge[2]],
         )
         return psi
 
@@ -926,7 +923,6 @@ def decompose_two_tensors(
     psi,
     max_bond_dim,
     max_truncation_err,
-    side,
     opt_structure=False,
     operate_degeneracy=False,
 ):
@@ -937,10 +933,7 @@ def decompose_two_tensors(
         c = psi[2]
         d = psi[3]
         e = psi[4]
-        if side == 0:
-            (u, s, v, terr) = tn.split_node_full_svd(psi, [e, a, b], [c, d])
-        elif side == 1:
-            (u, s, v, terr) = tn.split_node_full_svd(psi, [a, b], [e, c, d])
+        (u, s, v, terr) = tn.split_node_full_svd(psi, [e, a, b], [c, d])
 
         p = np.diagonal(s.tensor.todense())
         ee = entanglement_entropy(p)
@@ -956,10 +949,7 @@ def decompose_two_tensors(
             c = psi_[edges[2]]
             d = psi_[edges[3]]
             e = psi_[4]
-            if side == 0:
-                (u_, s_, v_, terr) = tn.split_node_full_svd(psi, [e, a, b], [c, d])
-            elif side == 1:
-                (u_, s_, v_, terr) = tn.split_node_full_svd(psi, [a, b], [e, c, d])
+            (u_, s_, v_, terr) = tn.split_node_full_svd(psi_, [e, a, b], [c, d])
 
             p_ = np.diagonal(s_.tensor.todense())
             ee_tmp = entanglement_entropy(p_)
@@ -982,42 +972,35 @@ def decompose_two_tensors(
                     ind -= 1
                 else:
                     break
-    if side == 0:
-        a = psi_last[edge_order[0]]
-        b = psi_last[edge_order[1]]
-        c = psi_last[edge_order[2]]
-        d = psi_last[edge_order[3]]
-        e = psi_last[4]
-        (u, s, v, terr) = tn.split_node_full_svd(
-            psi_last, [e, a, b], [c, d], max_singular_values=ind
-        )
-        u = u.reorder_edges([u[1], u[2], u[3], u[0]])
-        u_tensor = u.tensor
-        s_data = s.tensor.data
-        s_tensor = s.tensor / np.linalg.norm(s_data)
-        v = v.reorder_edges([v[1], v[2], v[0]])
-        v_tensor = v.tensor
-    elif side == 1:
-        a = psi_last[edge_order[0]]
-        b = psi_last[edge_order[1]]
-        c = psi_last[edge_order[2]]
-        d = psi_last[edge_order[3]]
-        e = psi_last[4]
-        (u, s, v, terr) = tn.split_node_full_svd(
-            psi_last, [a, b], [e, c, d], max_singular_values=ind
-        )
-        u_tensor = u.tensor
-        s_data = s.tensor.data
-        s_tensor = s.tensor / np.linalg.norm(s_data)
-        v = v.reorder_edges(
-            [
-                v[2],
-                v[3],
-                v[0],
-                v[1],
-            ]
-        )
-        v_tensor = v.tensor
+    a = psi_last[edge_order[0]]
+    b = psi_last[edge_order[1]]
+    c = psi_last[edge_order[2]]
+    d = psi_last[edge_order[3]]
+    e = psi_last[4]
+    (u, s, v, terr) = tn.split_node_full_svd(
+        psi_last, [e, a, b], [c, d], max_singular_values=ind
+    )
+    u = u.reorder_edges([u[1], u[2], u[3], u[0]])
+    u_tensor = u.tensor
+    s_data = s.tensor.data
+    s_tensor = s.tensor / np.linalg.norm(s_data)
+
+    s = tn.Node(s_tensor)
+    u = tn.Node(u_tensor)
+    a, ss, b, terr = tn.split_node_full_svd(
+        u,
+        [
+            u[0],
+            u[1],
+        ],
+        [u[2], u[3]],
+    )
+    u_tensor = a.tensor
+    s[0] ^ b[1]
+    s = tn.contractors.auto([s, b], output_edge_order=[b[0], s[1], b[2]])
+    s_tensor = s.tensor
+    v = v.reorder_edges([v[1], v[2], v[0]])
+    v_tensor = v.tensor
     return (
         u_tensor,
         s_tensor,

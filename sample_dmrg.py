@@ -66,13 +66,11 @@ def magnetic_field_hamiltonian(d, c):
 
 
 if __name__ == "__main__":
-    d = 3
+    d = 4
     size = 2**d
     physical_edges, edges, top_edge_id = init_structure_mps(size)
     psi = TreeTensorNetwork(edges, top_edge_id)
     hamiltonians = hierarchical_chain_hamiltonian(d)
-    magnetic_field = magnetic_field_hamiltonian(d, 1.5)
-    hamiltonians += magnetic_field  # list of Observable objects
     physical_spin_nums = {i: "S=1/2" for i in psi.physical_edges}
     max_bond_dim = 4
     dmrg = DMRG(

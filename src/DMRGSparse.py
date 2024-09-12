@@ -55,19 +55,16 @@ class DMRGSparse(PhysicsEngineSparse):
             self.flag = self.initial_flag()
 
             print("Sweep count: " + str(sweep_num))
-            do_sweep = True
-            while do_sweep:
+            while self.candidate_edge_ids() != []:
                 (
                     edge_id,
                     selected_tensor_id,
                     connected_tensor_id,
                     not_selected_tensor_id,
                 ) = self.local_two_tensor()
-
                 # absorb gauge tensor
                 iso = tn.Node(self.psi.tensors[selected_tensor_id])
                 gauge = tn.Node(self.psi.gauge_tensor)
-
                 if iso.tensor.flat_flows[2]:
                     out = gauge[1]
                     iso[2] ^ gauge[0]
@@ -75,7 +72,7 @@ class DMRGSparse(PhysicsEngineSparse):
                     out = gauge[0]
                     iso[2] ^ gauge[1]
                 iso = tn.contractors.auto(
-                    [iso, gauge], output_edge_order=[iso[0], iso[1], out, iso[3]]
+                    [iso, gauge], output_edge_order=[iso[0], iso[1], out, gauge[2]]
                 )
                 self.psi.tensors[selected_tensor_id] = iso.get_tensor()
 
@@ -94,22 +91,13 @@ class DMRGSparse(PhysicsEngineSparse):
                     + self.psi.edges[connected_tensor_id][:2]
                 )
 
-                if self.candidate_edge_ids() == []:
-                    do_sweep = False
-                    self.distance = self.initial_distance()
-                    self.flag = self.initial_flag()
-                _, new_selected_tensor_id, _, _ = self.local_two_tensor()
-
-                side = 0 if new_selected_tensor_id == selected_tensor_id else 1
                 u, s, v, edge_order, ee = decompose_two_tensors(
                     ground_state,
                     self.max_bond_dim,
                     self.max_truncation_err,
-                    side,
                     opt_structure=opt_structure,
                     operate_degeneracy=True,
                 )
-
                 self.psi.tensors[selected_tensor_id] = u
                 self.psi.tensors[connected_tensor_id] = v
                 self.psi.gauge_tensor = s
