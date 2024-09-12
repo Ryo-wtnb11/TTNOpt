@@ -828,16 +828,16 @@ class PhysicsEngineSparse(TwoSiteUpdater):
         self,
         initial_edge_ids,
     ):
-        causal_cone_ids = []
+        causal_cone_ids = {}
         remain_rule = {}
         connect_rule = {}
 
-        for initial_edge_id in initial_edge_ids:
+        for n, initial_edge_id in enumerate(initial_edge_ids):
             if initial_edge_id is None:
                 continue
             for i, edge_id in enumerate(self.psi.edges):
                 if initial_edge_id in edge_id[:2]:
-                    causal_cone_ids.append(i)
+                    causal_cone_ids[n] = i
                     for ii in range(2):
                         if initial_edge_id == edge_id[ii]:
                             connect_rule[i] = ii
@@ -846,45 +846,51 @@ class PhysicsEngineSparse(TwoSiteUpdater):
 
         return causal_cone_ids, connect_rule, remain_rule
 
-    def _effective_hamiltonian(self, edges, ham, tensor_ids, finish=0):
+    def _effective_hamiltonian(self, edges, ham, tensor_ids, finish=None):
+        if finish is None:
+            finish = [0, 0]
         causal_cone_ids, connect_rule, remain_rule = self._contraction_rule(edges)
-        for causal_cone_ids_ in causal_cone_ids:
-            if causal_cone_ids_ in tensor_ids:
-                finish += 1
-        if finish == 2:
+        if finish == [1, 1]:
             return ham
         else:
             edges_ = [None, None]
-            v0 = causal_cone_ids[0]
-            if v0 not in tensor_ids:
-                ham = tn.Node(ham)
-                bra = tn.Node(self.psi.tensors[v0])
-                ket = bra.copy(conjugate=True)
-                ham[0] ^ bra[connect_rule[v0]]
-                ham[2] ^ ket[connect_rule[v0]]
-                bra[remain_rule[v0]] ^ ket[remain_rule[v0]]
-                ham = tn.contractors.auto(
-                    [bra, ham, ket], output_edge_order=[bra[2], ham[1], ket[2], ham[3]]
-                ).get_tensor()
-                edges_[0] = self.psi.edges[v0][2]
-            v1 = causal_cone_ids[1]
-            if v1 not in tensor_ids:
-                ham = tn.Node(ham)
-                bra = tn.Node(self.psi.tensors[v1])
-                ket = bra.copy(conjugate=True)
-                ham[1] ^ bra[connect_rule[v1]]
-                ham[3] ^ ket[connect_rule[v1]]
-                bra[remain_rule[v1]] ^ ket[remain_rule[v1]]
-                ham = tn.contractors.auto(
-                    [bra, ham, ket],
-                    output_edge_order=[
-                        ham[0],
-                        bra[2],
-                        ham[2],
-                        ket[2],
-                    ],
-                ).get_tensor()
-                edges_[1] = self.psi.edges[v1][2]
+            if 0 in causal_cone_ids.keys():
+                v0 = causal_cone_ids[0]
+                if v0 not in tensor_ids:
+                    ham = tn.Node(ham)
+                    bra = tn.Node(self.psi.tensors[v0])
+                    ket = bra.copy(conjugate=True)
+                    ham[0] ^ bra[connect_rule[v0]]
+                    ham[2] ^ ket[connect_rule[v0]]
+                    bra[remain_rule[v0]] ^ ket[remain_rule[v0]]
+                    ham = tn.contractors.auto(
+                        [bra, ham, ket],
+                        output_edge_order=[bra[2], ham[1], ket[2], ham[3]],
+                    ).get_tensor()
+                    edges_[0] = self.psi.edges[v0][2]
+                else:
+                    finish[0] = 1
+            if 1 in causal_cone_ids.keys():
+                v1 = causal_cone_ids[1]
+                if v1 not in tensor_ids:
+                    ham = tn.Node(ham)
+                    bra = tn.Node(self.psi.tensors[v1])
+                    ket = bra.copy(conjugate=True)
+                    ham[1] ^ bra[connect_rule[v1]]
+                    ham[3] ^ ket[connect_rule[v1]]
+                    bra[remain_rule[v1]] ^ ket[remain_rule[v1]]
+                    ham = tn.contractors.auto(
+                        [bra, ham, ket],
+                        output_edge_order=[
+                            ham[0],
+                            bra[2],
+                            ham[2],
+                            ket[2],
+                        ],
+                    ).get_tensor()
+                    edges_[1] = self.psi.edges[v1][2]
+                else:
+                    finish[1] = 1
             return self._effective_hamiltonian(edges_, ham, tensor_ids, finish=finish)
 
     def contract_central_tensors(self):

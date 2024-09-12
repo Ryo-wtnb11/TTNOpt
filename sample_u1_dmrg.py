@@ -54,13 +54,13 @@ def magnetic_field(d):
 
 
 if __name__ == "__main__":
-    d = 4
+    d = 7
     size = 2**d
     physical_edges, edges, top_edge_id = init_structure_mps(size)
     psi = TreeTensorNetwork(edges, top_edge_id)
     hamiltonians = hierarchical_chain_hamiltonian(d)
     physical_spin_nums = {i: "S=1/2" for i in psi.physical_edges}
-    max_bond_dim = 4
+    max_bond_dim = 100
     u1_num = 0
     dmrg = DMRGSparse(
         psi,
@@ -69,5 +69,5 @@ if __name__ == "__main__":
         u1_num,
         max_bond_dim=max_bond_dim,
     )
-    dmrg.run(opt_structure=False)
+    dmrg.run(opt_structure=True)
     plt = psi.visualize()
