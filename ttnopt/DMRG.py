@@ -5,6 +5,8 @@ import copy
 
 
 class DMRG(PhysicsEngine):
+    """A class for density matrix renormalization group (DMRG) algorithm.
+    """
     def __init__(
         self,
         psi,
@@ -30,6 +32,14 @@ class DMRG(PhysicsEngine):
         converged_count=1,
         opt_structure=False,
     ):
+        """Run DMRG algorithm.
+
+        Args:
+            energy_threshold (float, optional): Energy threshold for convergence. Defaults to 1e-8.
+            ee_threshold (float, optional): Entanglement entropy threshold for automatic optimization. Defaults to 1e-8.
+            converged_count (int, optional): Converged count. Defaults to 1.
+            opt_structure (bool, optional): If optimize the tree structure or not. Defaults to False.
+        """
         energy_at_edge, _energy_at_edge = {}, {}
         ee_at_edge, _ee_at_edge = {}, {}
         edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
