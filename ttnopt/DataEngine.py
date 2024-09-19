@@ -1,6 +1,6 @@
 import tensornetwork as tn
 import numpy as np
-from src.TwoSiteUpdater import TwoSiteUpdater
+from ttnopt.TwoSiteUpdater import TwoSiteUpdater
 import copy
 
 

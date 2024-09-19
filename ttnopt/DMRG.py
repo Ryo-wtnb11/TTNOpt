@@ -1,6 +1,6 @@
 import tensornetwork as tn
 import numpy as np
-from src.PhysicsEngine import PhysicsEngine
+from ttnopt.PhysicsEngine import PhysicsEngine
 import copy
 
 

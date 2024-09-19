@@ -1,9 +1,9 @@
 import tensornetwork as tn
 import numpy as np
 from scipy.linalg import eigh_tridiagonal
-from src.Observable import bare_spin_operator, spin_dof
-from src.TwoSiteUpdater import TwoSiteUpdater
-from src.functionTTN import get_renormalization_sequence, get_bare_edges
+from ttnopt.Observable import bare_spin_operator, spin_dof
+from ttnopt.TwoSiteUpdater import TwoSiteUpdater
+from ttnopt.functionTTN import get_renormalization_sequence, get_bare_edges
 from scipy.sparse.linalg import expm
 from tensornetwork import U1Charge, Index, BlockSparseTensor
 
