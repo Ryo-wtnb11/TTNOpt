@@ -1,7 +1,7 @@
-from src.initialTTN import init_structure_mps
-from src.Observable import Observable
-from src.TTN import TreeTensorNetwork
-from src.DMRG import DMRG
+from ttnopt import init_structure_mps
+from ttnopt import Observable
+from ttnopt import TreeTensorNetwork
+from ttnopt import DMRG
 
 
 def open_adjacent_indexs(d: int):

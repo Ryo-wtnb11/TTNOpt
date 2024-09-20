@@ -1,6 +1,6 @@
 import tensornetwork as tn
 import numpy as np
-from src.PhysicsEngineSparse import (
+from ttnopt.PhysicsEngineSparse import (
     PhysicsEngineSparse,
     decompose_two_tensors,
     inner_product,

@@ -1,5 +1,5 @@
 import tensornetwork as tn
-from src.PhysicsEngine import PhysicsEngine
+from ttnopt.PhysicsEngine import PhysicsEngine
 
 
 class TDVP(PhysicsEngine):

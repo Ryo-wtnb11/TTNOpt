@@ -1,0 +1,6 @@
+tensornetwork
+numpy
+opt_einsum
+scipy
+networkx
+matplotlib
