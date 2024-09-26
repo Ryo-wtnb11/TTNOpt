@@ -5,7 +5,8 @@ import numpy as np
 from ttnopt.PhysicsEngine import PhysicsEngine
 import copy
 
-from ttnopt import TreeTensorNetwork, Observable
+from ttnopt.TTN import TreeTensorNetwork
+from ttnopt.Observable import Observable
 
 
 class DMRG(PhysicsEngine):

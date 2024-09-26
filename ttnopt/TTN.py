@@ -10,13 +10,13 @@ class TreeTensorNetwork:
     """
 
     def __init__(self,
-                 edges: List[int],
+                 edges: List[List[int]],
                  top_edge_id: int,
                  tensors: Optional[List[np.ndarray]] = None):
         """Initialize a TreeTensorNetwork object.
 
         Args:
-            edges (List[int]): Edge id list for each tensor in the order [left, right, top].
+            edges (List[List[int]]): Edge id list for each tensor in the order [left, right, top].
             top_edge_id (int): edge id that connects to the top tensor.
             tensors (Optional[List[np.ndarray]]): tensors for each node. 
                 This parameter is not required for some algorithms (DMRG, etc.)
