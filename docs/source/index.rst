@@ -22,7 +22,7 @@ documentation for details.
    :maxdepth: 2
    :caption: Tutorials
 
-   tutorials/DMRG
+   tutorials/DMRG_algorithm
 
 .. toctree::
    :maxdepth: 1

@@ -1,10 +1,23 @@
+from typing import List, Optional
+
 import numpy as np
 from fractions import Fraction
 
 
 class Observable:
-    def __init__(self, indices, operators_list, coef_list):
-        """ """
+    """A class for observables."""
+
+    def __init__(self, 
+                 indices: List[int],
+                 operators_list: List[List[str]],
+                 coef_list: List[float]):
+        """Initialize an Observable object.
+
+        Args:
+            indices (List[int]): Indices of the observable.
+            operators_list (List[List[str]]): List of operators for each index.
+            coef_list (List[float]): Coefficients for each operator.
+        """
         self.indices = indices
         self.operators_list = operators_list
         self.coef_list = coef_list
