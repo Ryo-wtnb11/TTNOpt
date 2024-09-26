@@ -2,6 +2,6 @@ Observable
 ==========
 
 .. autoclass:: ttnopt.Observable
-   :members:
-   :undoc-members:
    :show-inheritance:
+   :special-members: __init__
+   :members:
