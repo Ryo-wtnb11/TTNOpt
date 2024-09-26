@@ -69,7 +69,8 @@ if __name__ == "__main__":
     d = 4
     size = 2**d
     physical_edges, edges, top_edge_id = init_structure_mps(size)
-    psi = TreeTensorNetwork(edges, top_edge_id)
+    #psi = TreeTensorNetwork(edges, top_edge_id)
+    psi = TreeTensorNetwork.mps(size)
     hamiltonians = hierarchical_chain_hamiltonian(d)
     physical_spin_nums = {i: "S=1/2" for i in psi.physical_edges}
     max_bond_dim = 4
