@@ -6,7 +6,15 @@ import copy
 
 class DMRG(PhysicsEngine):
     """A class for density matrix renormalization group (DMRG) algorithm.
+    Args:
+        psi: The instance of TTN Class
+        physical_spin_nums: The list of physical spin numbers
+        hamiltonians: The list of Hamiltonians which are instances of Observable Class
+        init_bond_dim (int, optional): The bond dimension which are used to initialize tensors
+        max_bond_dim (int, optional): The maximum bond dimension during updating tensors
+        max_truncation_err (float, optional): The maximum truncation error during updating tensors
     """
+
     def __init__(
         self,
         psi,
