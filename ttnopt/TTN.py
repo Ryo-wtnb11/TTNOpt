@@ -57,7 +57,7 @@ class TreeTensorNetwork:
             node_size=20,
             node_shape="o",
             width=0.5,
-            node_color="blue",  # デフォルトの色
+            node_color="blue",
         )
 
         # bare node
@@ -68,7 +68,7 @@ class TreeTensorNetwork:
             nodelist=small_black_nodes,
             node_size=8,
             node_shape="o",
-            node_color="black",  # 小さい黒色
+            node_color="black",
         )
 
         # top node
@@ -79,7 +79,7 @@ class TreeTensorNetwork:
             nodelist=large_red_nodes,
             node_size=25,
             node_shape="o",
-            node_color="red",  # 大きい赤色
+            node_color="red",
         )
         return plt
 

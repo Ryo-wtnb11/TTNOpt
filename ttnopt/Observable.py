@@ -4,7 +4,12 @@ from fractions import Fraction
 
 class Observable:
     def __init__(self, indices, operators_list, coef_list):
-        """ """
+        """_summary
+        Args:
+            indices List[int]: indices of a observable which must belongs to dangling bond in TTN
+            operators_list List[List[str]]: operators_list[i] is a list of operators composing of observable as their tensor product
+            coef_list List[float]: coef_list[i] is a coefficient of each observable
+        """
         self.indices = indices
         self.operators_list = operators_list
         self.coef_list = coef_list
@@ -30,11 +35,11 @@ def spin_ind(spin_num):
     else:
         raise TypeError("Invalid type for spin_num. Expected a string or a number.")
 
-    # スピンの値を分数として取得
+    # Get the spin value as a fraction
     fraction = Fraction(spin_value).limit_denominator()
     numerator, denominator = fraction.numerator, fraction.denominator
 
-    # "S="形式の文字列を返す
+    # form of "S="
     return f"S={numerator}/{denominator}" if denominator != 1 else f"S={numerator}"
 
 
