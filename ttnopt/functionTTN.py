@@ -1,4 +1,5 @@
 import tensornetwork as tn
+import numpy as np
 
 
 def get_renormalization_sequence(edges, top_edge_id):
@@ -53,3 +54,14 @@ def inner_product(u, v):
     u[2] ^ v[2]
     u[3] ^ v[3]
     return tn.contractors.auto([u, v]).get_tensor()
+
+
+def inner_product_sparse(u, v):
+    u = u.copy(conjugate=True)
+    u[0] ^ v[0]
+    u[1] ^ v[1]
+    u[2] ^ v[2]
+    u[3] ^ v[3]
+    u[4] ^ v[4]
+    prod = tn.contractors.auto([u, v]).tensor.todense()
+    return np.real(prod)[0]
