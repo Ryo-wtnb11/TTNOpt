@@ -4,3 +4,4 @@ tensornetwork
 networkx
 matplotlib
 scipy
+typing
