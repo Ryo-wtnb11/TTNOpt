@@ -1,5 +1,6 @@
 import tensornetwork as tn
 import numpy as np
+from typing import List
 from ttnopt.PhysicsEngineSparse import PhysicsEngineSparse
 import copy
 from ttnopt.functionTTN import (
@@ -14,7 +15,7 @@ class DMRGSparse(PhysicsEngineSparse):
     def __init__(
         self,
         psi,
-        physical_spin_nums: list[int],
+        physical_spin_nums: List[int],
         hamiltonians,
         u1_num: int,
         init_bond_dim: int = 4,
