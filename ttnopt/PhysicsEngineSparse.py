@@ -11,9 +11,6 @@ from ttnopt.functionTTN import (
 from scipy.sparse.linalg import expm
 from tensornetwork import U1Charge, Index, BlockSparseTensor
 
-np.set_printoptions(precision=4, suppress=True)
-tn.set_default_backend("symmetric")
-
 
 class PhysicsEngineSparse(TwoSiteUpdaterSparse):
     def __init__(
@@ -102,6 +99,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
             )
 
             output_edge_order = bra.get_all_edges()
+
             bra[apply_ids[0]] ^ spin1[0]
             output_edge_order[apply_ids[0]] = spin1[1]
             bra = tn.contractors.auto([bra, spin1], output_edge_order=output_edge_order)
@@ -416,10 +414,10 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         self.psi.gauge_tensor = self.psi.gauge_tensor / np.linalg.norm(
             self.psi.gauge_tensor.todense()
         )
-
         iso = tn.Node(self.psi.tensors[central_tensor_ids[0]])
         gauge = tn.Node(self.psi.gauge_tensor)
         iso[2] ^ gauge[0]
+
         iso = tn.contractors.auto(
             [iso, gauge], output_edge_order=[iso[0], iso[1], gauge[1], gauge[2]]
         )
@@ -445,7 +443,6 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         i = Index(psi_tensor.flat_charges[4], flow=psi_tensor.flat_flows[4])
 
         psi_tensor = BlockSparseTensor.zeros([i_ll, i_l, i_r, i_rr, i])
-
         if self.psi.edges[central_tensor_ids[0]][0] in self.block_hamiltonians.keys():
             psi_tensor += self._block_ham_psi(
                 psi, self.psi.edges[central_tensor_ids[0]][0], 0
