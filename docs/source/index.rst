@@ -13,6 +13,27 @@ documentation for details.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Getting Started
 
-   modules
+   getting_started/installation
+   getting_started/quick_start
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
+
+   tutorials/DMRG_algorithm
+
+.. toctree::
+   :maxdepth: 1
+   :caption: API reference
+
+   api/TreeTensorNetwork
+   api/Observable
+   api/DMRG
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`search`
