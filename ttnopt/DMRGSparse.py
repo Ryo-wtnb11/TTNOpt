@@ -6,6 +6,8 @@ from ttnopt.functionTTN import (
     inner_product_sparse,
 )
 
+tn.set_default_backend("symmetric")
+
 
 class DMRGSparse(PhysicsEngineSparse):
 
