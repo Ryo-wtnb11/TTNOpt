@@ -1,17 +1,28 @@
+from typing import List, Optional
+
+import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
 
 class TreeTensorNetwork:
+    """A class for Tree Tensor Network (TTN).
+    """
 
-    def __init__(self, edges, top_edge_id, tensors=None):
-        """_summary_
+    def __init__(self,
+                 edges: List[List[int]],
+                 top_edge_id: int,
+                 tensors: Optional[List[np.ndarray]] = None):
+        """Initialize a TreeTensorNetwork object.
+
         Args:
-            edges List[[int, int, int]]: edge_id_list of each tensor [left, right, top]
-            top_edge_id : edge_id which connects top_tensor
-            tensors List[np.array]: tensors is not necessary initially because we can generate it in some algorithms (DMRG, etc.)
+            edges (List[List[int]]): Edge id list for each tensor in the order [left, right, top].
+            top_edge_id (int): edge id that connects to the top tensor.
+            tensors (Optional[List[np.ndarray]]): tensors for each node. 
+                This parameter is not required for some algorithms (DMRG, etc.)
         """
         self.edges = edges
+
         self.tensor_num = len(edges)
         self.top_edge_id = top_edge_id
         self.canonical_center_edge_id = top_edge_id
@@ -25,7 +36,47 @@ class TreeTensorNetwork:
             self.tensors = tensors
             self.edge_dims = self._edge_dims()
 
+    @classmethod
+    def mps(cls, size: int):
+        """Initialize an MPS object.
+        
+        Args:
+            size (int): The size of system.
+        """
+        edges = []
+
+        layer_index = 0
+        num_layer = int(np.log2(size)) - 1
+        for layer in range(num_layer):
+            tensor_num = int(2 ** (np.log2(size) - 1 - layer))
+            nn = int(2 ** (np.log2(size) - layer))
+            for i in range(tensor_num):
+                if layer != num_layer - 1:
+                    edge_id = [
+                        layer_index + i * 2,
+                        layer_index + i * 2 + 1,
+                        layer_index + nn + i,
+                    ]
+
+                else:
+                    edge_id = [
+                        layer_index + i * 2,
+                        layer_index + i * 2 + 1,
+                        layer_index + nn,
+                    ]
+
+                edges.append(edge_id)
+
+            layer_index += nn
+
+        center_edge_id = layer_index
+
+        return cls(edges, center_edge_id)
+
+
     def visualize(self):
+        """Visualize the TreeTensorNetwork
+        """
         g = nx.DiGraph()
         logs = self._get_parent_child_pairs()
 

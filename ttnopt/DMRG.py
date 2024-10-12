@@ -1,7 +1,12 @@
+from typing import List, Dict
+
 import tensornetwork as tn
 import numpy as np
 from ttnopt.PhysicsEngine import PhysicsEngine
 import copy
+
+from ttnopt.TTN import TreeTensorNetwork
+from ttnopt.Observable import Observable
 
 
 class DMRG(PhysicsEngine):
@@ -17,13 +22,23 @@ class DMRG(PhysicsEngine):
 
     def __init__(
         self,
-        psi,
-        physical_spin_nums,
-        hamiltonians,
-        init_bond_dim=4,
-        max_bond_dim=100,
-        max_truncation_err=1e-11,
+        psi: TreeTensorNetwork,
+        physical_spin_nums: Dict[int, str],
+        hamiltonians: List[Observable],
+        init_bond_dim: int = 4,
+        max_bond_dim: int = 100,
+        max_truncation_err: float = 1e-11,
     ):
+        """Initialize a DMRG object.
+
+        Args:
+            psi (TreeTensorNetwork): The quantum state.
+            physical_spin_nums (Dict[int, str]): Physical spin numbers for each physical edge.
+            hamiltonians (List[Observable]): List of Hamiltonians.
+            init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
+            max_bond_dim (int, optional): Maximum bond dimension. Defaults to 100.
+            max_truncation_err (float, optional): Maximum truncation error. Defaults to 1e-11.
+        """
         super().__init__(
             psi,
             physical_spin_nums,
