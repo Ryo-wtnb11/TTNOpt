@@ -6,19 +6,20 @@ import matplotlib.pyplot as plt
 
 
 class TreeTensorNetwork:
-    """A class for Tree Tensor Network (TTN).
-    """
+    """A class for Tree Tensor Network (TTN)."""
 
-    def __init__(self,
-                 edges: List[List[int]],
-                 top_edge_id: int,
-                 tensors: Optional[List[np.ndarray]] = None):
+    def __init__(
+        self,
+        edges: List[List[int]],
+        top_edge_id: int,
+        tensors: Optional[List[np.ndarray]] = None,
+    ):
         """Initialize a TreeTensorNetwork object.
 
         Args:
             edges (List[List[int]]): Edge id list for each tensor in the order [left, right, top].
             top_edge_id (int): edge id that connects to the top tensor.
-            tensors (Optional[List[np.ndarray]]): tensors for each node. 
+            tensors (Optional[List[np.ndarray]]): tensors for each node.
                 This parameter is not required for some algorithms (DMRG, etc.)
         """
         self.edges = edges
@@ -38,8 +39,35 @@ class TreeTensorNetwork:
 
     @classmethod
     def mps(cls, size: int):
-        """Initialize an MPS object.
-        
+        """Initialize an State object with matrix product structure.
+        Args:
+            size (int): The size of system.
+        """
+        edges = []
+        upper_edge_id = size
+        edges.append([0, 1, upper_edge_id])
+        for i in range(2, (size - 2) // 2 + 1):
+            edges.append([upper_edge_id, i, upper_edge_id + 1])
+            upper_edge_id += 1
+
+        center_edge_id = upper_edge_id
+        upper_edge_id = upper_edge_id + 1
+
+        tmp_edges = []
+        tmp_edges.append([size - 2, size - 1, upper_edge_id])
+
+        for i in reversed(range((size - 2) // 2 + 2, size - 2)):
+            tmp_edges.append([i, upper_edge_id, upper_edge_id + 1])
+            upper_edge_id += 1
+
+        tmp_edges.append([(size - 2) // 2 + 1, upper_edge_id, center_edge_id])
+        edges += reversed(tmp_edges)
+
+        return cls(edges, center_edge_id)
+
+    @classmethod
+    def tree(cls, size: int):
+        """Initialize an State object with binary tree structure.
         Args:
             size (int): The size of system.
         """
@@ -73,10 +101,8 @@ class TreeTensorNetwork:
 
         return cls(edges, center_edge_id)
 
-
     def visualize(self):
-        """Visualize the TreeTensorNetwork
-        """
+        """Visualize the TreeTensorNetwork"""
         g = nx.DiGraph()
         logs = self._get_parent_child_pairs()
 
@@ -93,7 +119,7 @@ class TreeTensorNetwork:
                 default_nodes.append(log[0])
             if log[1] == "top":
                 large_red_nodes.append(log[1])
-        pos = nx.nx_agraph.graphviz_layout(g, prog="twopi")
+        pos = nx.nx_pydot.graphviz_layout(g, prog="twopi")
         # matplotlib settings
         fig, ax = plt.subplots(figsize=(5, 5), dpi=300)
 
@@ -108,7 +134,7 @@ class TreeTensorNetwork:
             node_size=20,
             node_shape="o",
             width=0.5,
-            node_color="blue",  # デフォルトの色
+            node_color="blue",
         )
 
         # bare node
@@ -119,7 +145,7 @@ class TreeTensorNetwork:
             nodelist=small_black_nodes,
             node_size=8,
             node_shape="o",
-            node_color="black",  # 小さい黒色
+            node_color="black",
         )
 
         # top node
@@ -130,7 +156,7 @@ class TreeTensorNetwork:
             nodelist=large_red_nodes,
             node_size=25,
             node_shape="o",
-            node_color="red",  # 大きい赤色
+            node_color="red",
         )
         return plt
 

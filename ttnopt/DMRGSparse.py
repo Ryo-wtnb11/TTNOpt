@@ -1,12 +1,13 @@
 import tensornetwork as tn
 import numpy as np
-from ttnopt.PhysicsEngineSparse import (
-    PhysicsEngineSparse,
-    decompose_two_tensors,
-    inner_product,
-    entanglement_entropy,
-)
+from typing import List, Dict
+from ttnopt.PhysicsEngineSparse import PhysicsEngineSparse
 import copy
+from ttnopt.functionTTN import (
+    inner_product_sparse,
+)
+
+tn.set_default_backend("symmetric")
 
 
 class DMRGSparse(PhysicsEngineSparse):
@@ -14,12 +15,12 @@ class DMRGSparse(PhysicsEngineSparse):
     def __init__(
         self,
         psi,
-        physical_spin_nums,
+        physical_spin_nums: List[int],
         hamiltonians,
-        u1_num,
-        init_bond_dim=4,
-        max_bond_dim=100,
-        max_truncation_err=1e-11,
+        u1_num: int,
+        init_bond_dim: int = 4,
+        max_bond_dim: int = 100,
+        max_truncation_err: float = 1e-11,
     ):
         super().__init__(
             psi,
@@ -33,13 +34,24 @@ class DMRGSparse(PhysicsEngineSparse):
 
     def run(
         self,
-        energy_threshold=1e-8,
-        ee_threshold=1e-8,
-        converged_count=1,
-        opt_structure=False,
+        energy_threshold: float = 1e-8,
+        ee_threshold: float = 1e-8,
+        converged_count: int = 1,
+        opt_structure: bool = False,
     ):
-        energy_at_edge, _energy_at_edge = {}, {}
-        ee_at_edge, _ee_at_edge = {}, {}
+        """Run DMRG algorithm.
+
+        Args:
+            energy_threshold (float, optional): Energy threshold for convergence. Defaults to 1e-8.
+            ee_threshold (float, optional): Entanglement entropy threshold for automatic optimization. Defaults to 1e-8.
+            converged_count (int, optional): Converged count. Defaults to 1.
+            opt_structure (bool, optional): If optimize the tree structure or not. Defaults to False.
+        """
+
+        energy_at_edge: Dict[int, float] = {}
+        _energy_at_edge: Dict[int, float] = {}
+        ee_at_edge: Dict[int, float] = {}
+        _ee_at_edge: Dict[int, float] = {}
         edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
 
         converged_num = 0
@@ -84,14 +96,14 @@ class DMRGSparse(PhysicsEngineSparse):
 
                 ground_state = self.lanczos([selected_tensor_id, connected_tensor_id])
                 ground_state = ground_state / np.sqrt(
-                    inner_product(ground_state, ground_state)
+                    inner_product_sparse(ground_state, ground_state)
                 )
                 psi_edges = (
                     self.psi.edges[selected_tensor_id][:2]
                     + self.psi.edges[connected_tensor_id][:2]
                 )
 
-                u, s, v, edge_order, ee = decompose_two_tensors(
+                u, s, v, edge_order, ee = self.decompose_two_tensors(
                     ground_state,
                     self.max_bond_dim,
                     self.max_truncation_err,

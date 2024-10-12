@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 import tensornetwork as tn
 import numpy as np
@@ -11,14 +11,24 @@ from ttnopt.Observable import Observable
 
 class DMRG(PhysicsEngine):
     """A class for density matrix renormalization group (DMRG) algorithm.
+    Args:
+        psi: The instance of TTN Class
+        physical_spin_nums: The list of physical spin numbers
+        hamiltonians: The list of Hamiltonians which are instances of Observable Class
+        init_bond_dim (int, optional): The bond dimension which are used to initialize tensors
+        max_bond_dim (int, optional): The maximum bond dimension during updating tensors
+        max_truncation_err (float, optional): The maximum truncation error during updating tensors
     """
-    def __init__(self,
-                 psi: TreeTensorNetwork,
-                 physical_spin_nums: Dict[int, str],
-                 hamiltonians: List[Observable],
-                 init_bond_dim: int = 4,
-                 max_bond_dim: int = 100,
-                 max_truncation_err: float = 1e-11):
+
+    def __init__(
+        self,
+        psi: TreeTensorNetwork,
+        physical_spin_nums: Dict[int, str],
+        hamiltonians: List[Observable],
+        init_bond_dim: int = 4,
+        max_bond_dim: int = 100,
+        max_truncation_err: float = 1e-11,
+    ):
         """Initialize a DMRG object.
 
         Args:
@@ -53,8 +63,11 @@ class DMRG(PhysicsEngine):
             converged_count (int, optional): Converged count. Defaults to 1.
             opt_structure (bool, optional): If optimize the tree structure or not. Defaults to False.
         """
-        energy_at_edge, _energy_at_edge = {}, {}
-        ee_at_edge, _ee_at_edge = {}, {}
+        energy_at_edge: Dict[int, float] = {}
+        _energy_at_edge: Dict[int, float] = {}
+        ee_at_edge: Dict[int, float] = {}
+        _ee_at_edge: Dict[int, float] = {}
+
         edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
 
         converged_num = 0

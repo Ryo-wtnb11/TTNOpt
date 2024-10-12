@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 import numpy as np
 from fractions import Fraction
@@ -7,10 +7,12 @@ from fractions import Fraction
 class Observable:
     """A class for observables."""
 
-    def __init__(self, 
-                 indices: List[int],
-                 operators_list: List[List[str]],
-                 coef_list: List[float]):
+    def __init__(
+        self,
+        indices: List[int],
+        operators_list: List[List[str]],
+        coef_list: List[float],
+    ):
         """Initialize an Observable object.
 
         Args:
@@ -43,11 +45,11 @@ def spin_ind(spin_num):
     else:
         raise TypeError("Invalid type for spin_num. Expected a string or a number.")
 
-    # スピンの値を分数として取得
+    # Get the spin value as a fraction
     fraction = Fraction(spin_value).limit_denominator()
     numerator, denominator = fraction.numerator, fraction.denominator
 
-    # "S="形式の文字列を返す
+    # form of "S="
     return f"S={numerator}/{denominator}" if denominator != 1 else f"S={numerator}"
 
 

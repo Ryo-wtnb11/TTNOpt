@@ -1,6 +1,8 @@
+numpy==1.23.5
+jaxlib<0.4.34
 tensornetwork
-numpy
-opt_einsum
-scipy
 networkx
 matplotlib
+scipy
+typing
+pydot
