@@ -63,8 +63,11 @@ class DMRG(PhysicsEngine):
             converged_count (int, optional): Converged count. Defaults to 1.
             opt_structure (bool, optional): If optimize the tree structure or not. Defaults to False.
         """
-        energy_at_edge, _energy_at_edge = {}, {}
-        ee_at_edge, _ee_at_edge = {}, {}
+        energy_at_edge: Dict[int, float] = {}
+        _energy_at_edge: Dict[int, float] = {}
+        ee_at_edge: Dict[int, float] = {}
+        _ee_at_edge: Dict[int, float] = {}
+
         edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
 
         converged_num = 0
