@@ -1,14 +1,24 @@
+from typing import List
+
 import numpy as np
 from fractions import Fraction
 
 
 class Observable:
-    def __init__(self, indices, operators_list, coef_list):
-        """_summary
+    """A class for observables."""
+
+    def __init__(
+        self,
+        indices: List[int],
+        operators_list: List[List[str]],
+        coef_list: List[float],
+    ):
+        """Initialize an Observable object.
+
         Args:
-            indices List[int]: indices of a observable which must belongs to dangling bond in TTN
-            operators_list List[List[str]]: operators_list[i] is a list of operators composing of observable as their tensor product
-            coef_list List[float]: coef_list[i] is a coefficient of each observable
+            indices (List[int]): Indices of the observable.
+            operators_list (List[List[str]]): List of operators for each index.
+            coef_list (List[float]): Coefficients for each operator.
         """
         self.indices = indices
         self.operators_list = operators_list
