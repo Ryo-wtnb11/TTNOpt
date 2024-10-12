@@ -54,6 +54,18 @@ def heisenberg_hamiltonian(d):
     return observables
 
 
+def ising_hamiltonian(d):
+    adjacent_indices = open_adjacent_indexs(d)
+    observables = []
+    for i in adjacent_indices:
+        indices = i
+        operators_list = [["Sx", "Sx"]]
+        coef_list = [1.0]
+        ob = Observable(indices, operators_list, coef_list)
+        observables.append(ob)
+    return observables
+
+
 def magnetic_field_hamiltonian(d, c):
     observables = []
     for i in range(2**d):
@@ -70,9 +82,9 @@ if __name__ == "__main__":
     size = 2**d
     physical_edges, edges, top_edge_id = init_structure_mps(size)
     psi = TreeTensorNetwork.mps(size)
-    hamiltonians = hierarchical_chain_hamiltonian(d)
+    hamiltonians = ising_hamiltonian(d)
     physical_spin_nums = {i: "S=1/2" for i in psi.physical_edges}
-    max_bond_dim = 50
+    max_bond_dim = 100
     dmrg = DMRG(
         psi,
         physical_spin_nums,

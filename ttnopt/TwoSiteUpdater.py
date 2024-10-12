@@ -10,14 +10,13 @@ class TwoSiteUpdater:
         self.flag = self.initial_flag()
         self.distance = self.initial_distance()
 
-    def entanglement_entropy(self, max_truncation_err, probability=None):
+    def entanglement_entropy(self, probability=None):
         if probability is None:
             psi = self.contract_central_tensors()
             (_, s, _, _) = tn.split_node_full_svd(
                 psi,
                 [psi[0], psi[1]],
                 [psi[2], psi[3]],
-                max_truncation_err=max_truncation_err,
             )
             probability = np.diagonal(s.get_tensor())
         el = probability**2 / np.sum(probability**2)
@@ -32,15 +31,14 @@ class TwoSiteUpdater:
         max_truncation_err,
         opt_structure=False,
         operate_degeneracy=False,
+        epsilon=1e-8,
     ):
         if opt_structure is False:
             a = psi[0]
             b = psi[1]
             c = psi[2]
             d = psi[3]
-            (u, s, v, terr) = tn.split_node_full_svd(
-                psi, [a, b], [c, d], max_truncation_err=max_truncation_err
-            )
+            (u, s, v, terr) = tn.split_node_full_svd(psi, [a, b], [c, d])
             p = np.diagonal(s.get_tensor())
             edge_order = [0, 1, 2, 3]
         else:
@@ -56,11 +54,10 @@ class TwoSiteUpdater:
                     psi_,
                     [a, b],
                     [c, d],
-                    max_truncation_err=max_truncation_err,
                 )
                 p_ = np.diagonal(s_.get_tensor())
-                ee_tmp = self.entanglement_entropy(max_truncation_err, probability=p_)
-                if ee_tmp < ee:
+                ee_tmp = self.entanglement_entropy(probability=p_)
+                if not np.isclose(ee_tmp, ee, atol=epsilon) and ee_tmp < ee:
                     u = u_
                     s = s_
                     v = v_
