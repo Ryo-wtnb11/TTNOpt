@@ -23,6 +23,7 @@ class TwoSiteUpdaterSparse:
         max_truncation_err,
         opt_structure=False,
         operate_degeneracy=False,
+        epsilon=1e-8,
     ):
         psi_last = psi.copy()
         if opt_structure is False:
