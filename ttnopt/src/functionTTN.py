@@ -1,5 +1,5 @@
-import tensornetwork as tn
 import numpy as np
+import tensornetwork as tn
 
 
 def get_renormalization_sequence(edges, top_edge_id):
