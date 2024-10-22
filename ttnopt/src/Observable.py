@@ -55,7 +55,6 @@ def bare_spin_operator(spin, spin_num):
         raise ValueError("Invalid spin number. Spin number must be an integer or half-integer.")
 
     dim = int(2 * spin_value + 1)  # Dimension of the matrix based on the spin value
-
     if spin == "S+":
         # Construct the raising operator S+
         S_plus = np.zeros((dim, dim), dtype=np.float64)
