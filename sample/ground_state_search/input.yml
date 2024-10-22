@@ -41,7 +41,7 @@ numerics:
         # Jx == Jy and Hx = Hy == 0 and DM_x = DM_y == 0
         active: 0 # 1 for active, 0 for inactive
         magnetization: 0 # Total magnetization (used if U(1) symmetry is active)
-    initial_bond_dimension: 10
+    initial_bond_dimension: 4
     max_bond_dimensions: [20, 40, 80] # Maximum bond dimension for each repetition
     max_num_sweeps: [15, 10, 5]
     truncation_error: 1e-10
