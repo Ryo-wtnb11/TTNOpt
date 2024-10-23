@@ -63,7 +63,6 @@ outputs:
         Sz:
             active: 1
     two_site:
-        # all to all
         SxSx:
             active: 0
         SySy:
