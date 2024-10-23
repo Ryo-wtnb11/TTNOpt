@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import Optional, List, Dict
 
 import numpy as np
 import tensornetwork as tn
@@ -27,6 +27,8 @@ class GroundStateSearch(PhysicsEngine):
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
         truncation_error = 1e-11,
+        edge_spin_operators: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
+        block_hamiltonians: Optional[Dict[int, Dict[str, np.ndarray]]] = None
     ):
         """Initialize a DMRG object.
 
@@ -36,13 +38,17 @@ class GroundStateSearch(PhysicsEngine):
             init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
             max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
             truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
+            edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
+            block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
         """
         super().__init__(
             psi,
             hamiltonian,
             init_bond_dim,
             max_bond_dim,
-            truncation_error
+            truncation_error,
+            edge_spin_operators,
+            block_hamiltonians
         )
 
     def run(
@@ -72,7 +78,7 @@ class GroundStateSearch(PhysicsEngine):
         converged_num = 0
 
         sweep_num = 0
-        while converged_num < converged_count:
+        while converged_num < converged_count and sweep_num < max_num_sweep:
             # energy
             energy_at_edge = copy.deepcopy(_energy_at_edge)
             ee_at_edge = copy.deepcopy(_ee_at_edge)
@@ -165,7 +171,7 @@ class GroundStateSearch(PhysicsEngine):
                     ]
                 ):
                     if all(
-                        [energy < energy_threshold for energy in diff_energy]
-                    ) and all([ee < ee_threshold for ee in diff_ee]):
+                        [energy < energy_convergence_threshold for energy in diff_energy]
+                    ) and all([ee < entanglement_convergence_threshold for ee in diff_ee]):
                         converged_num += 1
         print("Converged")

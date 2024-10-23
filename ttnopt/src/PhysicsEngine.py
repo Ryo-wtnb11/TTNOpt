@@ -1,3 +1,4 @@
+from typing import Dict, Optional
 import tensornetwork as tn
 import numpy as np
 import scipy
@@ -20,6 +21,8 @@ class PhysicsEngine(TwoSiteUpdater):
         init_bond_dim: int,
         max_bond_dim: int,
         truncation_error: float,
+        edge_spin_operators: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
+        block_hamiltonians: Optional[Dict[int, Dict[str, np.ndarray]]] = None
     ):
         """Initialize a PhysicsEngine object.
 
@@ -29,14 +32,23 @@ class PhysicsEngine(TwoSiteUpdater):
             init_bond_dim (int): Initial bond dimension.
             max_bond_dim (int): Maximum bond dimension.
             truncation_error (float): Maximum truncation error.
+            edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
+            block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
         """
+
         super().__init__(psi)
         self.hamiltonian = hamiltonian
         self.init_bond_dim = init_bond_dim
         self.max_bond_dim = max_bond_dim
         self.truncation_error = truncation_error
-        self.edge_spin_operators = self._init_spin_operator()
-        self.block_hamiltonians = self._init_block_hamiltonians()
+        if edge_spin_operators is None:
+            self.edge_spin_operators = self._init_spin_operator()
+        else:
+            self.edge_spin_operators = edge_spin_operators
+        if block_hamiltonians is None:
+            self.block_hamiltonians = self._init_block_hamiltonians()
+        else:
+            self.block_hamiltonians = block_hamiltonians
 
         init_tensors_flag = False
         if (
@@ -56,6 +68,7 @@ class PhysicsEngine(TwoSiteUpdater):
 
         if init_tensors_flag:
             print("Initialize tensors with real space renormalization.")
+
             for k in self.hamiltonian.spin_size.keys():
                 self.psi.edge_dims[k] = spin_dof(self.hamiltonian.spin_size[k])
             self.init_tensors_by_block_hamiltonian()

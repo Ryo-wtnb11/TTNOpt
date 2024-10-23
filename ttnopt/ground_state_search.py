@@ -24,20 +24,29 @@ def ground_state_search():
     ham = hamiltonian(config.system)
 
     numerics = config.numerics
-    for max_bond_dim, max_num_sweep in zip(numerics.max_bond_dimensions, numerics.max_num_sweeps):
+    opt_structure = numerics.opt_structure.active
+    edge_op_at_edge = None
+    block_ham_at_edge = None
+    for i, (max_bond_dim, max_num_sweep) in enumerate(zip(numerics.max_bond_dimensions, numerics.max_num_sweeps)):
         gss = GroundStateSearch(
             psi,
             ham,
             init_bond_dim=numerics.initial_bond_dimension,
             max_bond_dim=max_bond_dim,
-            truncation_error=numerics.truncation_error
+            truncation_error=numerics.truncation_error,
+            edge_spin_operators=edge_op_at_edge,
+            block_hamiltonians=block_ham_at_edge
         )
         gss.run(
-            opt_structure=numerics.opt_structure.active,
-            energy_convergence_threshold=numerics.energy_convergence_threshold,
-            entanglement_convergence_threshold=numerics.entanglement_convergence_threshold,
+            opt_structure=opt_structure,
+            energy_convergence_threshold=float(numerics.energy_convergence_threshold),
+            entanglement_convergence_threshold=float(numerics.entanglement_convergence_threshold),
             max_num_sweep=max_num_sweep,
         )
+
+        opt_structure = 0
+        edge_op_at_edge = gss.edge_spin_operators
+        block_ham_at_edge = gss.block_hamiltonians
 
 
 
