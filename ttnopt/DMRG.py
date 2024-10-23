@@ -50,10 +50,10 @@ class DMRG(PhysicsEngine):
 
     def run(
         self,
-        energy_threshold=1e-8,
-        ee_threshold=1e-8,
-        converged_count=1,
-        opt_structure=False,
+        energy_threshold: float = 1e-8,
+        ee_threshold: float = 1e-8,
+        converged_count: int = 1,
+        opt_structure: bool = False,
     ):
         """Run DMRG algorithm.
 
