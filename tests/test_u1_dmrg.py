@@ -1,7 +1,10 @@
-from ttnopt.initialTTN import init_structure_mps
-from ttnopt.Observable import Observable
-from ttnopt.TTN import TreeTensorNetwork
-from ttnopt.DMRGSparse import DMRGSparse
+from ttnopt import init_structure_mps
+from ttnopt import Observable
+from ttnopt import TreeTensorNetwork
+from ttnopt import DMRGSparse
+
+import pytest
+import numpy as np
 
 
 def open_adjacent_indexs(d: int):
@@ -53,14 +56,14 @@ def magnetic_field(d):
     return observables
 
 
-if __name__ == "__main__":
+def test_u1_dmrg():
     d = 3
     size = 2**d
     physical_edges, edges, top_edge_id = init_structure_mps(size)
     psi = TreeTensorNetwork(edges, top_edge_id)
     hamiltonians = hierarchical_chain_hamiltonian(d)
     physical_spin_nums = {i: "S=1/2" for i in psi.physical_edges}
-    max_bond_dim = 100
+    max_bond_dim = 4
     u1_num = 0
     dmrg = DMRGSparse(
         psi,
@@ -70,4 +73,4 @@ if __name__ == "__main__":
         max_bond_dim=max_bond_dim,
     )
     dmrg.run(opt_structure=True)
-    plt = psi.visualize()
+    assert np.allclose(-12.236946526970327, dmrg.energy(), atol=1e-8)

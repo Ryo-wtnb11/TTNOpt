@@ -3,10 +3,10 @@ import itertools
 import numpy as np
 from collections import deque, defaultdict
 
-
 class TwoSiteUpdaterSparse:
     def __init__(self, psi):
         self.psi = psi
+        self.backend = "symmetric"
         self.flag = self.initial_flag()
         self.distance = self.initial_distance()
 
@@ -84,8 +84,8 @@ class TwoSiteUpdaterSparse:
         s_data = s.tensor.data
         s_tensor = s.tensor / np.linalg.norm(s_data)
 
-        s = tn.Node(s_tensor)
-        u = tn.Node(u_tensor)
+        s = tn.Node(s_tensor, backend=self.backend)
+        u = tn.Node(u_tensor, backend=self.backend)
         a, ss, b, terr = tn.split_node_full_svd(
             u,
             [
@@ -216,9 +216,9 @@ class TwoSiteUpdaterSparse:
     def contract_central_tensors(self):
         central_tensor_ids = self.psi.central_tensor_ids()
 
-        psi1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
-        psi2 = tn.Node(self.psi.tensors[central_tensor_ids[1]])
-        gauge = tn.Node(self.psi.gauge_tensor)
+        psi1 = tn.Node(self.psi.tensors[central_tensor_ids[0]], backend=self.backend)
+        psi2 = tn.Node(self.psi.tensors[central_tensor_ids[1]], backend=self.backend)
+        gauge = tn.Node(self.psi.gauge_tensor, backend=self.backend)
 
         psi1[2] ^ gauge[0]
         gauge[1] ^ psi2[2]
