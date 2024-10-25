@@ -1,4 +1,4 @@
 #!/bin/bash
 
 
-mypy ttnopt && pytest
+mypy ttnopt && pytest --cov=ttnopt --cov-report=term-missing
