@@ -1,7 +1,8 @@
-import tensornetwork as tn
 import numpy as np
-from ttnopt.TwoSiteUpdater import TwoSiteUpdater
+import tensornetwork as tn
 import copy
+
+from ttnopt.src.TwoSiteUpdater import TwoSiteUpdater
 
 
 class DataEngine(TwoSiteUpdater):

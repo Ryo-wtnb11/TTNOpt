@@ -1,7 +1,7 @@
 from ttnopt import init_structure_mps
 from ttnopt import Observable
 from ttnopt import TreeTensorNetwork
-from ttnopt import DMRG
+from ttnopt import GroundStateSearch
 
 
 def open_adjacent_indexs(d: int):
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     hamiltonians = ising_hamiltonian(d)
     physical_spin_nums = {i: "S=1/2" for i in psi.physical_edges}
     max_bond_dim = 100
-    dmrg = DMRG(
+    dmrg = GroundStateSearch(
         psi,
         physical_spin_nums,
         hamiltonians,

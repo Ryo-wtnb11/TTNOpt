@@ -1,6 +1,6 @@
+import numpy as np
 import tensornetwork as tn
 import itertools
-import numpy as np
 from collections import deque, defaultdict
 
 from ttnopt.TwoSiteUpdater import TwoSiteUpdaterMixin
@@ -54,7 +54,7 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
 
                 p_ = np.diagonal(s_.tensor.todense())
                 ee_tmp = self.entanglement_entropy(p_)
-                if ee_tmp < ee:
+                if not np.isclose(ee_tmp, ee, atol=epsilon) and ee_tmp < ee:
                     u = u_
                     s = s_
                     v = v_

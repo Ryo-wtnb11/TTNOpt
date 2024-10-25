@@ -1,6 +1,6 @@
+import numpy as np
 import tensornetwork as tn
 import itertools
-import numpy as np
 from collections import deque, defaultdict
 
 class TwoSiteUpdaterMixin:

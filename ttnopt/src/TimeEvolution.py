@@ -1,8 +1,8 @@
 import tensornetwork as tn
-from ttnopt.PhysicsEngine import PhysicsEngine
+from ttnopt.src.PhysicsEngine import PhysicsEngine
 
 
-class TDVP(PhysicsEngine):
+class TimeEvolution(PhysicsEngine):
     def __init__(
         self,
         psi,

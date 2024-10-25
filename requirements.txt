@@ -6,3 +6,6 @@ matplotlib
 scipy
 typing
 pydot
+pyyaml
+dotmap
+pandas
