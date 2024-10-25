@@ -3,74 +3,7 @@ import tensornetwork as tn
 import itertools
 from collections import deque, defaultdict
 
-
-class TwoSiteUpdater:
-    def __init__(self, psi):
-        self.psi = psi
-        self.flag = self.initial_flag()
-        self.distance = self.initial_distance()
-
-    def entanglement_entropy(self, probability):
-        el = probability**2 / np.sum(probability**2)
-        el = el[el > 0.0]
-        ee = -np.sum(el * np.log2(el))
-        return np.real(ee)
-
-    def decompose_two_tensors(
-        self,
-        psi,
-        max_bond_dim,
-        opt_structure=False,
-        operate_degeneracy=False,
-        epsilon=1e-8,
-    ):
-        if opt_structure is False:
-            a = psi[0]
-            b = psi[1]
-            c = psi[2]
-            d = psi[3]
-            (u, s, v, terr) = tn.split_node_full_svd(psi, [a, b], [c, d])
-            p = np.diagonal(s.get_tensor())
-            edge_order = [0, 1, 2, 3]
-        else:
-            candidates = [[0, 1, 2, 3], [0, 2, 1, 3], [1, 2, 3, 0]]
-            ee = 1e10
-            for edges in candidates:
-                psi_ = psi.copy()
-                a = psi_[edges[0]]
-                b = psi_[edges[1]]
-                c = psi_[edges[2]]
-                d = psi_[edges[3]]
-                (u_, s_, v_, terr) = tn.split_node_full_svd(
-                    psi_,
-                    [a, b],
-                    [c, d],
-                )
-                p_ = np.diagonal(s_.get_tensor())
-                ee_tmp = self.entanglement_entropy(probability=p_)
-                if not np.isclose(ee_tmp, ee, atol=epsilon) and ee_tmp < ee:
-                    u = u_
-                    s = s_
-                    v = v_
-                    ee = ee_tmp
-                    edge_order = edges
-                    p = p_
-        # 縮退を解消
-        ind = np.min([max_bond_dim, len(p)])
-        if operate_degeneracy:
-            if ind < len(p):
-                while ind > 1:
-                    if (np.abs(p[ind] - p[ind - 1]) / p[ind]) * 100 < 0.1:
-                        ind -= 1
-                    else:
-                        break
-        v = v.reorder_edges([v[1], v[2], v[0]])
-        u = u.get_tensor()[:, :, :ind]
-        v = v.get_tensor()[:, :, :ind]
-        s = s.get_tensor()[:ind, :ind]
-        s = s / np.linalg.norm(s)
-        return u, s, v, edge_order, p
-
+class TwoSiteUpdaterMixin:
     def initial_flag(self):
         edge_ids = set(itertools.chain.from_iterable(self.psi.edges))
         flag = {ind: 0 if ind not in self.psi.physical_edges else 1 for ind in edge_ids}
@@ -179,9 +112,9 @@ class TwoSiteUpdater:
     def contract_central_tensors(self):
         central_tensor_ids = self.psi.central_tensor_ids()
 
-        psi1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
-        psi2 = tn.Node(self.psi.tensors[central_tensor_ids[1]])
-        gauge = tn.Node(self.psi.gauge_tensor)
+        psi1 = tn.Node(self.psi.tensors[central_tensor_ids[0]], backend=self.backend)
+        psi2 = tn.Node(self.psi.tensors[central_tensor_ids[1]], backend=self.backend)
+        gauge = tn.Node(self.psi.gauge_tensor, backend=self.backend)
 
         psi1[2] ^ gauge[0]
         gauge[1] ^ psi2[2]
@@ -191,3 +124,80 @@ class TwoSiteUpdater:
             output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]],
         )
         return psi
+
+
+class TwoSiteUpdater(TwoSiteUpdaterMixin):
+    def __init__(self, psi):
+        self.psi = psi
+        self.backend = "numpy"
+        self.flag = self.initial_flag()
+        self.distance = self.initial_distance()
+
+    def entanglement_entropy(self, probability=None):
+        if probability is None:
+            psi = self.contract_central_tensors()
+            (_, s, _, _) = tn.split_node_full_svd(
+                psi,
+                [psi[0], psi[1]],
+                [psi[2], psi[3]],
+            )
+            probability = np.diagonal(s.get_tensor())
+        el = probability**2 / np.sum(probability**2)
+        el = el[el > 0.0]
+        ee = -np.sum(el * np.log2(el))
+        return np.real(ee)
+
+    def decompose_two_tensors(
+        self,
+        psi,
+        max_bond_dim,
+        opt_structure=False,
+        operate_degeneracy=False,
+        epsilon=1e-8,
+    ):
+        if opt_structure is False:
+            a = psi[0]
+            b = psi[1]
+            c = psi[2]
+            d = psi[3]
+            (u, s, v, terr) = tn.split_node_full_svd(psi, [a, b], [c, d])
+            p = np.diagonal(s.get_tensor())
+            edge_order = [0, 1, 2, 3]
+        else:
+            candidates = [[0, 1, 2, 3], [0, 2, 1, 3], [1, 2, 3, 0]]
+            ee = 1e10
+            for edges in candidates:
+                psi_ = psi.copy()
+                a = psi_[edges[0]]
+                b = psi_[edges[1]]
+                c = psi_[edges[2]]
+                d = psi_[edges[3]]
+                (u_, s_, v_, terr) = tn.split_node_full_svd(
+                    psi_,
+                    [a, b],
+                    [c, d],
+                )
+                p_ = np.diagonal(s_.get_tensor())
+                ee_tmp = self.entanglement_entropy(probability=p_)
+                if not np.isclose(ee_tmp, ee, atol=epsilon) and ee_tmp < ee:
+                    u = u_
+                    s = s_
+                    v = v_
+                    ee = ee_tmp
+                    edge_order = edges
+                    p = p_
+        # 縮退を解消
+        ind = np.min([max_bond_dim, len(p)])
+        if operate_degeneracy:
+            if ind < len(p):
+                while ind > 1:
+                    if (np.abs(p[ind] - p[ind - 1]) / p[ind]) * 100 < 0.1:
+                        ind -= 1
+                    else:
+                        break
+        v = v.reorder_edges([v[1], v[2], v[0]])
+        u = u.get_tensor()[:, :, :ind]
+        v = v.get_tensor()[:, :, :ind]
+        s = s.get_tensor()[:ind, :ind]
+        s = s / np.linalg.norm(s)
+        return u, s, v, edge_order

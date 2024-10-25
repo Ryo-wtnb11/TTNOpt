@@ -6,7 +6,7 @@ import copy
 
 from ttnopt.src.PhysicsEngine import PhysicsEngine
 from ttnopt.src.TTN import TreeTensorNetwork
-from ttnopt.src import Hamiltonian
+from ttnopt.src.Hamiltonian import Hamiltonian
 from ttnopt.src.Observable import Observable
 
 
@@ -53,11 +53,11 @@ class GroundStateSearch(PhysicsEngine):
 
     def run(
         self,
-        opt_structure=False,
-        energy_convergence_threshold=1e-8,
-        entanglement_convergence_threshold=1e-8,
-        max_num_sweep=5,
-        converged_count=2,
+        opt_structure : bool = False,
+        energy_convergence_threshold : float = 1e-8,
+        entanglement_convergence_threshold : float = 1e-8,
+        max_num_sweep : int = 5,
+        converged_count : int = 2,
 
     ):
         """Run DMRG algorithm.

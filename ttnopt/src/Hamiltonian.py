@@ -11,11 +11,11 @@ class Hamiltonian:
                  system_size: int,
                  spin_size: List[str],
                  model: str,
-                 interaction_indices: List[Tuple[int]],
-                 interaction_coefs: List[float],
+                 interaction_indices: List[List[int]],
+                 interaction_coefs: List[List[float]],
                  magnetic_field: Optional[List[float]] = None,
                  ion_anisotropy: Optional[List[float]] = None,
-                 dzyaloshinskii_moriya: Optional[List[float]] = None,
+                 dzyaloshinskii_moriya: Optional[List[List[float]]] = None,
                 ):
         """Initialize a Hamiltonian object.
 
@@ -68,15 +68,15 @@ class Hamiltonian:
                 self.observables.append(ob)
 
         if magnetic_field is not None:
-            for i, c in enumerate(magnetic_field):
+            for idx, c in enumerate(magnetic_field):
                 if c != 0.0:
-                    ob = Observable([i], ["Sz"], [-c])
+                    ob = Observable([idx], [["Sz"]], [-c])
                     self.observables.append(ob)
 
         if ion_anisotropy is not None:
-            for i, c in enumerate(ion_anisotropy):
+            for idx, c in enumerate(ion_anisotropy):
                 if c != 0.0:
-                    ob = Observable([i], ["Sz^2"], [-c])
+                    ob = Observable([idx], [["Sz^2"]], [-c])
                     self.observables.append(ob)
 
         if dzyaloshinskii_moriya is not None:

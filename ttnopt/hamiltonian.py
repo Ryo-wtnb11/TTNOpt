@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from dotmap import DotMap
 
-def hamiltonian(config: Dict):
+def hamiltonian(config: DotMap):
     """_summary_
 
     Args:
