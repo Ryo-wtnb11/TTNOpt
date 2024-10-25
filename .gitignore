@@ -2,7 +2,6 @@ __pycache__
 test.py
 main_.py
 .DS_Store
-run*.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
