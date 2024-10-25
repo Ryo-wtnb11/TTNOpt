@@ -135,7 +135,6 @@ class PhysicsEngine(TwoSiteUpdater):
         self.distance = self.initial_distance()
         self.flag = self.initial_flag()
 
-        expval = 0
         if isinstance(indices, int):  # one-site expectation value
             index = indices
             while self.candidate_edge_ids() != []:
@@ -155,9 +154,8 @@ class PhysicsEngine(TwoSiteUpdater):
                         index, central_tensor_ids[1], operators
                     ).tensor
                 self.move_center()
-            return expval
+            return np.real(expval)
         else:  # two-site expectation value
-
             def check_and_calculate(tensor_id, order):
                 return _calculate_double_expval(
                     tensor_id,
@@ -168,7 +166,6 @@ class PhysicsEngine(TwoSiteUpdater):
 
             while self.candidate_edge_ids() != []:
                 central_tensor_ids = self.psi.central_tensor_ids()
-
                 for k in [0, 1]:
                     for order in [(0, 1), (1, 0)]:
                         if indices[order[0]] in get_bare_edges(
@@ -180,10 +177,10 @@ class PhysicsEngine(TwoSiteUpdater):
                             self.psi.edges,
                             self.psi.physical_edges,
                         ):
-                            expval = check_and_calculate(k, list(order)).tensor
+                            expval = check_and_calculate(central_tensor_ids[k], list(order)).tensor
 
                 self.move_center()
-            return expval
+            return np.real(expval)
 
     def energy(self):
         central_tensor_ids = self.psi.central_tensor_ids()
@@ -223,8 +220,8 @@ class PhysicsEngine(TwoSiteUpdater):
             [psi1, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
         )
 
-        u, s, v, edge_order = self.decompose_two_tensors(
-            psi, self.max_bond_dim, self.max_truncation_err
+        u, s, v, edge_order, _ = self.decompose_two_tensors(
+            psi, self.max_bond_dim
         )
         psi_edges = (
             self.psi.edges[selected_tensor_id][:2]
