@@ -50,11 +50,16 @@ numerics:
     energy_degeneracy_threshold: 1e-11
     entanglement_degeneracy_threshold: 0.1
 
-outputs:
+output:
+    dir: data
+    basic_file: basic.csv
+    single_site_file: single_site.csv
+    two_site_file: two_site.csv
+
     energy:
-        activate: 1
+        active: 1
     entanglement:
-        activate: 1
+        active: 1
     single_site:
         Sx:
             active: 0

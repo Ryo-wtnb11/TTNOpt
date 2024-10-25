@@ -146,7 +146,6 @@ class GroundStateSearch(PhysicsEngine):
                 self.distance = self.initial_distance()
 
                 energy = self.energy()
-                print(energy)
                 ee = self.entanglement_entropy(probability)
                 _energy_at_edge[self.psi.canonical_center_edge_id] = energy
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
@@ -175,3 +174,5 @@ class GroundStateSearch(PhysicsEngine):
                     ) and all([ee < entanglement_convergence_threshold for ee in diff_ee]):
                         converged_num += 1
         print("Converged")
+
+        return _energy_at_edge, _ee_at_edge
