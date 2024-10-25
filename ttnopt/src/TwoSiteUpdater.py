@@ -1,6 +1,6 @@
+import numpy as np
 import tensornetwork as tn
 import itertools
-import numpy as np
 from collections import deque, defaultdict
 
 
@@ -10,15 +10,7 @@ class TwoSiteUpdater:
         self.flag = self.initial_flag()
         self.distance = self.initial_distance()
 
-    def entanglement_entropy(self, probability=None):
-        if probability is None:
-            psi = self.contract_central_tensors()
-            (_, s, _, _) = tn.split_node_full_svd(
-                psi,
-                [psi[0], psi[1]],
-                [psi[2], psi[3]],
-            )
-            probability = np.diagonal(s.get_tensor())
+    def entanglement_entropy(self, probability):
         el = probability**2 / np.sum(probability**2)
         el = el[el > 0.0]
         ee = -np.sum(el * np.log2(el))
@@ -28,7 +20,6 @@ class TwoSiteUpdater:
         self,
         psi,
         max_bond_dim,
-        max_truncation_err,
         opt_structure=False,
         operate_degeneracy=False,
         epsilon=1e-8,
@@ -78,7 +69,7 @@ class TwoSiteUpdater:
         v = v.get_tensor()[:, :, :ind]
         s = s.get_tensor()[:ind, :ind]
         s = s / np.linalg.norm(s)
-        return u, s, v, edge_order
+        return u, s, v, edge_order, p
 
     def initial_flag(self):
         edge_ids = set(itertools.chain.from_iterable(self.psi.edges))

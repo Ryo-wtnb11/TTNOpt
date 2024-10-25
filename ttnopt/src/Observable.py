@@ -45,34 +45,35 @@ def spin_ind(spin_num):
     else:
         raise TypeError("Invalid type for spin_num. Expected a string or a number.")
 
-    # Get the spin value as a fraction
-    fraction = Fraction(spin_value).limit_denominator()
-    numerator, denominator = fraction.numerator, fraction.denominator
-
-    # form of "S="
-    return f"S={numerator}/{denominator}" if denominator != 1 else f"S={numerator}"
+    return spin_value
 
 
 def bare_spin_operator(spin, spin_num):
-    spin_num = spin_ind(spin_num)
-    if spin_num == "S=1/2":
-        if spin == "S+":
-            return np.array([[0, 2], [0, 0]], dtype=np.float64)
-        elif spin == "S-":
-            return np.array([[0, 0], [2, 0]], dtype=np.float64)
-        elif spin == "Sz":
-            return np.array([[1, 0], [0, -1]], dtype=np.float64)
-    elif spin_num == "1":
-        print("error")
+    spin_value = spin_ind(spin_num)  # Get both string form and numeric value
+    # Check if spin_value is valid
+    if not (spin_value == int(spin_value) or spin_value == int(spin_value) + 0.5):
+        raise ValueError("Invalid spin number. Spin number must be an integer or half-integer.")
+
+    dim = int(2 * spin_value + 1)  # Dimension of the matrix based on the spin value
+    if spin == "S+":
+        # Construct the raising operator S+
+        S_plus = np.zeros((dim, dim), dtype=np.float64)
+        for m in range(dim - 1):
+            S_plus[m, m + 1] = np.sqrt(spin_value * (spin_value + 1) - (spin_value - m) * (spin_value - m - 1))
+        return S_plus
+
+    elif spin == "Sz":
+        # Construct the Sz operator
+        Sz = np.zeros((dim, dim), dtype=np.float64)
+        for m in range(dim):
+            Sz[m, m] = spin_value - m
+        return Sz
+
+    else:
+        raise ValueError("Invalid spin operator. Choose 'S+' or 'Sz'.")
 
 
 def spin_dof(spin_num):
-    spin_num = spin_ind(spin_num)
-    spin_value_str = spin_num[2:]
-    if "/" in spin_value_str:
-        numerator, denominator = spin_value_str.split("/")
-        spin_value = int(numerator) / int(denominator)
-    else:
-        spin_value = float(spin_value_str)
-    degrees_of_freedom = int(2 * spin_value + 1)
-    return degrees_of_freedom
+    spin_value = spin_ind(spin_num)
+    dim = int(2 * spin_value + 1)
+    return dim
