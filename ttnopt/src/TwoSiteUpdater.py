@@ -151,7 +151,6 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         self,
         psi,
         max_bond_dim,
-        max_truncation_err,
         opt_structure=False,
         operate_degeneracy=False,
         epsilon=1e-8,

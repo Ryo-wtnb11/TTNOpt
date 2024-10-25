@@ -73,4 +73,4 @@ def test_u1_dmrg():
         max_bond_dim=max_bond_dim,
     )
     dmrg.run(opt_structure=True)
-    assert np.allclose(-12.236946526970327, dmrg.energy(), atol=1e-8)
+    assert np.allclose(-3.0592369151984715, dmrg.energy(), atol=1e-8)

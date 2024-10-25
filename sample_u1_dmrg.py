@@ -1,7 +1,7 @@
-from ttnopt.initialTTN import init_structure_mps
-from ttnopt.Observable import Observable
-from ttnopt.TTN import TreeTensorNetwork
-from ttnopt.DMRGSparse import DMRGSparse
+from ttnopt import init_structure_mps
+from ttnopt import Observable
+from ttnopt import TreeTensorNetwork
+from ttnopt import DMRGSparse
 
 
 def open_adjacent_indexs(d: int):

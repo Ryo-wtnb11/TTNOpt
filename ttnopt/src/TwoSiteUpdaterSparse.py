@@ -3,7 +3,7 @@ import tensornetwork as tn
 import itertools
 from collections import deque, defaultdict
 
-from ttnopt.TwoSiteUpdater import TwoSiteUpdaterMixin
+from ttnopt.src.TwoSiteUpdater import TwoSiteUpdaterMixin
 
 class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
     def __init__(self, psi):
