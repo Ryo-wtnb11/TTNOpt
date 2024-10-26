@@ -118,7 +118,7 @@ class GroundStateSearch(PhysicsEngine):
                     + self.psi.edges[connected_tensor_id][:2]
                 )
 
-                u, s, v, edge_order, probability = self.decompose_two_tensors(
+                u, s, v, probability, edge_order = self.decompose_two_tensors(
                     ground_state,
                     self.max_bond_dim,
                     opt_structure=opt_structure,

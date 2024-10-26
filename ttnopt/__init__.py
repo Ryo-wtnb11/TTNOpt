@@ -1,4 +1,3 @@
-from .src.initialTTN import init_structure_mps
 from .src.Observable import Observable
 from .src.Hamiltonian import Hamiltonian
 from .src.TTN import TreeTensorNetwork

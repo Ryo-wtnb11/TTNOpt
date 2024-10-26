@@ -68,17 +68,6 @@ class Hamiltonian:
                 self.observables.append(ob)
 
         if magnetic_field is not None:
-<<<<<<< HEAD
-            for i, c in enumerate(magnetic_field):
-                if c != 0.0:
-                    ob = Observable([i], ["Sz"], [-c])
-                    self.observables.append(ob)
-
-        if ion_anisotropy is not None:
-            for i, c in enumerate(ion_anisotropy):
-                if c != 0.0:
-                    ob = Observable([i], ["Sz^2"], [-c])
-=======
             for idx, c in enumerate(magnetic_field):
                 if c != 0.0:
                     ob = Observable([idx], [["Sz"]], [-c])
@@ -88,7 +77,6 @@ class Hamiltonian:
             for idx, c in enumerate(ion_anisotropy):
                 if c != 0.0:
                     ob = Observable([idx], [["Sz^2"]], [-c])
->>>>>>> origin/main
                     self.observables.append(ob)
 
         if dzyaloshinskii_moriya is not None:

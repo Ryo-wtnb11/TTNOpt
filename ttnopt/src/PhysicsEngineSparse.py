@@ -1,7 +1,5 @@
 import numpy as np
 import tensornetwork as tn
-<<<<<<< HEAD
-=======
 from tensornetwork import U1Charge, Index, BlockSparseTensor
 from scipy.linalg import eigh_tridiagonal
 from scipy.sparse.linalg import expm
@@ -15,23 +13,10 @@ from ttnopt.src.functionTTN import (
 )
 
 from scipy.sparse.linalg import expm
->>>>>>> origin/main
 from tensornetwork import U1Charge, Index, BlockSparseTensor
 from scipy.linalg import eigh_tridiagonal
 from scipy.sparse.linalg import expm
 
-<<<<<<< HEAD
-from ttnopt.src.Observable import bare_spin_operator, spin_dof
-from ttnopt.src.TwoSiteUpdaterSparse import TwoSiteUpdaterSparse
-from ttnopt.src.functionTTN import (
-    get_renormalization_sequence,
-    get_bare_edges,
-    inner_product_sparse,
-)
-
-
-=======
->>>>>>> origin/main
 class PhysicsEngineSparse(TwoSiteUpdaterSparse):
     def __init__(
         self,
@@ -287,11 +272,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         else:
             e_old = 0
             for j in range(1, dim_n):
-<<<<<<< HEAD
-                beta[j] = np.sqrt(inner_product_sparse(tn.Node(omega), tn.Node(omega)))
-=======
                 beta[j] = np.sqrt(inner_product_sparse(tn.Node(omega, backend=self.backend), tn.Node(omega, backend=self.backend)))
->>>>>>> origin/main
                 if j > 1 and beta[j] < tol:
                     break
                 psi = tn.Node(omega / beta[j], backend=self.backend)
@@ -318,13 +299,8 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         a = inner_product_sparse(psi_w, psi)
         omega = psi_w.tensor - a * psi.tensor
         for k in range(1, len(v_tilda)):
-<<<<<<< HEAD
-            b = np.sqrt(inner_product_sparse(tn.Node(omega), tn.Node(omega)))
-            psi = tn.Node(omega / b)
-=======
             b = np.sqrt(inner_product_sparse(tn.Node(omega, backend=self.backend), tn.Node(omega, backend=self.backend)))
             psi = tn.Node(omega / b, backend=self.backend)
->>>>>>> origin/main
             v += v_tilda[k] * psi.tensor
             psi_w = self._apply_ham_psi(psi, central_tensor_ids)
             a = inner_product_sparse(psi_w, psi)
@@ -336,11 +312,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         v_ = self._apply_ham_psi(v, central_tensor_ids)
         v_ = v_ / np.sqrt(inner_product_sparse(v_, v_))
         delta_v = v_.tensor - np.sign(e)[0] * v.tensor
-<<<<<<< HEAD
-        while inner_product_sparse(tn.Node(delta_v), tn.Node(delta_v)) > tol:
-=======
         while inner_product_sparse(tn.Node(delta_v, backend=self.backend), tn.Node(delta_v, backend=self.backend)) > tol:
->>>>>>> origin/main
             v = self._apply_ham_psi(v, central_tensor_ids)
             v = v / np.sqrt(inner_product_sparse(v, v))
             delta_v = v.tensor - np.sign(e)[0] * v_.tensor
@@ -450,13 +422,8 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         self.psi.gauge_tensor = self.psi.gauge_tensor / np.linalg.norm(
             self.psi.gauge_tensor.todense()
         )
-<<<<<<< HEAD
-        iso = tn.Node(self.psi.tensors[central_tensor_ids[0]])
-        gauge = tn.Node(self.psi.gauge_tensor)
-=======
         iso = tn.Node(self.psi.tensors[central_tensor_ids[0]], backend=self.backend)
         gauge = tn.Node(self.psi.gauge_tensor, backend=self.backend)
->>>>>>> origin/main
         iso[2] ^ gauge[0]
 
         iso = tn.contractors.auto(
