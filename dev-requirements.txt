@@ -2,7 +2,4 @@ pytest
 pytest-cov
 mypy
 coverage
-<<<<<<< HEAD
-=======
 types-PyYAML
->>>>>>> origin/main
