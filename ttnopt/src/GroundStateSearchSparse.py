@@ -9,9 +9,6 @@ from ttnopt.src.functionTTN import (
     inner_product_sparse,
 )
 
-tn.set_default_backend("symmetric")
-
-
 class DMRGSparse(PhysicsEngineSparse):
 
     def __init__(
@@ -24,6 +21,8 @@ class DMRGSparse(PhysicsEngineSparse):
         max_bond_dim: int = 100,
         max_truncation_err: float = 1e-11,
     ):
+
+        # set backend only in this function
         super().__init__(
             psi,
             physical_spin_nums,
@@ -56,6 +55,7 @@ class DMRGSparse(PhysicsEngineSparse):
         _ee_at_edge: Dict[int, float] = {}
         edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
 
+
         converged_num = 0
 
         sweep_num = 0
@@ -77,8 +77,8 @@ class DMRGSparse(PhysicsEngineSparse):
                     not_selected_tensor_id,
                 ) = self.local_two_tensor()
                 # absorb gauge tensor
-                iso = tn.Node(self.psi.tensors[selected_tensor_id])
-                gauge = tn.Node(self.psi.gauge_tensor)
+                iso = tn.Node(self.psi.tensors[selected_tensor_id], backend=self.backend)
+                gauge = tn.Node(self.psi.gauge_tensor, backend=self.backend)
                 if iso.tensor.flat_flows[2]:
                     out = gauge[1]
                     iso[2] ^ gauge[0]

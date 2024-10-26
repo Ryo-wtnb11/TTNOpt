@@ -62,7 +62,7 @@ class PhysicsEngine(TwoSiteUpdater):
         else:
             for k in self.hamiltonian.spin_size.keys():
                 if spin_dof(self.hamiltonian.spin_size[k]) != self.psi.edge_dims[k]:
-                    print("Initial tensors are not valid for given hamiltonian.")
+                    print("Initial tensors is not valid for given hamiltonian.")
                     init_tensors_flag = True
                     break
 

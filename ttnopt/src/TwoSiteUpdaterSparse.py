@@ -3,10 +3,12 @@ import tensornetwork as tn
 import itertools
 from collections import deque, defaultdict
 
+from ttnopt.src.TwoSiteUpdater import TwoSiteUpdaterMixin
 
-class TwoSiteUpdaterSparse:
+class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
     def __init__(self, psi):
         self.psi = psi
+        self.backend = "symmetric"
         self.flag = self.initial_flag()
         self.distance = self.initial_distance()
 
@@ -84,8 +86,13 @@ class TwoSiteUpdaterSparse:
         s_data = s.tensor.data
         s_tensor = s.tensor / np.linalg.norm(s_data)
 
+<<<<<<< HEAD
         s = tn.Node(s_tensor)
         u = tn.Node(u_tensor)
+=======
+        s = tn.Node(s_tensor, backend=self.backend)
+        u = tn.Node(u_tensor, backend=self.backend)
+>>>>>>> origin/main
         a, ss, b, terr = tn.split_node_full_svd(
             u,
             [
@@ -106,6 +113,7 @@ class TwoSiteUpdaterSparse:
             v_tensor,
             edge_order,
             ee,
+<<<<<<< HEAD
         )
 
     def initial_flag(self):
@@ -228,3 +236,6 @@ class TwoSiteUpdaterSparse:
             output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]],
         )
         return psi
+=======
+        )
+>>>>>>> origin/main
