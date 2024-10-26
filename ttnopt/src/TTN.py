@@ -176,15 +176,15 @@ class TreeTensorNetwork:
         )
 
         # top node
-        nx.draw_networkx_nodes(
-            g,
-            ax=ax,
-            pos=pos,
-            nodelist=large_red_nodes,
-            node_size=25,
-            node_shape="o",
-            node_color="red",
-        )
+        # nx.draw_networkx_nodes(
+        #     g,
+        #     ax=ax,
+        #     pos=pos,
+        #     nodelist=large_red_nodes,
+        #     node_size=25,
+        #     node_shape="o",
+        #     node_color="red",
+        # )
         return plt
 
     def central_tensor_ids(self):

@@ -62,8 +62,8 @@ quantum_state_standard = quantum_state_standard.reshape((2,) * (L*3))
 quantum_state_interleaved = quantum_state_interleaved.reshape((2,) * (L*3))
 
 # 計算した量子状態を保存
-np.save("quantum_state_standard.npy", quantum_state_standard)
-np.save("quantum_state_interleaved.npy", quantum_state_interleaved)
+np.save("input/quantum_state_standard.npy", quantum_state_standard)
+np.save("input/quantum_state_interleaved.npy", quantum_state_interleaved)
 
 # z = 0.5 に対応するビット列を計算
 z_fixed_bin = [1] + [0] * 7  # z0 = 1 で他は 0
@@ -83,11 +83,10 @@ for i, x in enumerate(x_vals_fixed):
             for k in range(1, n + 1)
         )
 
-# 結果を描画し、カラーバー範囲を -10 から 10 に設定
 plt.figure(figsize=(6, 6))
 plt.imshow(f_xy_fixed_z, extent=(0, 1, 0, 1), origin='lower', cmap='seismic', vmin=-10, vmax=10)
 plt.colorbar(extend='both')
 plt.xlabel('x')
 plt.ylabel('y')
-plt.savefig("sample.pdf")
+plt.savefig("input/sample.pdf")
 plt.close()

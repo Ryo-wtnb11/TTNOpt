@@ -95,11 +95,11 @@ class FactorizeTensor(DataEngine):
                     + self.psi.edges[connected_tensor_id][:2]
                 )
 
-                u, s, v, edge_order, probability = self.decompose_two_tensors(
+                u, s, v, probability, edge_order = self.decompose_two_tensors(
                     new_tensor,
                     self.max_bond_dim,
                     opt_structure=opt_structure,
-                    operate_degeneracy=True,
+                    operate_degeneracy=False,
                 )
 
                 self.psi.tensors[selected_tensor_id] = u

@@ -83,8 +83,8 @@ class DataEngine(TwoSiteUpdater):
         output_order = self.psi.edges[central_tensor_ids[0]][:2] + self.psi.edges[central_tensor_ids[1]][:2]
         environment.reorder_edges([out_edge_orders[edge_id] for edge_id in output_order])
         environment = environment.copy(conjugate=True)
-        # self.environment_tensor = environment.get_tensor()
-        # self.environment_edges = output_order
+        self.environment_tensor = environment.get_tensor()
+        self.environment_edges = output_order
         return environment
 
     def environment(self, tensor_ids):

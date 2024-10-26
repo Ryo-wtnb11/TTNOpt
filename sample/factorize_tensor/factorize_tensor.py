@@ -3,23 +3,22 @@ from ttnopt.src import FactorizeTensor
 import numpy as np
 
 def factorize_tensor():
-    quantum_state = np.load('quantum_state_standard.npy')
+    quantum_state = np.load('input/quantum_state_standard.npy')
     N = len(quantum_state.shape)
-    psi = TreeTensorNetwork.mps(N, quantum_state, max_bond_dimension=10)
+    psi = TreeTensorNetwork.mps(N, quantum_state, max_bond_dimension=4)
 
     ft = FactorizeTensor(
         psi,
         quantum_state,
         init_bond_dim=4,
-        max_bond_dim=100,
+        max_bond_dim=4,
         truncation_error=1e-10,
     )
 
-    ft.run()
+    ft.run(opt_structure=True)
 
-    # reset parameters for the next iteration
-    opt_structure = 0
-
+    p = psi.visualize()
+    p.savefig('structure.pdf')
     return 0
 
 factorize_tensor()
