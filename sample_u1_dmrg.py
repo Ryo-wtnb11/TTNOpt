@@ -54,11 +54,7 @@ def magnetic_field(d):
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
-    d = 4
-=======
     d = 3
->>>>>>> origin/main
     size = 2**d
     physical_edges, edges, top_edge_id = init_structure_mps(size)
     psi = TreeTensorNetwork(edges, top_edge_id)
