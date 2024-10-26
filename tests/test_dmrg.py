@@ -103,8 +103,6 @@ def test_dmrg_hierarchical_chain():
     print(dmrg.calculate_expval([0, 1], ["Sz", "Sz"]))
 
     assert 0.0 == pytest.approx(dmrg.calculate_expval(0, "Sz"))
-<<<<<<< HEAD
-=======
 
 def test_dmrg_ising():
     return True
@@ -130,4 +128,3 @@ def test_dmrg_ising():
 
     assert 0.0 == pytest.approx(dmrg.calculate_expval(0, "Sz"))
     assert np.allclose(-15.0, dmrg.energy(), atol=1e-8)
->>>>>>> origin/main
