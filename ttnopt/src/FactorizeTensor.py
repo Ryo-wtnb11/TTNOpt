@@ -4,17 +4,15 @@ import numpy as np
 import tensornetwork as tn
 import copy
 
-from ttnopt.src.PhysicsEngine import PhysicsEngine
+from ttnopt.src.DataEngine import DataEngine
 from ttnopt.src.TTN import TreeTensorNetwork
-from ttnopt.src import Hamiltonian
-from ttnopt.src.Observable import Observable
 
 
-class GroundStateSearch(PhysicsEngine):
+class FactorizeTensor(DataEngine):
     """A class for ground state search algorithm based on DMRG.
     Args:
         psi: The instance of TTN Class
-        hamiltonians: The list of Hamiltonians which are instances of Observable Class
+        target (np.array): The target tensor
         init_bond_dim (int, optional): The bond dimension which are used to initialize tensors
         max_bond_dim (int, optional): The maximum bond dimension during updating tensors
         max_truncation_err (float, optional): The maximum truncation error during updating tensors
@@ -23,32 +21,26 @@ class GroundStateSearch(PhysicsEngine):
     def __init__(
         self,
         psi: TreeTensorNetwork,
-        hamiltonian: Hamiltonian,
+        target: np.ndarray,
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
         truncation_error = 1e-11,
-        edge_spin_operators: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
-        block_hamiltonians: Optional[Dict[int, Dict[str, np.ndarray]]] = None
     ):
-        """Initialize a DMRG object.
+        """Initialize a FactorizeTensor object.
 
         Args:
             psi (TreeTensorNetwork): The quantum state.
-            hamiltonians (Hamiltonian): Hamiltonian which is list of Observable.
+            target (np.ndarray): Target tensor.
             init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
             max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
             truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
-            edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
-            block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
         """
         super().__init__(
             psi,
-            hamiltonian,
+            target,
             init_bond_dim,
             max_bond_dim,
-            truncation_error,
-            edge_spin_operators,
-            block_hamiltonians
+            truncation_error
         )
 
     def run(
@@ -60,7 +52,7 @@ class GroundStateSearch(PhysicsEngine):
         converged_count=2,
 
     ):
-        """Run Ground State Search algorithm.
+        """Run FactorizingTensor algorithm.
 
         Args:
             energy_threshold (float, optional): Energy threshold for convergence. Defaults to 1e-8.
@@ -68,9 +60,7 @@ class GroundStateSearch(PhysicsEngine):
             converged_count (int, optional): Converged count. Defaults to 1.
             opt_structure (bool, optional): If optimize the tree structure or not. Defaults to False.
         """
-        energy_at_edge: Dict[int, float] = {}
-        _energy_at_edge: Dict[int, float] = {}
-        ee_at_edge: Dict[int, float] = {}
+
         _ee_at_edge: Dict[int, float] = {}
 
         edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
@@ -79,8 +69,7 @@ class GroundStateSearch(PhysicsEngine):
 
         sweep_num = 0
         while converged_num < converged_count and sweep_num < max_num_sweep:
-            # energy
-            energy_at_edge = copy.deepcopy(_energy_at_edge)
+
             ee_at_edge = copy.deepcopy(_ee_at_edge)
             edges = copy.deepcopy(_edges)
 
@@ -96,30 +85,18 @@ class GroundStateSearch(PhysicsEngine):
                     not_selected_tensor_id,
                 ) = self.local_two_tensor()
 
-                # absorb gauge tensor
-                iso = tn.Node(self.psi.tensors[selected_tensor_id])
-                gauge = tn.Node(self.psi.gauge_tensor)
-                iso[2] ^ gauge[0]
-                iso = tn.contractors.auto(
-                    [iso, gauge], output_edge_order=[iso[0], iso[1], gauge[1]]
-                )
-                self.psi.tensors[selected_tensor_id] = iso.get_tensor()
-
                 self.set_flag(not_selected_tensor_id)
-
                 self.set_ttn_properties_at_one_tensor(edge_id, selected_tensor_id)
 
-                self._set_edge_spin(not_selected_tensor_id)
-                self._set_block_hamiltonian(not_selected_tensor_id)
+                new_tensor = self.update_tensor([selected_tensor_id, connected_tensor_id])
 
-                ground_state = self.lanczos([selected_tensor_id, connected_tensor_id])
                 psi_edges = (
                     self.psi.edges[selected_tensor_id][:2]
                     + self.psi.edges[connected_tensor_id][:2]
                 )
 
                 u, s, v, edge_order, probability = self.decompose_two_tensors(
-                    ground_state,
+                    new_tensor,
                     self.max_bond_dim,
                     opt_structure=opt_structure,
                     operate_degeneracy=True,
@@ -145,9 +122,8 @@ class GroundStateSearch(PhysicsEngine):
 
                 self.distance = self.initial_distance()
 
-                energy = self.energy()
+                print("Fidelity: ", self.fidelity())
                 ee = self.entanglement_entropy(probability)
-                _energy_at_edge[self.psi.canonical_center_edge_id] = energy
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
 
             _edges = copy.deepcopy(self.psi.edges)
@@ -155,10 +131,6 @@ class GroundStateSearch(PhysicsEngine):
             # 終了判定
             sweep_num += 1
             if sweep_num > 2:
-                diff_energy = [
-                    np.abs(energy_at_edge[key] - _energy_at_edge[key])
-                    for key in energy_at_edge.keys()
-                ]
                 diff_ee = [
                     np.abs(ee_at_edge[key] - _ee_at_edge[key])
                     for key in ee_at_edge.keys()
@@ -169,10 +141,8 @@ class GroundStateSearch(PhysicsEngine):
                         for edge, _edge in zip(edges, _edges)
                     ]
                 ):
-                    if all(
-                        [energy < energy_convergence_threshold for energy in diff_energy]
-                    ) and all([ee < entanglement_convergence_threshold for ee in diff_ee]):
+                    if all([ee < entanglement_convergence_threshold for ee in diff_ee]):
                         converged_num += 1
         print("Converged")
 
-        return _energy_at_edge, _ee_at_edge
+        return _ee_at_edge

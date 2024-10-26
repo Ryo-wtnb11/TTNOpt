@@ -1,5 +1,4 @@
 # ground_state_search.py
-from ttnopt.src import init_structure_mps
 from ttnopt.src import Observable
 from ttnopt.src import TreeTensorNetwork
 from ttnopt.src import GroundStateSearch

@@ -62,7 +62,7 @@ class PhysicsEngine(TwoSiteUpdater):
         else:
             for k in self.hamiltonian.spin_size.keys():
                 if spin_dof(self.hamiltonian.spin_size[k]) != self.psi.edge_dims[k]:
-                    print("Initial tensors is not valid for given hamiltonian.")
+                    print("Initial tensors are not valid for given hamiltonian.")
                     init_tensors_flag = True
                     break
 
@@ -404,7 +404,7 @@ class PhysicsEngine(TwoSiteUpdater):
         return eigen_vectors
 
     def init_tensors_by_block_hamiltonian(self):
-        sequence = get_renormalization_sequence(self.psi.edges, self.psi.top_edge_id)
+        sequence = get_renormalization_sequence(self.psi.edges, self.psi.canonical_center_edge_id)
         for tensor_id in sequence:
             ham = self._get_block_hamiltonian(tensor_id)
             self._set_psi_tensor_with_ham(tensor_id, ham)
