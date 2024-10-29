@@ -18,4 +18,10 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         "Programming Language :: Python :: 3",
     ],
+    entry_points={
+        'console_scripts': [
+            'gss=ttnopt:ground_state_search',  # Link ttnopt_gss command to your main function
+            'samplettn=ttnopt:sample',  # Link ttnopt_sample command to your sample function
+        ],
+    },
 )

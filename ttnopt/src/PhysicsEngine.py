@@ -1,43 +1,54 @@
+from typing import Dict, Optional
 import tensornetwork as tn
 import numpy as np
-from scipy.linalg import eigh_tridiagonal
-from ttnopt.Observable import bare_spin_operator, spin_dof
-from ttnopt.TwoSiteUpdater import TwoSiteUpdater
-from ttnopt.functionTTN import get_renormalization_sequence, get_bare_edges, inner_product
 import scipy
+from scipy.linalg import eigh_tridiagonal
 from scipy.sparse.linalg import expm
 
-np.set_printoptions(precision=3, suppress=True)
-tn.set_default_backend("numpy")
+from ttnopt.src.TTN import TreeTensorNetwork
+from ttnopt.src.Hamiltonian import Hamiltonian
+from ttnopt.src.Observable import bare_spin_operator, spin_dof
+from ttnopt.src.TwoSiteUpdater import TwoSiteUpdater
+from ttnopt.src.functionTTN import get_renormalization_sequence, get_bare_edges, inner_product
 
+tn.set_default_backend("numpy")
 
 class PhysicsEngine(TwoSiteUpdater):
     def __init__(
         self,
-        psi,
-        physical_spin_nums,
-        hamiltonians,
-        init_bond_dim=4,
-        max_bond_dim=100,
-        max_truncation_err=1e-15,
+        psi: TreeTensorNetwork,
+        hamiltonian: Hamiltonian,
+        init_bond_dim: int,
+        max_bond_dim: int,
+        truncation_error: float,
+        edge_spin_operators: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
+        block_hamiltonians: Optional[Dict[int, Dict[str, np.ndarray]]] = None
     ):
-        """_summary_
+        """Initialize a PhysicsEngine object.
+
         Args:
-            psi: TreeTensorNetwork
-                the initial state
-            physical_spin_nums: List[str]
-                the spin number of physical edges
-            hamiltonian : List[Observable]
-                the hamiltonian
+            psi (TreeTensorNetwork): The quantum state.
+            hamiltonians (Hamiltonian): Hamiltonian which has a list of Observables.
+            init_bond_dim (int): Initial bond dimension.
+            max_bond_dim (int): Maximum bond dimension.
+            truncation_error (float): Maximum truncation error.
+            edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
+            block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
         """
+
         super().__init__(psi)
-        self.hamiltonians = hamiltonians
-        self.physical_spin_nums = physical_spin_nums
+        self.hamiltonian = hamiltonian
         self.init_bond_dim = init_bond_dim
         self.max_bond_dim = max_bond_dim
-        self.max_truncation_err = max_truncation_err
-        self.edge_spin_operators = self._init_spin_operator()
-        self.block_hamiltonians = self._init_block_hamiltonians()
+        self.truncation_error = truncation_error
+        if edge_spin_operators is None:
+            self.edge_spin_operators = self._init_spin_operator()
+        else:
+            self.edge_spin_operators = edge_spin_operators
+        if block_hamiltonians is None:
+            self.block_hamiltonians = self._init_block_hamiltonians()
+        else:
+            self.block_hamiltonians = block_hamiltonians
 
         init_tensors_flag = False
         if (
@@ -49,16 +60,17 @@ class PhysicsEngine(TwoSiteUpdater):
                 self.psi.tensors.append(None)
             init_tensors_flag = True
         else:
-            for k in self.physical_spin_nums.keys():
-                if spin_dof(self.physical_spin_nums[k]) != self.pso.edge_dims[k]:
+            for k in self.hamiltonian.spin_size.keys():
+                if spin_dof(self.hamiltonian.spin_size[k]) != self.psi.edge_dims[k]:
                     print("Initial tensors is not valid for given hamiltonian.")
                     init_tensors_flag = True
                     break
 
         if init_tensors_flag:
             print("Initialize tensors with real space renormalization.")
-            for k in self.physical_spin_nums.keys():
-                self.psi.edge_dims[k] = spin_dof(self.physical_spin_nums[k])
+
+            for k in self.hamiltonian.spin_size.keys():
+                self.psi.edge_dims[k] = spin_dof(self.hamiltonian.spin_size[k])
             self.init_tensors_by_block_hamiltonian()
 
     def calculate_expval(self, indices, operators):
@@ -123,7 +135,6 @@ class PhysicsEngine(TwoSiteUpdater):
         self.distance = self.initial_distance()
         self.flag = self.initial_flag()
 
-        expval = 0
         if isinstance(indices, int):  # one-site expectation value
             index = indices
             while self.candidate_edge_ids() != []:
@@ -143,9 +154,8 @@ class PhysicsEngine(TwoSiteUpdater):
                         index, central_tensor_ids[1], operators
                     ).tensor
                 self.move_center()
-            return expval
+            return np.real(expval)
         else:  # two-site expectation value
-
             def check_and_calculate(tensor_id, order):
                 return _calculate_double_expval(
                     tensor_id,
@@ -156,7 +166,6 @@ class PhysicsEngine(TwoSiteUpdater):
 
             while self.candidate_edge_ids() != []:
                 central_tensor_ids = self.psi.central_tensor_ids()
-
                 for k in [0, 1]:
                     for order in [(0, 1), (1, 0)]:
                         if indices[order[0]] in get_bare_edges(
@@ -168,10 +177,10 @@ class PhysicsEngine(TwoSiteUpdater):
                             self.psi.edges,
                             self.psi.physical_edges,
                         ):
-                            expval = check_and_calculate(k, list(order)).tensor
+                            expval = check_and_calculate(central_tensor_ids[k], list(order)).tensor
 
                 self.move_center()
-            return expval
+            return np.real(expval)
 
     def energy(self):
         central_tensor_ids = self.psi.central_tensor_ids()
@@ -211,8 +220,8 @@ class PhysicsEngine(TwoSiteUpdater):
             [psi1, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
         )
 
-        u, s, v, edge_order = self.decompose_two_tensors(
-            psi, self.max_bond_dim, self.max_truncation_err
+        u, s, v, edge_order, _ = self.decompose_two_tensors(
+            psi, self.max_bond_dim
         )
         psi_edges = (
             self.psi.edges[selected_tensor_id][:2]
@@ -405,8 +414,8 @@ class PhysicsEngine(TwoSiteUpdater):
         # gauge_tensor
         central_tensor_ids = self.psi.central_tensor_ids()
         ground_state = self.lanczos(central_tensor_ids, init_random=True)
-        u, s, v, _ = self.decompose_two_tensors(
-            ground_state, self.max_bond_dim, self.max_truncation_err
+        u, s, v, _, _ = self.decompose_two_tensors(
+            ground_state, self.max_bond_dim, self.truncation_error
         )
         self.psi.tensors[central_tensor_ids[0]] = u
         self.psi.tensors[central_tensor_ids[1]] = v
@@ -583,7 +592,7 @@ class PhysicsEngine(TwoSiteUpdater):
             self.psi.edges,
             self.psi.physical_edges,
         )
-        for ham in self.hamiltonians:
+        for ham in self.hamiltonian.observables:
             output_edge_order = _output_edges_order(
                 ham.indices, l_bare_edges, r_bare_edges
             )
@@ -716,7 +725,7 @@ class PhysicsEngine(TwoSiteUpdater):
 
     def _init_spin_operator(self):
         edge_spin_operators = {}
-        for key, value in self.physical_spin_nums.items():
+        for key, value in self.hamiltonian.spin_size.items():
             edge_spin_operators[key] = {
                 key: {
                     "S+": bare_spin_operator("S+", value),
@@ -727,9 +736,9 @@ class PhysicsEngine(TwoSiteUpdater):
 
     def _init_block_hamiltonians(self):
         block_hamiltonians = {}
-        for key in self.physical_spin_nums.keys():
-            for ham in self.hamiltonians:
-                if ham.indices == [key]:
+        for key in self.hamiltonian.spin_size.keys():
+            for ham in self.hamiltonian.observables:
+                if np.array_equal(ham.indices, [key]):
                     spin_operators = []
                     for n in range(ham.operators_num):
                         operators = ham.operators_list[n]
