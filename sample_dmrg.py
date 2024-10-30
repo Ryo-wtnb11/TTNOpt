@@ -2,7 +2,6 @@ from ttnopt import Hamiltonian
 from ttnopt import TreeTensorNetwork
 from ttnopt import GroundStateSearch
 
-import math
 
 def open_adjacent_indexs(d: int):
     n = 2**d
@@ -38,7 +37,7 @@ def hierarchical_chain_hamiltonian(d, coef_j=1.0, alpha=0.5):
     return Hamiltonian(d**2, spin_size, model, indices, interaction_coefs=interaction_coefs)
 
 
-def test_run_dmrg():
+if __name__ == "__main__":
     d = 4
     psi = TreeTensorNetwork.mps(d**2)
     hamiltonian = hierarchical_chain_hamiltonian(d)
@@ -52,4 +51,4 @@ def test_run_dmrg():
     )
     dmrg.run(opt_structure=True)
     energy = dmrg.energy()
-    assert math.isclose(energy, -6.1200396827086365)
+    print(energy)
