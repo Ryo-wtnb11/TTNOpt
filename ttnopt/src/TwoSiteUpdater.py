@@ -200,4 +200,4 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         v = v.get_tensor()[:, :, :ind]
         s = s.get_tensor()[:ind, :ind]
         s = s / np.linalg.norm(s)
-        return u, s, v, edge_order
+        return u, s, v, edge_order, p

@@ -17,10 +17,9 @@ class TreeTensorNetwork:
         """Initialize a TreeTensorNetwork object.
 
         Args:
-            edges (List[List[int]]): Edge id list for each tensor in the order [left, right, top].
-            top_edge_id (int): edge id that connects to the top tensor.
-            tensors (Optional[List[np.ndarray]]): tensors for each node.
-                This parameter is not required for some algorithms (DMRG, etc.)
+            edges : Edge id list for each tensor in the order [left, right, top].
+            top_edge_id : edge id that connects to the top tensor.
+            tensors : tensors for each node. This parameter is not required for some algorithms (DMRG, etc.)
         """
         self.edges = edges
 
@@ -39,9 +38,10 @@ class TreeTensorNetwork:
 
     @classmethod
     def mps(cls, size: int):
-        """Initialize an State object with matrix product structure.
+        """Initialize an object with matrix product structure.
+
         Args:
-            size (int): The size of system.
+            size : The size of system.
         """
         edges = []
         upper_edge_id = size
@@ -67,9 +67,10 @@ class TreeTensorNetwork:
 
     @classmethod
     def tree(cls, size: int):
-        """Initialize an State object with binary tree structure.
+        """Initialize an object with binary tree structure.
+
         Args:
-            size (int): The size of system.
+            size : The size of system.
         """
         edges = []
 
@@ -102,7 +103,7 @@ class TreeTensorNetwork:
         return cls(edges, center_edge_id)
 
     def visualize(self):
-        """Visualize the TreeTensorNetwork"""
+        """Visualize the TreeTensorNetwork."""
         g = nx.DiGraph()
         logs = self._get_parent_child_pairs()
 

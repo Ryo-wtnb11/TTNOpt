@@ -22,7 +22,7 @@ documentation for details.
    :maxdepth: 2
    :caption: Tutorials
 
-   tutorials/DMRG_algorithm
+   tutorials/DMRG
 
 .. toctree::
    :maxdepth: 1
@@ -30,7 +30,8 @@ documentation for details.
 
    api/TreeTensorNetwork
    api/Observable
-   api/DMRG
+   api/Hamiltonian
+   api/GroundStateSearch
 
 Indices and tables
 ==================
