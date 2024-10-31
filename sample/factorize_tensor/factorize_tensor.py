@@ -56,11 +56,3 @@ def factorize_tensor():
 
 factorize_tensor()
 
-
-
-
-
-
-
-
-

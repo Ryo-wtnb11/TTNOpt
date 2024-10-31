@@ -1,5 +1,4 @@
 # ground_state_search.py
-from ttnopt.src import Observable
 from ttnopt.src import TreeTensorNetwork
 from ttnopt.src import GroundStateSearch
 
@@ -66,7 +65,7 @@ def ground_state_search():
         tmp = []
         tmp.append(edge_id)
         for node_id, edges in enumerate(psi.edges):
-            node_id += N
+            node_id += config.system.N
             if edge_id in edges:
                 tmp.append(node_id)
         nodes_list.append(tmp)
