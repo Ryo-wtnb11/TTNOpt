@@ -14,6 +14,7 @@ class Hamiltonian:
                  interaction_indices: List[Tuple[int]],
                  interaction_coefs: List[float],
                  magnetic_field: Optional[List[float]] = None,
+                 magnetic_field_axis: Optional[str] = None,
                  ion_anisotropy: Optional[List[float]] = None,
                  dzyaloshinskii_moriya: Optional[List[float]] = None,
                 ):
@@ -25,7 +26,8 @@ class Hamiltonian:
             model (str): The model of the Hamiltonian.
             interaction_indices (List[Tuple[int]]): The indices of the interaction.
             interaction_coefs (List[float]): The coefficients of the interaction.
-            magnetic_field (Optional[List[float]], optional): The magnetic field. Defaults to None.
+            magnetic_field (Optional[List[float]], optional): The magnetic field axis. Defaults to None.
+            magnetic_field_axis: The magnetic field axis. Defaults to None.
             ion_anisotropy (Optional[List[float]], optional): The ion anisotropy. Defaults to None.
             dzyaloshinskii_moriya (Optional[List[float]], optional): The Dzyaloshinskii-Moriya interaction. Defaults to None.
         """
@@ -70,7 +72,12 @@ class Hamiltonian:
         if magnetic_field is not None:
             for idx, c in enumerate(magnetic_field):
                 if c != 0.0:
-                    ob = Observable([idx], [["Sz"]], [-c])
+                    if magnetic_field_axis == "X":
+                        ob = Observable([idx], [["Sx"]], [-c])
+                    elif magnetic_field_axis == "Y":
+                        ob = Observable([idx], [["Sy"]], [-c])
+                    elif magnetic_field_axis == "Z":
+                        ob = Observable([idx], [["Sz"]], [-c])
                     self.observables.append(ob)
 
         if ion_anisotropy is not None:

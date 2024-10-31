@@ -16,6 +16,7 @@ system:
     # External magnetic field settings
     magnetic_field:
         active: 0 # 1 for adding magnetic field, 0 for no magnetic field
+        axis: X # Axis of the magnetic field (X, Y, or Z)
         uniform: 1 # 1 for uniform magnetic field, 0 for non-uniform
         h: 1.0 # Magnetic field size (used if uniform is 1)
         # hi_file: magnetic_field_per_site.dat # Site-variable file for non-uniform magnetic field (used if uniform is 0)

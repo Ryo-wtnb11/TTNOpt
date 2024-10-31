@@ -46,7 +46,7 @@ class FactorizeTensor(DataEngine):
     def run(
         self,
         opt_structure=False,
-        energy_convergence_threshold=1e-8,
+        fidelity_convergence_threshold=1e-8,
         entanglement_convergence_threshold=1e-8,
         max_num_sweep=5,
         converged_count=2,
@@ -62,6 +62,7 @@ class FactorizeTensor(DataEngine):
         """
 
         _ee_at_edge: Dict[int, float] = {}
+        _fidelity_at_edge: Dict[int, float] = {}
 
         edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
 
@@ -71,6 +72,7 @@ class FactorizeTensor(DataEngine):
         while converged_num < converged_count and sweep_num < max_num_sweep:
 
             ee_at_edge = copy.deepcopy(_ee_at_edge)
+            fidelity_at_edge = copy.deepcopy(_fidelity_at_edge)
             edges = copy.deepcopy(_edges)
 
             self.distance = self.initial_distance()
@@ -121,10 +123,11 @@ class FactorizeTensor(DataEngine):
                 )
 
                 self.distance = self.initial_distance()
-
-                print("Fidelity: ", self.fidelity())
+                fidelity = self.fidelity()
+                print("Fidelity: " + str(fidelity))
                 ee = self.entanglement_entropy(probability)
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
+                _fidelity_at_edge[self.psi.canonical_center_edge_id] = fidelity
 
             _edges = copy.deepcopy(self.psi.edges)
 
@@ -135,14 +138,19 @@ class FactorizeTensor(DataEngine):
                     np.abs(ee_at_edge[key] - _ee_at_edge[key])
                     for key in ee_at_edge.keys()
                 ]
+                diff_fidelity = [
+                    np.abs(fidelity_at_edge[key] - _fidelity_at_edge[key])
+                    for key in fidelity_at_edge.keys()
+                ]
                 if all(
                     [
                         set(edge[:2]) == set(_edge[:2]) and edge[2] == _edge[2]
                         for edge, _edge in zip(edges, _edges)
                     ]
                 ):
-                    if all([ee < entanglement_convergence_threshold for ee in diff_ee]):
+                    if all([ee < entanglement_convergence_threshold for ee in diff_ee]) and all(
+                        [fidelity < fidelity_convergence_threshold for fidelity in diff_fidelity]):
                         converged_num += 1
         print("Converged")
 
-        return _ee_at_edge
+        return _fidelity_at_edge, _ee_at_edge

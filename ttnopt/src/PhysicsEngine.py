@@ -415,7 +415,7 @@ class PhysicsEngine(TwoSiteUpdater):
         central_tensor_ids = self.psi.central_tensor_ids()
         ground_state = self.lanczos(central_tensor_ids, init_random=True)
         u, s, v, _, _ = self.decompose_two_tensors(
-            ground_state, self.max_bond_dim, self.truncation_error
+            ground_state, self.max_bond_dim
         )
         self.psi.tensors[central_tensor_ids[0]] = u
         self.psi.tensors[central_tensor_ids[1]] = v
