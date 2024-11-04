@@ -137,47 +137,6 @@ class DataEngine(TwoSiteUpdater):
             self.psi.edge_dims[self.psi.edges[tensor_id][2]] = n
         self.psi.gauge_tensor = np.eye(n)
 
-    def opt_structure(
-        self,
-        ee_threshold=1e-8,
-        converged_count=1,
-    ):
-        ee_at_edge, _ee_at_edge = {}, {}
-        edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
-
-        converged_num = 0
-
-        sweep_num = 0
-        while converged_num < converged_count:
-            ee_at_edge = copy.deepcopy(_ee_at_edge)
-            edges = copy.deepcopy(_edges)
-
-            self.distance = self.initial_distance()
-            self.flag = self.initial_flag()
-
-            plt = self.psi.visualize()
-            plt.show()
-            while self.candidate_edge_ids() != []:
-                self.move_center(opt_structure=True)
-                ee = self.entanglement_entropy()
-                _ee_at_edge[self.psi.canonical_center_edge_id] = ee
-
-            _edges = copy.deepcopy(self.psi.edges)
-            sweep_num += 1
-            if sweep_num > 2:
-                diff_ee = [
-                    np.abs(ee_at_edge[key] - _ee_at_edge[key])
-                    for key in ee_at_edge.keys()
-                ]
-                if all(
-                    [
-                        set(edge[:2]) == set(_edge[:2]) and edge[2] == _edge[2]
-                        for edge, _edge in zip(edges, _edges)
-                    ]
-                ):
-                    if all([ee < ee_threshold for ee in diff_ee]):
-                        converged_num += 1
-
     def move_center(self, opt_structure=False):
         (
             edge_id,
@@ -206,7 +165,7 @@ class DataEngine(TwoSiteUpdater):
             [psi1, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
         )
         u, s, v, edge_order = self.decompose_two_tensors(
-            psi, opt_structure=opt_structure
+            psi, self.max_bond_dim, opt_structure=opt_structure, operate_degeneracy=False
         )
         psi_edges = (
             self.psi.edges[selected_tensor_id][:2]

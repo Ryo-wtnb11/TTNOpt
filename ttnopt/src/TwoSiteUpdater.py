@@ -9,6 +9,12 @@ class TwoSiteUpdaterMixin:
         flag = {ind: 0 if ind not in self.psi.physical_edges else 1 for ind in edge_ids}
         return flag
 
+    def entanglement_entropy(self, probability):
+        el = probability**2 / np.sum(probability**2)
+        el = el[el > 0.0]
+        ee = -np.sum(el * np.log2(el))
+        return np.real(ee)
+
     def initial_distance(self):
         # 隣接リストを作成
         adjacency_list = defaultdict(list)
@@ -88,27 +94,6 @@ class TwoSiteUpdaterMixin:
                 self.flag[self.psi.edges[not_selected_tensor_id][2]] = 1
         return
 
-    def set_ttn_properties_at_one_tensor(self, edge_id, selected_tensor_id):
-        # update_ttn_properties
-        self.psi.canonical_center_edge_id = edge_id
-        out_selected_inds = []
-        for i, e in enumerate(self.psi.edges[selected_tensor_id]):
-            if e == edge_id:
-                canonical_center_ind = i
-            else:
-                out_selected_inds.append(i)
-        self.psi.tensors[selected_tensor_id] = self.psi.tensors[
-            selected_tensor_id
-        ].transpose(
-            out_selected_inds + [canonical_center_ind],
-        )
-        self.psi.edges[selected_tensor_id] = [
-            self.psi.edges[selected_tensor_id][i] for i in out_selected_inds
-        ] + [edge_id]
-        for i, e in enumerate(self.psi.edges[selected_tensor_id]):
-            self.psi.edge_dims[e] = self.psi.tensors[selected_tensor_id].shape[i]
-        return
-
     def contract_central_tensors(self):
         central_tensor_ids = self.psi.central_tensor_ids()
 
@@ -132,12 +117,6 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         self.backend = "numpy"
         self.flag = self.initial_flag()
         self.distance = self.initial_distance()
-
-    def entanglement_entropy(self, probability):
-        el = probability**2 / np.sum(probability**2)
-        el = el[el > 0.0]
-        ee = -np.sum(el * np.log2(el))
-        return np.real(ee)
 
     def decompose_two_tensors(
         self,
@@ -193,3 +172,24 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         s = s.get_tensor()[:ind, :ind]
         s = s / np.linalg.norm(s)
         return u, s, v, p, edge_order
+
+    def set_ttn_properties_at_one_tensor(self, edge_id, selected_tensor_id):
+        # update_ttn_properties
+        self.psi.canonical_center_edge_id = edge_id
+        out_selected_inds = []
+        for i, e in enumerate(self.psi.edges[selected_tensor_id]):
+            if e == edge_id:
+                canonical_center_ind = i
+            else:
+                out_selected_inds.append(i)
+        self.psi.tensors[selected_tensor_id] = self.psi.tensors[
+            selected_tensor_id
+        ].transpose(
+            out_selected_inds + [canonical_center_ind],
+        )
+        self.psi.edges[selected_tensor_id] = [
+            self.psi.edges[selected_tensor_id][i] for i in out_selected_inds
+        ] + [edge_id]
+        for i, e in enumerate(self.psi.edges[selected_tensor_id]):
+            self.psi.edge_dims[e] = self.psi.tensors[selected_tensor_id].shape[i]
+        return

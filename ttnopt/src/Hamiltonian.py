@@ -58,7 +58,7 @@ class Hamiltonian:
                 operator_list = []
                 coef_list = []
                 if coef[0] != 0.0:
-                    operator_list.append(["Sx", "S"])
+                    operator_list.append(["Sx", "Sx"])
                     coef_list.append(coef[0])
                 if coef[1] != 0.0:
                     operator_list.append(["Sy", "Sy"])

@@ -45,6 +45,7 @@ class FactorizeTensor(DataEngine):
 
     def run(
         self,
+        opt_fidelity=False,
         opt_structure=False,
         fidelity_convergence_threshold=1e-8,
         entanglement_convergence_threshold=1e-8,
@@ -90,7 +91,17 @@ class FactorizeTensor(DataEngine):
                 self.set_flag(not_selected_tensor_id)
                 self.set_ttn_properties_at_one_tensor(edge_id, selected_tensor_id)
 
-                new_tensor = self.update_tensor([selected_tensor_id, connected_tensor_id])
+                if opt_fidelity:
+                    new_tensor = self.update_tensor([selected_tensor_id, connected_tensor_id])
+                else:
+                    iso1 = tn.Node(self.psi.tensors[selected_tensor_id])
+                    iso2 = tn.Node(self.psi.tensors[connected_tensor_id])
+                    gauge = tn.Node(self.psi.gauge_tensor)
+                    iso1[2] ^ gauge[0]
+                    iso2[2] ^ gauge[1]
+                    new_tensor = tn.contractors.auto(
+                        [iso1, iso2], output_edge_order=[iso1[0], iso1[1], iso2[0], iso2[1]]
+                    )
 
                 psi_edges = (
                     self.psi.edges[selected_tensor_id][:2]

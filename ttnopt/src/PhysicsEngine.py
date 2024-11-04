@@ -276,7 +276,10 @@ class PhysicsEngine(TwoSiteUpdater):
             e_old = 0
             for j in range(1, dim_n):
                 beta[j] = np.linalg.norm(omega)
-                if j > 1 and beta[j] < tol:
+                if j == 1 and beta[j] < tol:
+                    eigen_vectors = psi
+                    return eigen_vectors
+                elif j > 1 and beta[j] < tol:
                     break
                 psi = tn.Node(omega / beta[j])
                 psi_w = self._apply_ham_psi(psi, central_tensor_ids)
@@ -293,6 +296,7 @@ class PhysicsEngine(TwoSiteUpdater):
                     if np.abs(e - e_old) < tol:
                         break
                     e_old = e
+
         v_tilda = np.array(v_tilda.flatten(), dtype=np.complex128)
         v = v_tilda[0] * psi_0.tensor
         psi = psi_0
@@ -541,7 +545,6 @@ class PhysicsEngine(TwoSiteUpdater):
                     spin_operators[i] = self._spin_operator_at_edge(
                         edge_id, bare_edge_id, operators[i]
                     )
-
                 block_ham = tn.ncon(
                     spin_operators,
                     [["-b0", "-k0"], ["-b1", "-k1"]],

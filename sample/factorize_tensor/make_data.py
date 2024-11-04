@@ -62,8 +62,8 @@ quantum_state_standard = quantum_state_standard.reshape((2,) * (L*3))
 quantum_state_interleaved = quantum_state_interleaved.reshape((2,) * (L*3))
 
 # 計算した量子状態を保存
-np.save("input/quantum_state_standard.npy", quantum_state_standard)
-np.save("input/quantum_state_interleaved.npy", quantum_state_interleaved)
+np.save("input_data/quantum_state_standard.npy", quantum_state_standard)
+np.save("input_data/quantum_state_interleaved.npy", quantum_state_interleaved)
 
 # z = 0.5 に対応するビット列を計算
 z_fixed_bin = [1] + [0] * 7  # z0 = 1 で他は 0
@@ -88,5 +88,5 @@ plt.imshow(f_xy_fixed_z, extent=(0, 1, 0, 1), origin='lower', cmap='seismic', vm
 plt.colorbar(extend='both')
 plt.xlabel('x')
 plt.ylabel('y')
-plt.savefig("input/sample.pdf")
+plt.savefig("input_data/sample.pdf")
 plt.close()
