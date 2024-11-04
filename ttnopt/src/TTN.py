@@ -68,8 +68,8 @@ class TreeTensorNetwork:
         if target is not None and max_bond_dimension is not None:
             if len(target.shape) != size:
                 raise ValueError(f"The shape of the tensor is not correct. tensor.shape={target.shape}, size={size}")
-            target = tn.Node(target)
-            U, S, V, _ = tn.split_node_full_svd(target, [target[0], target[1]], target[2:], max_singular_values=max_bond_dimension)
+            target_node = tn.Node(target)
+            U, S, V, _ = tn.split_node_full_svd(target_node, target_node[:2], target_node[2:], max_singular_values=max_bond_dimension)
             tensors = [U.tensor]
             V = tn.contractors.auto([V, S], [S[0]] + V[1:])
             for i in range(2, (size - 2) // 2 + 1):

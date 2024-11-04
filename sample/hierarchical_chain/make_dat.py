@@ -21,6 +21,12 @@ def generate_height_list(d: int):
     assign_heights(0, length - 1, d - 1, heights)
     return heights
 
+
+def hierarchical_chain_coef(d, coef_j=1.0, alpha=0.5):
+    coefs = generate_height_list(d)
+    coefs = [coef_j * (alpha**coef) for coef in coefs]
+    return coefs
+
 if __name__ == "__main__":
     d = 4
     size = 2**d
@@ -29,7 +35,7 @@ if __name__ == "__main__":
     df = pd.DataFrame(ij_list)
     df.to_csv("coupling_indices.dat", index=False, header=False)
 
-    J_list = [1.0 for _ in ij_list]
+    J_list = hierarchical_chain_coef(d)
     df = pd.DataFrame(np.array([J_list, J_list]).T) # for XXZ model
     df.to_csv("coupling_coefs.dat", index=False, header=False)
 

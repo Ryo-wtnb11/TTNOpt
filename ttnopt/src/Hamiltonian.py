@@ -12,12 +12,12 @@ class Hamiltonian:
                  system_size: int,
                  spin_size: List[str],
                  model: str,
-                 interaction_indices: List[Tuple[int]],
-                 interaction_coefs: List[float],
+                 interaction_indices: List[List[int]],
+                 interaction_coefs: List[List[float]],
                  magnetic_field: Optional[List[float]] = None,
                  magnetic_field_axis: Optional[str] = None,
                  ion_anisotropy: Optional[List[float]] = None,
-                 dzyaloshinskii_moriya: Optional[List[float]] = None,
+                 dzyaloshinskii_moriya: Optional[List[List[float]]] = None,
                 ):
         """Initialize a Hamiltonian object.
 

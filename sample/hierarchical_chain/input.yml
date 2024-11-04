@@ -42,13 +42,13 @@ numerics:
         # Jx == Jy and Hx = Hy == 0 and DM_x = DM_y == 0
         active: 0 # 1 for active, 0 for inactive
         magnetization: 0 # Total magnetization (used if U(1) symmetry is active)
-    initial_bond_dimension: 10
-    max_bond_dimensions: [10, 40] # Maximum bond dimension for each repetition
+    initial_bond_dimension: 4
+    max_bond_dimensions: [10, 20, 40] # Maximum bond dimension for each repetition
     max_num_sweeps: [15, 10, 2]
     truncation_error: 1e-10
     energy_convergence_threshold: 1e-7
     entanglement_convergence_threshold: 1e-7
-    energy_degeneracy_threshold: 1e-14
+    energy_degeneracy_threshold: 1e-11
     entanglement_degeneracy_threshold: 0.1
 
 output:
