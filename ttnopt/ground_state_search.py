@@ -1,8 +1,7 @@
 # ground_state_search.py
-from ttnopt.src import init_structure_mps
-from ttnopt.src import Observable
 from ttnopt.src import TreeTensorNetwork
 from ttnopt.src import GroundStateSearch
+from ttnopt.src import GroundStateSearchSparse
 
 from ttnopt.hamiltonian import hamiltonian
 
@@ -31,21 +30,41 @@ def ground_state_search():
     edge_op_at_edge = None
     block_ham_at_edge = None
     for i, (max_bond_dim, max_num_sweep) in enumerate(zip(numerics.max_bond_dimensions, numerics.max_num_sweeps)):
-        gss = GroundStateSearch(
-            psi,
-            ham,
-            init_bond_dim=numerics.initial_bond_dimension,
-            max_bond_dim=max_bond_dim,
-            truncation_error=numerics.truncation_error,
-            edge_spin_operators=edge_op_at_edge,
-            block_hamiltonians=block_ham_at_edge
-        )
-        energy, entanglement = gss.run(
-            opt_structure=opt_structure,
-            energy_convergence_threshold=float(numerics.energy_convergence_threshold),
-            entanglement_convergence_threshold=float(numerics.entanglement_convergence_threshold),
-            max_num_sweep=max_num_sweep,
-        )
+        if numerics.U1_symmetry.active:
+            gss = GroundStateSearchSparse(
+                psi,
+                ham,
+                numerics.U1_symmetry.magnetization,
+                init_bond_dim=numerics.initial_bond_dimension,
+                max_bond_dim=max_bond_dim,
+                truncation_error=numerics.truncation_error,
+                edge_spin_operators=edge_op_at_edge,
+                block_hamiltonians=block_ham_at_edge
+            )
+
+            energy, entanglement = gss.run(
+                opt_structure=opt_structure,
+                energy_convergence_threshold=float(numerics.energy_convergence_threshold),
+                entanglement_convergence_threshold=float(numerics.entanglement_convergence_threshold),
+                max_num_sweep=max_num_sweep,
+            )
+
+        else:
+            gss = GroundStateSearch(
+                psi,
+                ham,
+                init_bond_dim=numerics.initial_bond_dimension,
+                max_bond_dim=max_bond_dim,
+                truncation_error=numerics.truncation_error,
+                edge_spin_operators=edge_op_at_edge,
+                block_hamiltonians=block_ham_at_edge
+            )
+            energy, entanglement = gss.run(
+                opt_structure=opt_structure,
+                energy_convergence_threshold=float(numerics.energy_convergence_threshold),
+                entanglement_convergence_threshold=float(numerics.entanglement_convergence_threshold),
+                max_num_sweep=max_num_sweep,
+            )
 
         # reset parameters for the next iteration
         opt_structure = 0
@@ -54,12 +73,26 @@ def ground_state_search():
 
 
     nodes_list = []
-    for edge_id in energy.keys():
+    nodes_list = []
+    for edge_id in entanglement.keys():
         tmp = []
         for node_id, edges in enumerate(psi.edges):
+            node_id += config.system.N
             if edge_id in edges:
                 tmp.append(node_id)
         nodes_list.append(tmp)
+
+    for edge_id in psi.physical_edges:
+        tmp = []
+        tmp.append(edge_id)
+        for node_id, edges in enumerate(psi.edges):
+            node_id += config.system.N
+            if edge_id in edges:
+                tmp.append(node_id)
+        nodes_list.append(tmp)
+        energy[edge_id] = 0.0
+        entanglement[edge_id] = 0.0
+
 
     if config.output.basic_file is not DotMap():
         df = pd.DataFrame(nodes_list, columns=['node1', 'node2'], index=None)
@@ -118,13 +151,3 @@ def ground_state_search():
         df.to_csv(path / config.output.two_site_file, header=True, index=None)
 
     return 0
-
-
-
-
-
-
-
-
-
-

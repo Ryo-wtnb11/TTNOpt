@@ -15,20 +15,22 @@ class Hamiltonian:
                  interaction_indices: List[List[int]],
                  interaction_coefs: List[List[float]],
                  magnetic_field: Optional[List[float]] = None,
+                 magnetic_field_axis: Optional[str] = None,
                  ion_anisotropy: Optional[List[float]] = None,
                  dzyaloshinskii_moriya: Optional[List[List[float]]] = None,
                 ):
         """Initialize a Hamiltonian object.
 
         Args:
-            system_size : The size of the system.
-            spin_size : The size of the spin.
-            model : The model of the Hamiltonian, "XXZ" or "XYZ".
-            interaction_indices : The indices of the interaction.
-            interaction_coefs : The coefficients of the interaction.
-            magnetic_field : The magnetic field.
-            ion_anisotropy : The ion anisotropy.
-            dzyaloshinskii_moriya : The Dzyaloshinskii-Moriya interaction.
+            system_size (int): The size of the system.
+            spin_size (List[str]): The size of the spin.
+            model (str): The model of the Hamiltonian.
+            interaction_indices (List[Tuple[int]]): The indices of the interaction.
+            interaction_coefs (List[float]): The coefficients of the interaction.
+            magnetic_field (Optional[List[float]], optional): The magnetic field axis. Defaults to None.
+            magnetic_field_axis: The magnetic field axis. Defaults to None.
+            ion_anisotropy (Optional[List[float]], optional): The ion anisotropy. Defaults to None.
+            dzyaloshinskii_moriya (Optional[List[float]], optional): The Dzyaloshinskii-Moriya interaction. Defaults to None.
         """
         self.system_size = system_size
         self.spin_size = {i: spin_size[i] for i in range(self.system_size)}
@@ -56,8 +58,8 @@ class Hamiltonian:
                     continue
                 operator_list = []
                 coef_list = []
-                if not math.isclose(coef[0], 0.0):
-                    operator_list.append(["Sx", "S"])
+                if coef[0] != 0.0:
+                    operator_list.append(["Sx", "Sx"])
                     coef_list.append(coef[0])
                 if not math.isclose(coef[1], 0.0):
                     operator_list.append(["Sy", "Sy"])
@@ -70,8 +72,13 @@ class Hamiltonian:
 
         if magnetic_field is not None:
             for idx, c in enumerate(magnetic_field):
-                if not math.isclose(c, 0.0):
-                    ob = Observable([idx], [["Sz"]], [-c])
+                if c != 0.0:
+                    if magnetic_field_axis == "X":
+                        ob = Observable([idx], [["Sx"]], [-c])
+                    elif magnetic_field_axis == "Y":
+                        ob = Observable([idx], [["Sy"]], [-c])
+                    elif magnetic_field_axis == "Z":
+                        ob = Observable([idx], [["Sz"]], [-c])
                     self.observables.append(ob)
 
         if ion_anisotropy is not None:

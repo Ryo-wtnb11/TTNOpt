@@ -40,7 +40,7 @@ numerics:
         activate: 1
     U1_symmetry:
         # Jx == Jy and Hx = Hy == 0 and DM_x = DM_y == 0
-        active: 0 # 1 for active, 0 for inactive
+        active: 1 # 1 for active, 0 for inactive
         magnetization: 0 # Total magnetization (used if U(1) symmetry is active)
     initial_bond_dimension: 10
     max_bond_dimensions: [10, 40] # Maximum bond dimension for each repetition

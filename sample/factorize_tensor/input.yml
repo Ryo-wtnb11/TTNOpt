@@ -1,0 +1,32 @@
+target: input_data/quantum_state_standard.npy
+
+numerics:
+    opt_structure:
+        active: 0
+        initial_bond_dimension: 4
+        max_bond_dimension: 10
+        max_num_sweeps: 15
+        truncation_error: 1e-10
+        entanglement_convergence_threshold: 1e-7
+    opt_fidelity:
+        active: 1
+        init_structure:
+            tree: 0
+        init_random: 0
+        opt_structure:
+            activate: 1
+        initial_bond_dimension: 4
+        max_bond_dimensions: [10, 20, 40] # Maximum bond dimension for each repetition
+        max_num_sweeps: [15, 10, 2]
+        truncation_error: 1e-10
+        fidelity_convergence_threshold: 1e-7
+        entanglement_convergence_threshold: 1e-7
+
+output:
+    dir: data
+    basic_file: basic.csv
+
+    fidelity:
+        active: 1
+    entanglement:
+        active: 1

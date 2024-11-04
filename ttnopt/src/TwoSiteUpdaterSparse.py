@@ -12,19 +12,11 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
         self.flag = self.initial_flag()
         self.distance = self.initial_distance()
 
-    def entanglement_entropy(self, probability):
-        el = probability**2 / np.sum(probability**2)
-        el = el[el > 0.0]
-        ee = -np.sum(el * np.log2(el))
-        return np.real(ee)
-
     def decompose_two_tensors(
         self,
         psi,
         max_bond_dim,
-        max_truncation_err,
         opt_structure=False,
-        operate_degeneracy=False,
         epsilon=1e-8,
     ):
         psi_last = psi.copy()
@@ -61,18 +53,17 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
                     ee = ee_tmp
                     edge_order = edges
                     p = p_
-        # 縮退を解消
+        # diagonal
         ind = np.min([max_bond_dim, len(p)])
         indices = np.argsort(-p)
-        if operate_degeneracy:
-            if ind < len(p):
-                while ind > 1:
-                    if (
-                        np.abs(p[indices[ind]] - p[indices[ind] - 1]) / p[indices[ind]]
-                    ) * 100 < 0.1:
-                        ind -= 1
-                    else:
-                        break
+        if ind < len(p):
+            while ind > 1:
+                if (
+                    np.abs(p[indices[ind]] - p[indices[ind - 1]]) / p[indices[ind]]
+                ) * 100 < 0.1:
+                    ind -= 1
+                else:
+                    break
         a = psi_last[edge_order[0]]
         b = psi_last[edge_order[1]]
         c = psi_last[edge_order[2]]
@@ -106,6 +97,27 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
             u_tensor,
             s_tensor,
             v_tensor,
+            p,
             edge_order,
-            ee,
         )
+
+    def set_ttn_properties_at_one_tensor(self, edge_id, selected_tensor_id):
+        # update_ttn_properties
+        self.psi.canonical_center_edge_id = edge_id
+        out_selected_inds = []
+        for i, e in enumerate(self.psi.edges[selected_tensor_id]):
+            if e == edge_id:
+                canonical_center_ind = i
+            else:
+                out_selected_inds.append(i)
+        self.psi.tensors[selected_tensor_id] = self.psi.tensors[
+            selected_tensor_id
+        ].transpose(
+            out_selected_inds + [canonical_center_ind] + [3],
+        )
+        self.psi.edges[selected_tensor_id] = [
+            self.psi.edges[selected_tensor_id][i] for i in out_selected_inds
+        ] + [edge_id]
+        for i, e in enumerate(self.psi.edges[selected_tensor_id]):
+            self.psi.edge_dims[e] = self.psi.tensors[selected_tensor_id].shape[i]
+        return
