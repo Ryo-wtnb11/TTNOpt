@@ -1,6 +1,7 @@
-DMRG
-=======
-.. autoclass:: ttnopt.DMRG
+Hamiltonian
+==========
+
+.. autoclass:: ttnopt.Hamiltonian
    :show-inheritance:
    :special-members: __init__
    :members:

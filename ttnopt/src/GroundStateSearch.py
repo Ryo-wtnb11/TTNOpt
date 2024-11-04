@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 
 import numpy as np
 import tensornetwork as tn
@@ -32,13 +32,13 @@ class GroundStateSearch(PhysicsEngine):
         """Initialize a DMRG object.
 
         Args:
-            psi (TreeTensorNetwork): The quantum state.
-            hamiltonians (Hamiltonian): Hamiltonian which is list of Observable.
-            init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
-            max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
-            truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
-            edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
-            block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
+            psi : The quantum state.
+            hamiltonians : The Hamiltonian.
+            init_bond_dim : Initial bond dimension.
+            max_bond_dim : Maximum bond dimension.
+            truncation_error : Maximum truncation error.
+            edge_spin_operators : Spin operators at each edge.
+            block_hamiltonians : Block hamiltonian at each edge.
         """
         super().__init__(
             psi,
@@ -57,15 +57,19 @@ class GroundStateSearch(PhysicsEngine):
         entanglement_convergence_threshold : float = 1e-8,
         max_num_sweep : int = 5,
         converged_count : int = 2,
-
-    ):
-        """Run Ground State Search algorithm.
+    )->Tuple[Dict[int, float], Dict[int, float]]:
+        """Run DMRG algorithm.
 
         Args:
-            opt_structure (bool, optional): If optimize the tree structure or not. Defaults to False.
-            energy_convergence_threshold (float, optional): Energy threshold for convergence. Defaults to 1e-8.
-            entanglement_convergence_threshold (float, optional): Entanglement entropy threshold for automatic optimization. Defaults to 1e-8.
-            converged_count (int, optional): Converged count. Defaults to 1.
+            energy_threshold : Energy threshold for convergence.
+            ee_threshold : Entanglement entropy threshold for automatic optimization.
+            converged_count : Converged count.
+            opt_structure : If optimize the tree structure or not.
+
+        Returns:
+            The result of DMRG algorithm.
+                * energy : A dictionary mapping the edges to the energy.
+                * entanglement : A dictionary mapping the edges to the entanglement entropy.
         """
         energy_at_edge: Dict[int, float] = {}
         _energy_at_edge: Dict[int, float] = {}

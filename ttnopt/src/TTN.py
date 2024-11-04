@@ -43,7 +43,7 @@ class TreeTensorNetwork:
     def mps(cls, size: int, target: Optional[np.ndarray] = None, max_bond_dimension: Optional[int] = None):
         """Initialize an State object with matrix product structure.
         Args:
-            size (int): The size of system.
+            size : The size of system.
         """
         edges = []
         upper_edge_id = size
@@ -94,9 +94,10 @@ class TreeTensorNetwork:
 
     @classmethod
     def tree(cls, size: int):
-        """Initialize an State object with binary tree structure.
+        """Initialize an object with binary tree structure.
+
         Args:
-            size (int): The size of system.
+            size : The size of system.
         """
         edges = []
 
@@ -129,7 +130,7 @@ class TreeTensorNetwork:
         return cls(edges, center_edge_id)
 
     def visualize(self):
-        """Visualize the TreeTensorNetwork"""
+        """Visualize the TreeTensorNetwork."""
         g = nx.DiGraph()
         logs = self._get_parent_child_pairs()
 

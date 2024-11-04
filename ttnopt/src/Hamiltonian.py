@@ -1,3 +1,4 @@
+import math
 from typing import Optional, List, Tuple
 
 from ttnopt.src.Observable import Observable
@@ -41,12 +42,12 @@ class Hamiltonian:
                     continue
                 operator_list = []
                 coef_list = []
-                if coef[0] != 0.0:
+                if not math.isclose(coef[0], 0.0):
                     operator_list.append(["S+", "S-"])
                     coef_list.append(coef[0] / 2.0)
                     operator_list.append(["S-", "S+"])
                     coef_list.append(coef[0] / 2.0)
-                if coef[1] != 0.0:
+                if not math.isclose(coef[1], 0.0):
                     operator_list.append(["Sz", "Sz"])
                     coef_list.append(coef[1])
                 ob = Observable(i, operator_list, coef_list)
@@ -60,10 +61,10 @@ class Hamiltonian:
                 if coef[0] != 0.0:
                     operator_list.append(["Sx", "Sx"])
                     coef_list.append(coef[0])
-                if coef[1] != 0.0:
+                if not math.isclose(coef[1], 0.0):
                     operator_list.append(["Sy", "Sy"])
                     coef_list.append(coef[1])
-                if coef[2] != 0.0:
+                if not math.isclose(coef[2], 0.0):
                     operator_list.append(["Sz", "Sz"])
                     coef_list.append(coef[2])
                 ob = Observable(i, operator_list, coef_list)
@@ -82,7 +83,7 @@ class Hamiltonian:
 
         if ion_anisotropy is not None:
             for idx, c in enumerate(ion_anisotropy):
-                if c != 0.0:
+                if not math.isclose(c, 0.0):
                     ob = Observable([idx], [["Sz^2"]], [-c])
                     self.observables.append(ob)
 
@@ -90,13 +91,13 @@ class Hamiltonian:
             for i, coefs in zip(interaction_indices, dzyaloshinskii_moriya):
                 if all([c == 0.0 for c in coefs]):
                     continue
-                if coef[0] != 0.0:
+                if not math.isclose(coef[0], 0.0):
                     ob = Observable(i, [["Sx", "Sy"], ["Sy", "Sx"]], [coefs[0] - coefs[0]])
                     self.observables.append(ob)
-                if coef[1] != 0.0:
+                if not math.isclose(coef[1], 0.0):
                     ob = Observable(i, [["Sy", "Sz"], ["Sz", "Sy"]], [coefs[1] - coefs[1]])
                     self.observables.append(ob)
-                if coef[2] != 0.0:
+                if not math.isclose(coef[2], 0.0):
                     ob = Observable(i, [["Sz", "Sx"], ["Sx", "Sz"]], [coefs[2] - coefs[2]])
                     self.observables.append(ob)
 

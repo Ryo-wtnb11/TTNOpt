@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-ttnopt documentation
+TTNOpt documentation
 ====================
 
 Add your content using ``reStructuredText`` syntax. See the
@@ -22,7 +22,7 @@ documentation for details.
    :maxdepth: 2
    :caption: Tutorials
 
-   tutorials/DMRG_algorithm
+   tutorials/DMRG
 
 .. toctree::
    :maxdepth: 1
@@ -30,7 +30,8 @@ documentation for details.
 
    api/TreeTensorNetwork
    api/Observable
-   api/DMRG
+   api/Hamiltonian
+   api/GroundStateSearch
 
 Indices and tables
 ==================

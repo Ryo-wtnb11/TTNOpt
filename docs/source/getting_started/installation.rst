@@ -1,7 +1,8 @@
 Installation
 ============
 
-One can install the package from GitHub
-```
-pip install git+https://github.com/Watayo/TTNOpt
-```
+One can install the package from GitHub:
+
+.. code-block:: bash
+
+    pip install git+https://github.com/Watayo/TTNOpt

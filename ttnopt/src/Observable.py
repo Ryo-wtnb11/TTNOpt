@@ -16,9 +16,9 @@ class Observable:
         """Initialize an Observable object.
 
         Args:
-            indices (List[int]): Indices of the observable.
-            operators_list (List[List[str]]): List of operators for each index.
-            coef_list (List[float]): Coefficients for each operator.
+            indices : Indices of the observable.
+            operators_list : List of operators, "S+", "S-", "Sz", "Sx" and "Sy".
+            coef_list : Coefficients for each operator.
         """
         self.indices = indices
         self.operators_list = operators_list
