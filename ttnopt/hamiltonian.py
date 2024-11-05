@@ -88,6 +88,7 @@ def hamiltonian(config: DotMap):
                 interaction_indices,
                 interaction_coefs,
                 magnetic_field=magnetic_field,
+                magnetic_field_axis=config.magnetic_field.axis,
                 ion_anisotropy=ion_anisotropy,
                 dzyaloshinskii_moriya=dzyaloshinskii_moriya,
             )
@@ -102,6 +103,7 @@ def hamiltonian(config: DotMap):
                 interaction_indices,
                 interaction_coefs,
                 magnetic_field=magnetic_field,
+                magnetic_field_axis=config.magnetic_field.axis,
                 ion_anisotropy=ion_anisotropy,
                 dzyaloshinskii_moriya=dzyaloshinskii_moriya,
             )
