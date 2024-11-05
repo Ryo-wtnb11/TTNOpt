@@ -57,7 +57,7 @@ class Hamiltonian:
                 operator_list = []
                 coef_list = []
                 if not math.isclose(coef[0], 0.0):
-                    operator_list.append(["Sx", "S"])
+                    operator_list.append(["Sx", "Sx"])
                     coef_list.append(coef[0])
                 if not math.isclose(coef[1], 0.0):
                     operator_list.append(["Sy", "Sy"])
@@ -71,7 +71,7 @@ class Hamiltonian:
         if magnetic_field is not None:
             for idx, c in enumerate(magnetic_field):
                 if not math.isclose(c, 0.0):
-                    ob = Observable([idx], [["Sz"]], [-c])
+                    ob = Observable([idx], ["Sx"], [-c])
                     self.observables.append(ob)
 
         if ion_anisotropy is not None:

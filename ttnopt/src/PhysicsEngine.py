@@ -415,11 +415,12 @@ class PhysicsEngine(TwoSiteUpdater):
         central_tensor_ids = self.psi.central_tensor_ids()
         ground_state = self.lanczos(central_tensor_ids, init_random=True)
         u, s, v, _, _ = self.decompose_two_tensors(
-            ground_state, self.max_bond_dim, self.truncation_error
+            ground_state, self.max_bond_dim
         )
         self.psi.tensors[central_tensor_ids[0]] = u
         self.psi.tensors[central_tensor_ids[1]] = v
         self.psi.gauge_tensor = s
+
 
     def _apply_ham_psi(self, psi, central_tensor_ids):
         psi_tensor = np.zeros(psi.shape, dtype=np.complex128)
@@ -618,16 +619,16 @@ class PhysicsEngine(TwoSiteUpdater):
             # if the bond dimension is too small, we need to increase it
             # stop program execution
             raise ValueError("initial bond dimension is too small.")
-
         isometry = eigenvectors[:, :ind]
         isometry = eigenvectors[:, :ind].reshape(lower_edge_dims + (ind,))
         self.psi.tensors[tensor_id] = isometry
 
     def _set_psi_edge_dim(self, tensor_id):
         if self.psi.tensors[tensor_id] is not None:
-            self.psi.edge_dims[self.psi.edges[tensor_id][2]] = self.psi.tensors[
+            for i, d in enumerate(self.psi.tensors[
                 tensor_id
-            ].shape[2]
+            ].shape):
+                self.psi.edge_dims[self.psi.edges[tensor_id][i]] = d
 
     def _set_edge_spin(self, tensor_id):
         new_spin_operators = {}
@@ -732,6 +733,7 @@ class PhysicsEngine(TwoSiteUpdater):
                     "Sz": bare_spin_operator("Sz", value),
                 }
             }
+
         return edge_spin_operators
 
     def _init_block_hamiltonians(self):
