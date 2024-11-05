@@ -276,7 +276,10 @@ class PhysicsEngine(TwoSiteUpdater):
             e_old = 0
             for j in range(1, dim_n):
                 beta[j] = np.linalg.norm(omega)
-                if j > 1 and beta[j] < tol:
+                if j == 1 and beta[j] < tol:
+                    eigen_vectors = psi
+                    return eigen_vectors
+                elif j > 1 and beta[j] < tol:
                     break
                 psi = tn.Node(omega / beta[j])
                 psi_w = self._apply_ham_psi(psi, central_tensor_ids)
@@ -293,6 +296,7 @@ class PhysicsEngine(TwoSiteUpdater):
                     if np.abs(e - e_old) < tol:
                         break
                     e_old = e
+
         v_tilda = np.array(v_tilda.flatten(), dtype=np.complex128)
         v = v_tilda[0] * psi_0.tensor
         psi = psi_0
@@ -404,7 +408,7 @@ class PhysicsEngine(TwoSiteUpdater):
         return eigen_vectors
 
     def init_tensors_by_block_hamiltonian(self):
-        sequence = get_renormalization_sequence(self.psi.edges, self.psi.top_edge_id)
+        sequence = get_renormalization_sequence(self.psi.edges, self.psi.canonical_center_edge_id)
         for tensor_id in sequence:
             ham = self._get_block_hamiltonian(tensor_id)
             self._set_psi_tensor_with_ham(tensor_id, ham)
@@ -413,7 +417,7 @@ class PhysicsEngine(TwoSiteUpdater):
             self._set_block_hamiltonian(tensor_id, ham)
         # gauge_tensor
         central_tensor_ids = self.psi.central_tensor_ids()
-        ground_state = self.lanczos(central_tensor_ids, init_random=True)
+        ground_state = self.lanczos(central_tensor_ids)
         u, s, v, _, _ = self.decompose_two_tensors(
             ground_state, self.max_bond_dim
         )
@@ -542,7 +546,6 @@ class PhysicsEngine(TwoSiteUpdater):
                     spin_operators[i] = self._spin_operator_at_edge(
                         edge_id, bare_edge_id, operators[i]
                     )
-
                 block_ham = tn.ncon(
                     spin_operators,
                     [["-b0", "-k0"], ["-b1", "-k1"]],
@@ -744,7 +747,7 @@ class PhysicsEngine(TwoSiteUpdater):
                     spin_operators = []
                     for n in range(ham.operators_num):
                         operators = ham.operators_list[n]
-                        spin_operator = self._spin_operator_at_edge(key, key, operators)
+                        spin_operator = self._spin_operator_at_edge(key, key, operators[0])
                         spin_operator *= ham.coef_list[n]
                         spin_operators.append(spin_operator)
                     block_ham = np.sum(spin_operators, axis=0)

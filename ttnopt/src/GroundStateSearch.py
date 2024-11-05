@@ -7,13 +7,18 @@ import copy
 from ttnopt.src.PhysicsEngine import PhysicsEngine
 from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.Hamiltonian import Hamiltonian
-from ttnopt.src.Observable import Observable
 
 
 class GroundStateSearch(PhysicsEngine):
     """A class for ground state search algorithm based on DMRG.
+        psi (TreeTensorNetwork): The quantum state.
+        hamiltonians (Hamiltonian): Hamiltonian which is list of Observable.
+        init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
+        max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
+        truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
+        edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
+        block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
     """
-
     def __init__(
         self,
         psi: TreeTensorNetwork,
@@ -117,7 +122,7 @@ class GroundStateSearch(PhysicsEngine):
                     + self.psi.edges[connected_tensor_id][:2]
                 )
 
-                u, s, v, edge_order, probability = self.decompose_two_tensors(
+                u, s, v, probability, edge_order = self.decompose_two_tensors(
                     ground_state,
                     self.max_bond_dim,
                     opt_structure=opt_structure,
