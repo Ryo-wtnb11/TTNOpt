@@ -417,7 +417,7 @@ class PhysicsEngine(TwoSiteUpdater):
             self._set_block_hamiltonian(tensor_id, ham)
         # gauge_tensor
         central_tensor_ids = self.psi.central_tensor_ids()
-        ground_state = self.lanczos(central_tensor_ids, init_random=True)
+        ground_state = self.lanczos(central_tensor_ids)
         u, s, v, _, _ = self.decompose_two_tensors(
             ground_state, self.max_bond_dim
         )
@@ -745,7 +745,7 @@ class PhysicsEngine(TwoSiteUpdater):
                     spin_operators = []
                     for n in range(ham.operators_num):
                         operators = ham.operators_list[n]
-                        spin_operator = self._spin_operator_at_edge(key, key, operators)
+                        spin_operator = self._spin_operator_at_edge(key, key, operators[0])
                         spin_operator *= ham.coef_list[n]
                         spin_operators.append(spin_operator)
                     block_ham = np.sum(spin_operators, axis=0)
