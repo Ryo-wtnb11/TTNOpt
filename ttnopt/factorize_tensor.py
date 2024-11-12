@@ -60,7 +60,7 @@ def factorize_tensor():
 
 
     nodes_list = []
-    for edge_id in entanglement.keys():
+    for edge_id in fidelity.keys():
         tmp = []
         for node_id, edges in enumerate(psi.edges):
             node_id += N

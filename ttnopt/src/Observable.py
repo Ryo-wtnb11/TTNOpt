@@ -56,14 +56,14 @@ def bare_spin_operator(spin, spin_num):
     dim = int(2 * spin_value + 1)  # Dimension of the matrix based on the spin value
     if spin == "S+":
         # Construct the raising operator S+
-        S_plus = np.zeros((dim, dim), dtype=np.float64)
+        S_plus = np.zeros((dim, dim), dtype=np.complex128)
         for m in range(dim - 1):
             S_plus[m, m + 1] = np.sqrt(spin_value * (spin_value + 1) - (spin_value - m) * (spin_value - m - 1))
         return S_plus
 
     elif spin == "S-":
         # Construct the raising operator S+
-        S_plus = np.zeros((dim, dim), dtype=np.float64)
+        S_plus = np.zeros((dim, dim), dtype=np.complex128)
         for m in range(dim - 1):
             S_plus[m, m + 1] = np.sqrt(spin_value * (spin_value + 1) - (spin_value - m) * (spin_value - m - 1))
         S_minus = np.transpose(S_plus)
@@ -71,7 +71,7 @@ def bare_spin_operator(spin, spin_num):
 
     elif spin == "Sz":
         # Construct the Sz operator
-        Sz = np.zeros((dim, dim), dtype=np.float64)
+        Sz = np.zeros((dim, dim), dtype=np.complex128)
         for m in range(dim):
             Sz[m, m] = spin_value - m
         return Sz

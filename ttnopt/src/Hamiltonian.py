@@ -14,24 +14,42 @@ class Hamiltonian:
                  model: str,
                  interaction_indices: List[List[int]],
                  interaction_coefs: List[List[float]],
+                 magnetic_field_indices: Optional[List[int]] = None,
                  magnetic_field: Optional[List[float]] = None,
                  magnetic_field_axis: Optional[str] = None,
+                 ion_anisotropy_indices: Optional[List[int]] = None,
                  ion_anisotropy: Optional[List[float]] = None,
-                 dzyaloshinskii_moriya: Optional[List[List[float]]] = None,
+                 dzyaloshinskii_moriya_indices: Optional[List[List[int]]] = None,
+                 dzyaloshinskii_moriya: Optional[List[float]] = None,
+                 dzyaloshinskii_moriya_axis: Optional[str] = None,
                 ):
-        """Initialize a Hamiltonian object.
-
-        Args:
-            system_size (int): The size of the system.
-            spin_size (List[str]): The size of the spin.
-            model (str): The model of the Hamiltonian.
-            interaction_indices (List[Tuple[int]]): The indices of the interaction.
-            interaction_coefs (List[float]): The coefficients of the interaction.
-            magnetic_field (Optional[List[float]], optional): The magnetic field axis. Defaults to None.
-            magnetic_field_axis: The magnetic field axis. Defaults to None.
-            ion_anisotropy (Optional[List[float]], optional): The ion anisotropy. Defaults to None.
-            dzyaloshinskii_moriya (Optional[List[float]], optional): The Dzyaloshinskii-Moriya interaction. Defaults to None.
         """
+            Args:
+                system_size (int): The size of the system, indicating the number of sites or particles.
+                spin_size (List[str]): A list of spin types or values, each corresponding to the spin state of each site in the system.
+                model (str): The type of Hamiltonian model, which determines the specific interactions and parameters used (e.g., "Heisenberg", "Ising").
+                interaction_indices (List[List[int]]): A nested list of integer pairs, where each sub-list specifies two indices corresponding
+                    to sites or particles between which an interaction occurs.
+                interaction_coefs (List[List[float]]): A nested list where each sub-list contains the coefficients for the interactions
+                    specified in `interaction_indices`, defining the strength and nature of each interaction.
+                magnetic_field_indices (Optional[List[int]], optional): A list of site indices at which the magnetic field is applied.
+                    If None, no magnetic field is applied to any specific site. Defaults to None.
+                magnetic_field (Optional[List[float]], optional): A list of magnetic field strengths, where each value corresponds
+                    to a specific site defined in `magnetic_field_indices`. Defaults to None.
+                magnetic_field_axis (Optional[str], optional): The axis along which the magnetic field is applied, specified as a string
+                    ("x", "y", or "z"). Defaults to None.
+                ion_anisotropy_indices (Optional[List[int]], optional): A list of indices specifying the sites with single-ion anisotropy.
+                    Defaults to None.
+                ion_anisotropy (Optional[List[float]], optional): A list of single-ion anisotropy values corresponding to each site specified
+                    in `ion_anisotropy_indices`. Defaults to None.
+                dzyaloshinskii_moriya_indices (Optional[List[List[int]]], optional): A nested list of integer pairs, where each sub-list specifies
+                    two indices corresponding to sites with Dzyaloshinskii-Moriya (DM) interaction. Defaults to None.
+                dzyaloshinskii_moriya (Optional[List[float]], optional): A list of DM interaction strengths, where each value corresponds
+                    to the pair specified in `dzyaloshinskii_moriya_indices`. Defaults to None.
+                dzyaloshinskii_moriya_axis (Optional[str], optional): The axis along which the DM interaction is applied, typically one
+                    of the Cartesian coordinates ("x", "y", or "z"). Defaults to None.
+            """
+
         self.system_size = system_size
         self.spin_size = {i: spin_size[i] for i in range(self.system_size)}
         self.observables = []
@@ -70,8 +88,8 @@ class Hamiltonian:
                 ob = Observable(i, operator_list, coef_list)
                 self.observables.append(ob)
 
-        if magnetic_field is not None:
-            for idx, c in enumerate(magnetic_field):
+        if magnetic_field is not None and magnetic_field_indices is not None:
+            for idx, c in zip(magnetic_field_indices, magnetic_field):
                 if c != 0.0:
                     if magnetic_field_axis == "X":
                         ob = Observable([idx], [["Sx"]], [-c])
@@ -81,23 +99,22 @@ class Hamiltonian:
                         ob = Observable([idx], [["Sz"]], [-c])
                     self.observables.append(ob)
 
-        if ion_anisotropy is not None:
-            for idx, c in enumerate(ion_anisotropy):
+        if ion_anisotropy is not None and ion_anisotropy_indices is not None:
+            for idx, c in zip(ion_anisotropy_indices, ion_anisotropy):
                 if not math.isclose(c, 0.0):
                     ob = Observable([idx], [["Sz^2"]], [-c])
                     self.observables.append(ob)
 
-        if dzyaloshinskii_moriya is not None:
-            for i, coefs in zip(interaction_indices, dzyaloshinskii_moriya):
-                if all([c == 0.0 for c in coefs]):
-                    continue
-                if not math.isclose(coef[0], 0.0):
-                    ob = Observable(i, [["Sx", "Sy"], ["Sy", "Sx"]], [coefs[0] - coefs[0]])
-                    self.observables.append(ob)
-                if not math.isclose(coef[1], 0.0):
-                    ob = Observable(i, [["Sy", "Sz"], ["Sz", "Sy"]], [coefs[1] - coefs[1]])
-                    self.observables.append(ob)
-                if not math.isclose(coef[2], 0.0):
-                    ob = Observable(i, [["Sz", "Sx"], ["Sx", "Sz"]], [coefs[2] - coefs[2]])
-                    self.observables.append(ob)
+        if dzyaloshinskii_moriya is not None and dzyaloshinskii_moriya_indices is not None:
+            for i, c in zip(dzyaloshinskii_moriya_indices, dzyaloshinskii_moriya):
+                if c != 0.0:
+                    if dzyaloshinskii_moriya_axis == "X":
+                        ob = Observable(i, [["Sx", "Sy"], ["Sy", "Sx"]], [c, -c])
+                        self.observables.append(ob)
+                    if dzyaloshinskii_moriya_axis == "Y":
+                        ob = Observable(i, [["Sy", "Sz"], ["Sz", "Sy"]], [c, -c])
+                        self.observables.append(ob)
+                    if dzyaloshinskii_moriya_axis == "Z":
+                        ob = Observable(i, [["Sz", "Sx"], ["Sx", "Sz"]], [c, -c])
+                        self.observables.append(ob)
 
