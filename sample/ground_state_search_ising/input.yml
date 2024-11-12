@@ -1,24 +1,25 @@
 system:
-    N: 16 # Number of spins
+    N: 64 # Number of spins
 
     # Spin size configuration
     spin_size:
-        uniform: 0 # 1 for uniform spin size, 0 for non-uniform
-        #S: 3/2 # Spin size (used only if uniform is 1)
-        Si_file: spins_sizes.dat # File containing spin sizes per site (used if uniform is 0)
+        uniform: 1 # 1 for uniform spin size, 0 for non-uniform
+        S: 1/2 # Spin size (used only if uniform is 1)
+        # Si_file: spins_sizes.dat # File containing spin sizes per site (used if uniform is 0)
 
     # Exchange coupling for the XXZ or XYZ model
     model:
         type: XXZ # Choose XXZ or XYZ
-        Jij_file: coupling_feature.dat # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
+        ij_file: coupling_indices.dat
+        Jij_file: coupling_coefs.dat # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
 
     # External magnetic field settings
     magnetic_field:
-        active: 0 # 1 for adding magnetic field, 0 for no magnetic field
+        active: 1 # 1 for adding magnetic field, 0 for no magnetic field
         axis: X # Axis of the magnetic field (X, Y, or Z)
-        uniform: 0 # 1 for uniform magnetic field, 0 for non-uniform
-        h: 1.0 # Magnetic field size (used if uniform is 1)
-        hi_file: magnetic_field_per_site.dat # Site-variable file for non-uniform magnetic field (used if uniform is 0)
+        uniform: 1 # 1 for uniform magnetic field, 0 for non-uniform
+        h: 0.25 # Magnetic field size (used if uniform is 1)
+        # hi_file: magnetic_field_per_site.dat # Site-variable file for non-uniform magnetic field (used if uniform is 0)
 
     # Single-ion anisotropy settings
     single_ion_anisotropy:
@@ -30,7 +31,6 @@ system:
     # DM interaction settings
     DM_interaction:
         active: 0 # 1 for adding DM interaction, 0 for none
-        axis: Z
         DM_file: DM.dat # Pair-variable file containing DM interaction values
 
 numerics:
@@ -42,13 +42,13 @@ numerics:
         # Jx == Jy and Hx = Hy == 0 and DM_x = DM_y == 0
         active: 0 # 1 for active, 0 for inactive
         magnetization: 0 # Total magnetization (used if U(1) symmetry is active)
-    initial_bond_dimension: 10
-    max_bond_dimensions: [10, 40] # Maximum bond dimension for each repetition
+    initial_bond_dimension: 4
+    max_bond_dimensions: [10, 20] # Maximum bond dimension for each repetition
     max_num_sweeps: [15, 10, 2]
     truncation_error: 1e-10
     energy_convergence_threshold: 1e-7
     entanglement_convergence_threshold: 1e-7
-    energy_degeneracy_threshold: 1e-14
+    energy_degeneracy_threshold: 1e-12
     entanglement_degeneracy_threshold: 0.1
 
 output:

@@ -22,20 +22,17 @@ def generate_height_list(d: int):
     return heights
 
 if __name__ == "__main__":
-    d = 4
+    d = 6
     size = 2**d
 
-    # Assuming ij_list contains pairs of indices as integers (e.g., [(i1, j1), (i2, j2), ...])
-    ij_list = open_adjacent_indexs(d)  # Example function to obtain ij_list pairs
-    J_list = [1.0 for _ in ij_list]
-    J_list = np.array([J_list, J_list]).T
+    ij_list = open_adjacent_indexs(d)
+    df = pd.DataFrame(ij_list)
+    df.to_csv("coupling_indices.dat", index=False, header=False)
 
-    # Create a DataFrame with integer types for ij_list and float for J_list
-    df = pd.DataFrame(data=np.column_stack((ij_list, J_list)), columns=['i', 'j', 'J1', 'J2'])
-    df[['i', 'j']] = df[['i', 'j']].astype(int)  # Ensuring ij columns are integers
-
-    # Save to CSV without header and index
-    df.to_csv("coupling_feature.dat", index=False, header=False)
+    Jxy_list = [0.0 for _ in ij_list]
+    Jzz_list = [1.0 for _ in ij_list]
+    df = pd.DataFrame(np.array([Jxy_list, Jzz_list]).T) # for XXZ model
+    df.to_csv("coupling_coefs.dat", index=False, header=False)
 
 
 

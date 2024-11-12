@@ -248,9 +248,18 @@ class PhysicsEngine(TwoSiteUpdater):
         self.distance = self.initial_distance()
 
     def lanczos(self, central_tensor_ids, tol=1e-10, init_random=False):
+        if self.psi.tensors[central_tensor_ids[0]].shape[2] !=  self.psi.tensors[central_tensor_ids[1]].shape[2]:
+            psi_1_shape = self.psi.tensors[central_tensor_ids[0]].shape
+            psi_2_shape = self.psi.tensors[central_tensor_ids[1]].shape
+            if psi_2_shape[2] < psi_1_shape[2]:
+                self.psi.tensors[central_tensor_ids[0]] = self.psi.tensors[central_tensor_ids[0]][:, :, :psi_2_shape[2]]
+            elif psi_1_shape[2] < psi_2_shape[2]:
+                self.psi.tensors[central_tensor_ids[1]] = self.psi.tensors[central_tensor_ids[1]][:, :, :psi_1_shape[2]]
+
         psi_1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
         psi_2 = tn.Node(self.psi.tensors[central_tensor_ids[1]])
         psi_1[2] ^ psi_2[2]
+
         psi = tn.contractors.auto(
             [psi_1, psi_2], output_edge_order=[psi_1[0], psi_1[1], psi_2[0], psi_2[1]]
         )

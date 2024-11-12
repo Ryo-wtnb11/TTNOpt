@@ -14,10 +14,14 @@ class Hamiltonian:
                  model: str,
                  interaction_indices: List[List[int]],
                  interaction_coefs: List[List[float]],
+                 magnetic_field_indices: Optional[List[int]] = None,
                  magnetic_field: Optional[List[float]] = None,
                  magnetic_field_axis: Optional[str] = None,
+                 ion_anisotropy_indices: Optional[List[int]] = None,
                  ion_anisotropy: Optional[List[float]] = None,
+                 dzyaloshinskii_moriya_indices: Optional[List[List[int]]] = None,
                  dzyaloshinskii_moriya: Optional[List[List[float]]] = None,
+                 dzyaloshinskii_moriya_axis: Optional[str] = None,
                 ):
         """Initialize a Hamiltonian object.
 
@@ -71,7 +75,7 @@ class Hamiltonian:
                 self.observables.append(ob)
 
         if magnetic_field is not None:
-            for idx, c in enumerate(magnetic_field):
+            for idx, c in zip(magnetic_field_indices, magnetic_field):
                 if c != 0.0:
                     if magnetic_field_axis == "X":
                         ob = Observable([idx], [["Sx"]], [-c])
@@ -82,22 +86,21 @@ class Hamiltonian:
                     self.observables.append(ob)
 
         if ion_anisotropy is not None:
-            for idx, c in enumerate(ion_anisotropy):
+            for idx, c in zip(ion_anisotropy_indices, ion_anisotropy):
                 if not math.isclose(c, 0.0):
                     ob = Observable([idx], [["Sz^2"]], [-c])
                     self.observables.append(ob)
 
         if dzyaloshinskii_moriya is not None:
-            for i, coefs in zip(interaction_indices, dzyaloshinskii_moriya):
-                if all([c == 0.0 for c in coefs]):
-                    continue
-                if not math.isclose(coef[0], 0.0):
-                    ob = Observable(i, [["Sx", "Sy"], ["Sy", "Sx"]], [coefs[0] - coefs[0]])
-                    self.observables.append(ob)
-                if not math.isclose(coef[1], 0.0):
-                    ob = Observable(i, [["Sy", "Sz"], ["Sz", "Sy"]], [coefs[1] - coefs[1]])
-                    self.observables.append(ob)
-                if not math.isclose(coef[2], 0.0):
-                    ob = Observable(i, [["Sz", "Sx"], ["Sx", "Sz"]], [coefs[2] - coefs[2]])
-                    self.observables.append(ob)
+            for idx, c in zip(dzyaloshinskii_moriya_indices, dzyaloshinskii_moriya):
+                if c != 0.0:
+                    if dzyaloshinskii_moriya_axis == "X":
+                        ob = Observable(i, [["Sx", "Sy"], ["Sy", "Sx"]], [c, -c])
+                        self.observables.append(ob)
+                    if dzyaloshinskii_moriya_axis == "Y":
+                        ob = Observable(i, [["Sy", "Sz"], ["Sz", "Sy"]], [c, -c])
+                        self.observables.append(ob)
+                    if dzyaloshinskii_moriya_axis == "Z":
+                        ob = Observable(i, [["Sz", "Sx"], ["Sx", "Sz"]], [c, -c])
+                        self.observables.append(ob)
 
