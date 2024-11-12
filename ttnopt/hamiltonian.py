@@ -82,8 +82,7 @@ def hamiltonian(config: DotMap):
             raise ValueError("Please input Di_file in dzyaloshinskii_moriya")
         dzyaloshinskii_moriya_csv = pd.read_csv(config.dzyaloshinskii_moriya.DM_file, delimiter=",", header=None)
         dzyaloshinskii_moriya_indices = dzyaloshinskii_moriya_csv.iloc[:, :2].values
-        dzyaloshinskii_moriya = dzyaloshinskii_moriya_csv.iloc[:, 2].values
-        dzyaloshinskii_moriya_axis = config.dzyaloshinskii_moriya.axis
+        dzyaloshinskii_moriya = dzyaloshinskii_moriya_csv.iloc[:, 2:].values
 
         if dzyaloshinskii_moriya_indices.max() >= config.N:
             raise ValueError(f"Interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N}).")
@@ -109,7 +108,6 @@ def hamiltonian(config: DotMap):
                 ion_anisotropy=ion_anisotropy,
                 dzyaloshinskii_moriya_indices=dzyaloshinskii_moriya_indices,
                 dzyaloshinskii_moriya=dzyaloshinskii_moriya,
-                dzyaloshinskii_moriya_axis=dzyaloshinskii_moriya_axis,
             )
         else:
             raise ValueError("Please input two columns in Jij_file for XXZ model")
@@ -128,7 +126,6 @@ def hamiltonian(config: DotMap):
                 ion_anisotropy=ion_anisotropy,
                 dzyaloshinskii_moriya_indices=dzyaloshinskii_moriya_indices,
                 dzyaloshinskii_moriya=dzyaloshinskii_moriya,
-                dzyaloshinskii_moriya_axis=dzyaloshinskii_moriya_axis,
             )
         else:
             raise ValueError("Please input two columns in Jij_file for XYZ model")
