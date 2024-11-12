@@ -57,7 +57,7 @@ class GroundStateSearch(PhysicsEngine):
         entanglement_convergence_threshold : float = 1e-8,
         max_num_sweep : int = 5,
         converged_count : int = 2,
-    )->Tuple[Dict[int, float], Dict[int, float]]:
+    )->Tuple[Dict[int, float], Dict[int, float], Dict[int, float]]:
         """Run DMRG algorithm.
 
         Args:
@@ -75,6 +75,8 @@ class GroundStateSearch(PhysicsEngine):
         _energy_at_edge: Dict[int, float] = {}
         ee_at_edge: Dict[int, float] = {}
         _ee_at_edge: Dict[int, float] = {}
+        error_at_edge: Dict[int, float] = {}
+        _error_at_edge: Dict[int, float] = {}
 
         edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
 
@@ -85,6 +87,8 @@ class GroundStateSearch(PhysicsEngine):
             # energy
             energy_at_edge = copy.deepcopy(_energy_at_edge)
             ee_at_edge = copy.deepcopy(_ee_at_edge)
+            error_at_edge = copy.deepcopy(_error_at_edge)
+
             edges = copy.deepcopy(_edges)
 
             self.distance = self.initial_distance()
@@ -121,7 +125,7 @@ class GroundStateSearch(PhysicsEngine):
                     + self.psi.edges[connected_tensor_id][:2]
                 )
 
-                u, s, v, probability, edge_order = self.decompose_two_tensors(
+                u, s, v, probability, error, edge_order = self.decompose_two_tensors(
                     ground_state,
                     self.max_bond_dim,
                     opt_structure=opt_structure,
@@ -155,6 +159,7 @@ class GroundStateSearch(PhysicsEngine):
                 ee_dict = self.entanglement_entropy_at_physical_bond(ground_state, psi_edges)
                 for key in ee_dict.keys():
                     _ee_at_edge[key] = ee_dict[key]
+                _error_at_edge[self.psi.canonical_center_edge_id] = error
 
             _edges = copy.deepcopy(self.psi.edges)
 
@@ -181,4 +186,4 @@ class GroundStateSearch(PhysicsEngine):
                         converged_num += 1
         print("Converged")
 
-        return _energy_at_edge, _ee_at_edge
+        return _energy_at_edge, _ee_at_edge, _error_at_edge

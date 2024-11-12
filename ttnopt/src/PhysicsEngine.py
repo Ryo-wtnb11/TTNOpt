@@ -219,7 +219,7 @@ class PhysicsEngine(TwoSiteUpdater):
         psi = tn.contractors.auto(
             [psi1, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
         )
-        u, s, v, _, edge_order = self.decompose_two_tensors(
+        u, s, v, _, _, edge_order= self.decompose_two_tensors(
             psi, self.max_bond_dim
         )
         psi_edges = (
@@ -426,7 +426,7 @@ class PhysicsEngine(TwoSiteUpdater):
         # gauge_tensor
         central_tensor_ids = self.psi.central_tensor_ids()
         ground_state = self.lanczos(central_tensor_ids)
-        u, s, v, _, _ = self.decompose_two_tensors(
+        u, s, v, _, _, _ = self.decompose_two_tensors(
             ground_state, self.max_bond_dim
         )
         self.psi.tensors[central_tensor_ids[0]] = u
