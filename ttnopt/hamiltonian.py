@@ -42,7 +42,7 @@ def hamiltonian(config: DotMap):
                 raise ValueError("Please input h value in magnetic_field if uniform is 1")
             magnetic_field_indices = [i for i in range(config.N)]
             magnetic_field = [config.magnetic_field.h] * config.N
-
+            magnetic_field_axis = config.magnetic_field.axis
         else:
             # Ensure that config.spin_size.S is set and valid before using it
             if isinstance(config.magnetic_field.hi_file, DotMap):
