@@ -43,8 +43,8 @@ numerics:
         active: 0 # 1 for active, 0 for inactive
         magnetization: 0 # Total magnetization (used if U(1) symmetry is active)
     initial_bond_dimension: 4
-    max_bond_dimensions: [20] # Maximum bond dimension for each repetition
-    max_num_sweeps: [1]
+    max_bond_dimensions: [10, 20] # Maximum bond dimension for each repetition
+    max_num_sweeps: [2, 2]
     truncation_error: 1e-10
     energy_convergence_threshold: 1e-7
     entanglement_convergence_threshold: 1e-7
@@ -60,6 +60,8 @@ output:
     energy:
         active: 1
     entanglement:
+        active: 1
+    error:
         active: 1
     single_site:
         Sx:

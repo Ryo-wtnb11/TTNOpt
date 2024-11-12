@@ -170,8 +170,11 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         u = u.get_tensor()[:, :, :ind]
         v = v.get_tensor()[:, :, :ind]
         s = s.get_tensor()[:ind, :ind]
+
+        p_truncate = np.diagonal(s)
+        err = 1.0 - np.real(np.sum(p_truncate**2))
         s = s / np.linalg.norm(s)
-        return u, s, v, p, edge_order
+        return u, s, v, p, err, edge_order
 
     def entanglement_entropy_at_physical_bond(self, psi, psi_edges):
         ee_at_physical_bond = {}
