@@ -173,6 +173,27 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         s = s / np.linalg.norm(s)
         return u, s, v, p, edge_order
 
+    def entanglement_entropy_at_physical_bond(self, psi, psi_edges):
+        ee_at_physical_bond = {}
+        for i, edge in enumerate(psi_edges):
+            if edge in self.psi.physical_edges:
+                ee_at_physical_bond[edge] = 0.0
+        for edge_id in ee_at_physical_bond.keys():
+            psi_ = psi.copy()
+            matching_index = list({i for i, v in enumerate(psi_edges) if v == edge_id})[0]
+            non_matching_indices = list({i for i in range(len(psi_edges)) if i != matching_index})
+            psi_dag = psi_.copy(conjugate=True)
+            for i in non_matching_indices:
+                psi_[i] ^ psi_dag[i]
+            rho = tn.contractors.auto([psi_, psi_dag], output_edge_order=[psi_[matching_index], psi_dag[matching_index]])
+            (u, s, v, terr) = tn.split_node_full_svd(rho, [rho[0]], [rho[1]])
+            p_ = np.diagonal(s.get_tensor())
+            p_ = np.sqrt(p_)
+            ee_at_physical_bond[edge_id] = self.entanglement_entropy(probability=p_)
+        return ee_at_physical_bond
+
+
+
     def set_ttn_properties_at_one_tensor(self, edge_id, selected_tensor_id):
         # update_ttn_properties
         self.psi.canonical_center_edge_id = edge_id

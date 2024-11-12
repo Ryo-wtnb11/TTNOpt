@@ -3,9 +3,9 @@ system:
 
     # Spin size configuration
     spin_size:
-        uniform: 0 # 1 for uniform spin size, 0 for non-uniform
-        #S: 3/2 # Spin size (used only if uniform is 1)
-        Si_file: spins_sizes.dat # File containing spin sizes per site (used if uniform is 0)
+        uniform: 1 # 1 for uniform spin size, 0 for non-uniform
+        S: 1/2 # Spin size (used only if uniform is 1)
+        # Si_file: spins_sizes.dat # File containing spin sizes per site (used if uniform is 0)
 
     # Exchange coupling for the XXZ or XYZ model
     model:
