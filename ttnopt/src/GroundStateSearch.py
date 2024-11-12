@@ -154,7 +154,7 @@ class GroundStateSearch(PhysicsEngine):
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
                 ee_dict = self.entanglement_entropy_at_physical_bond(ground_state, psi_edges)
                 for key in ee_dict.keys():
-                    ee_at_edge[key] = ee_dict[key]
+                    _ee_at_edge[key] = ee_dict[key]
 
             _edges = copy.deepcopy(self.psi.edges)
 

@@ -73,8 +73,7 @@ def ground_state_search():
 
 
     nodes_list = []
-    nodes_list = []
-    for edge_id in entanglement.keys():
+    for edge_id in energy.keys():
         tmp = []
         for node_id, edges in enumerate(psi.edges):
             node_id += config.system.N
@@ -91,8 +90,6 @@ def ground_state_search():
                 tmp.append(node_id)
         nodes_list.append(tmp)
         energy[edge_id] = 0.0
-        entanglement[edge_id] = 0.0
-
 
     if config.output.basic_file is not DotMap():
         df = pd.DataFrame(nodes_list, columns=['node1', 'node2'], index=None)

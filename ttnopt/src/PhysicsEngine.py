@@ -219,8 +219,7 @@ class PhysicsEngine(TwoSiteUpdater):
         psi = tn.contractors.auto(
             [psi1, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
         )
-
-        u, s, v, edge_order, _ = self.decompose_two_tensors(
+        u, s, v, _, edge_order = self.decompose_two_tensors(
             psi, self.max_bond_dim
         )
         psi_edges = (
@@ -585,8 +584,8 @@ class PhysicsEngine(TwoSiteUpdater):
 
         # if there is no hamiltonian within this block
         if block_hams == []:
-            eye_l = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][0]])
-            eye_r = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][1]])
+            eye_l = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][0]], dtype=np.complex128)
+            eye_r = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][1]], dtype=np.complex128)
             block_hams.append(np.kron(eye_l, eye_r))
 
         block_hams = np.sum(block_hams, axis=0)
@@ -733,6 +732,9 @@ class PhysicsEngine(TwoSiteUpdater):
             sp = self.edge_spin_operators[edge_id][bare_edge_id]["S+"]
             sm = self.edge_spin_operators[edge_id][bare_edge_id]["S+"].conj().T
             op = (sp - sm) / 2.0j
+        elif operator == "Sz^2":
+            op = self.edge_spin_operators[edge_id][bare_edge_id]["Sz"]
+            op = np.dot(op, op)
         return op
 
     def _init_spin_operator(self):
