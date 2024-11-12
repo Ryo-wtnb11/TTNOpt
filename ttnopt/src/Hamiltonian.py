@@ -20,8 +20,7 @@ class Hamiltonian:
                  ion_anisotropy_indices: Optional[List[int]] = None,
                  ion_anisotropy: Optional[List[float]] = None,
                  dzyaloshinskii_moriya_indices: Optional[List[List[int]]] = None,
-                 dzyaloshinskii_moriya: Optional[List[float]] = None,
-                 dzyaloshinskii_moriya_axis: Optional[str] = None,
+                 dzyaloshinskii_moriya: Optional[List[List[float]]] = None,
                 ):
         """
             Args:
@@ -44,10 +43,8 @@ class Hamiltonian:
                     in `ion_anisotropy_indices`. Defaults to None.
                 dzyaloshinskii_moriya_indices (Optional[List[List[int]]], optional): A nested list of integer pairs, where each sub-list specifies
                     two indices corresponding to sites with Dzyaloshinskii-Moriya (DM) interaction. Defaults to None.
-                dzyaloshinskii_moriya (Optional[List[float]], optional): A list of DM interaction strengths, where each value corresponds
+                dzyaloshinskii_moriya (Optional[List[List[float]]], optional): A list of DM interaction strengths, where each value corresponds
                     to the pair specified in `dzyaloshinskii_moriya_indices`. Defaults to None.
-                dzyaloshinskii_moriya_axis (Optional[str], optional): The axis along which the DM interaction is applied, typically one
-                    of the Cartesian coordinates ("x", "y", or "z"). Defaults to None.
             """
 
         self.system_size = system_size
@@ -106,15 +103,14 @@ class Hamiltonian:
                     self.observables.append(ob)
 
         if dzyaloshinskii_moriya is not None and dzyaloshinskii_moriya_indices is not None:
-            for i, c in zip(dzyaloshinskii_moriya_indices, dzyaloshinskii_moriya):
-                if c != 0.0:
-                    if dzyaloshinskii_moriya_axis == "X":
-                        ob = Observable(i, [["Sx", "Sy"], ["Sy", "Sx"]], [c, -c])
-                        self.observables.append(ob)
-                    if dzyaloshinskii_moriya_axis == "Y":
-                        ob = Observable(i, [["Sy", "Sz"], ["Sz", "Sy"]], [c, -c])
-                        self.observables.append(ob)
-                    if dzyaloshinskii_moriya_axis == "Z":
-                        ob = Observable(i, [["Sz", "Sx"], ["Sx", "Sz"]], [c, -c])
-                        self.observables.append(ob)
+            for i, coef in zip(dzyaloshinskii_moriya_indices, dzyaloshinskii_moriya):
+                if coef[0] != 0.0:
+                    ob = Observable(i, [["Sx", "Sy"], ["Sy", "Sx"]], [coef[0], -coef[0]])
+                    self.observables.append(ob)
+                if coef[1] != 0.0:
+                    ob = Observable(i, [["Sy", "Sz"], ["Sz", "Sy"]], [coef[1], -coef[1]])
+                    self.observables.append(ob)
+                if coef[2] != 0.0:
+                    ob = Observable(i, [["Sz", "Sx"], ["Sx", "Sz"]], [coef[2], -coef[2]])
+                    self.observables.append(ob)
 
