@@ -284,10 +284,10 @@ class PhysicsEngine(TwoSiteUpdater):
             e_old = 0
             for j in range(1, dim_n):
                 beta[j] = np.linalg.norm(omega)
-                if j == 1 and beta[j] < lanczos_tol:
+                if j == 1 and beta[j] < 1e-13:
                     eigen_vectors = psi
                     return eigen_vectors
-                elif j > 1 and beta[j] < lanczos_tol:
+                elif j > 1 and beta[j] < 1e-13:
                     break
                 psi = tn.Node(omega / beta[j])
                 psi_w = self._apply_ham_psi(psi, central_tensor_ids)
@@ -301,7 +301,7 @@ class PhysicsEngine(TwoSiteUpdater):
                         select="i",
                         select_range=(0, 0),
                     )
-                    if np.abs(e - e_old) < inverse_tol:
+                    if np.abs(e - e_old) < np.max([1.0, np.abs(e)]) * lanczos_tol:
                         break
                     e_old = e
 
