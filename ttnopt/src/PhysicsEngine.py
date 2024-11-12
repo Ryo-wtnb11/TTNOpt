@@ -219,8 +219,7 @@ class PhysicsEngine(TwoSiteUpdater):
         psi = tn.contractors.auto(
             [psi1, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
         )
-
-        u, s, v, edge_order, _ = self.decompose_two_tensors(
+        u, s, v, _, edge_order = self.decompose_two_tensors(
             psi, self.max_bond_dim
         )
         psi_edges = (
@@ -248,9 +247,18 @@ class PhysicsEngine(TwoSiteUpdater):
         self.distance = self.initial_distance()
 
     def lanczos(self, central_tensor_ids, tol=1e-10, init_random=False):
+        if self.psi.tensors[central_tensor_ids[0]].shape[2] !=  self.psi.tensors[central_tensor_ids[1]].shape[2]:
+            psi_1_shape = self.psi.tensors[central_tensor_ids[0]].shape
+            psi_2_shape = self.psi.tensors[central_tensor_ids[1]].shape
+            if psi_2_shape[2] < psi_1_shape[2]:
+                self.psi.tensors[central_tensor_ids[0]] = self.psi.tensors[central_tensor_ids[0]][:, :, :psi_2_shape[2]]
+            elif psi_1_shape[2] < psi_2_shape[2]:
+                self.psi.tensors[central_tensor_ids[1]] = self.psi.tensors[central_tensor_ids[1]][:, :, :psi_1_shape[2]]
+
         psi_1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
         psi_2 = tn.Node(self.psi.tensors[central_tensor_ids[1]])
         psi_1[2] ^ psi_2[2]
+
         psi = tn.contractors.auto(
             [psi_1, psi_2], output_edge_order=[psi_1[0], psi_1[1], psi_2[0], psi_2[1]]
         )
@@ -576,8 +584,8 @@ class PhysicsEngine(TwoSiteUpdater):
 
         # if there is no hamiltonian within this block
         if block_hams == []:
-            eye_l = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][0]])
-            eye_r = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][1]])
+            eye_l = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][0]], dtype=np.complex128)
+            eye_r = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][1]], dtype=np.complex128)
             block_hams.append(np.kron(eye_l, eye_r))
 
         block_hams = np.sum(block_hams, axis=0)
@@ -724,6 +732,9 @@ class PhysicsEngine(TwoSiteUpdater):
             sp = self.edge_spin_operators[edge_id][bare_edge_id]["S+"]
             sm = self.edge_spin_operators[edge_id][bare_edge_id]["S+"].conj().T
             op = (sp - sm) / 2.0j
+        elif operator == "Sz^2":
+            op = self.edge_spin_operators[edge_id][bare_edge_id]["Sz"]
+            op = np.dot(op, op)
         return op
 
     def _init_spin_operator(self):
