@@ -131,6 +131,7 @@ class GroundStateSearch(PhysicsEngine):
                     self.max_bond_dim,
                     opt_structure=opt_structure,
                     operate_degeneracy=True,
+                    epsilon=entanglement_convergence_threshold
                 )
 
                 self.psi.tensors[selected_tensor_id] = u

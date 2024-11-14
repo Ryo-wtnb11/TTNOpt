@@ -122,6 +122,7 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                     ground_state,
                     self.max_bond_dim,
                     opt_structure=opt_structure,
+                    #TODO:
                 )
                 self.psi.tensors[selected_tensor_id] = u
                 self.psi.tensors[connected_tensor_id] = v
