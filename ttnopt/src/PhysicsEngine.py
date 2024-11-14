@@ -220,7 +220,7 @@ class PhysicsEngine(TwoSiteUpdater):
             [psi1, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
         )
         u, s, v, _, _, edge_order= self.decompose_two_tensors(
-            psi, self.max_bond_dim
+            psi, self.max_bond_dim, operate_degeneracy=True
         )
         psi_edges = (
             self.psi.edges[selected_tensor_id][:2]
@@ -264,6 +264,7 @@ class PhysicsEngine(TwoSiteUpdater):
         )
         if init_random:
             psi = tn.Node(np.random.rand(*psi.shape))
+
         # normalization
         psi = psi / np.linalg.norm(psi.tensor)
         psi_ = psi.copy()
@@ -277,6 +278,7 @@ class PhysicsEngine(TwoSiteUpdater):
         alpha[0] = np.real(inner_product(psi_w, psi))
         omega = psi_w.tensor - np.array(alpha[0]) * psi.tensor
 
+        d = 0
         if dim_n == 1:
             eigen_vectors = psi
             return eigen_vectors
@@ -284,10 +286,10 @@ class PhysicsEngine(TwoSiteUpdater):
             e_old = 0
             for j in range(1, dim_n):
                 beta[j] = np.linalg.norm(omega)
-                if j == 1 and beta[j] < lanczos_tol:
+                if j == 1 and beta[j] < 1e-14:
                     eigen_vectors = psi
                     return eigen_vectors
-                elif j > 1 and beta[j] < lanczos_tol:
+                elif j > 1 and beta[j] < 1e-14:
                     break
                 psi = tn.Node(omega / beta[j])
                 psi_w = self._apply_ham_psi(psi, central_tensor_ids)
@@ -301,7 +303,9 @@ class PhysicsEngine(TwoSiteUpdater):
                         select="i",
                         select_range=(0, 0),
                     )
-                    if np.abs(e - e_old) < inverse_tol:
+                    if np.abs(e - e_old) < np.max([1.0, np.abs(e)]) * lanczos_tol:
+                        d += 1
+                    if d > 3:
                         break
                     e_old = e
 
@@ -427,7 +431,7 @@ class PhysicsEngine(TwoSiteUpdater):
         central_tensor_ids = self.psi.central_tensor_ids()
         ground_state = self.lanczos(central_tensor_ids)
         u, s, v, _, _, _ = self.decompose_two_tensors(
-            ground_state, self.max_bond_dim
+            ground_state, self.max_bond_dim, operate_degeneracy=True
         )
         self.psi.tensors[central_tensor_ids[0]] = u
         self.psi.tensors[central_tensor_ids[1]] = v

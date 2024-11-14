@@ -27,7 +27,7 @@ def ground_state_search():
     ham = hamiltonian(config.system)
 
     numerics = config.numerics
-    opt_structure = numerics.opt_structure.active
+    opt_structure = 1 if numerics.opt_structure.active else 0
     edge_op_at_edge = None
     block_ham_at_edge = None
 
