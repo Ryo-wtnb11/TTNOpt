@@ -157,7 +157,7 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
                     ee = ee_tmp
                     edge_order = edges
                     p = p_
-        # 縮退を解消
+        # Degeneracy
         ind = np.min([max_bond_dim, len(p)])
         if operate_degeneracy:
             if ind < len(p):
@@ -194,7 +194,6 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
             p_ = np.sqrt(p_)
             ee_at_physical_bond[edge_id] = self.entanglement_entropy(probability=p_)
         return ee_at_physical_bond
-
 
 
     def set_ttn_properties_at_one_tensor(self, edge_id, selected_tensor_id):

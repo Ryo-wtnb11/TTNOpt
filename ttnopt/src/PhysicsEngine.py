@@ -246,7 +246,7 @@ class PhysicsEngine(TwoSiteUpdater):
         )
         self.distance = self.initial_distance()
 
-    def lanczos(self, central_tensor_ids, lanczos_tol=1e-13, inverse_tol=1e-6, init_random=False):
+    def lanczos(self, central_tensor_ids, lanczos_tol=1e-13, inverse_tol=1e-7, init_random=False):
         if self.psi.tensors[central_tensor_ids[0]].shape[2] !=  self.psi.tensors[central_tensor_ids[1]].shape[2]:
             psi_1_shape = self.psi.tensors[central_tensor_ids[0]].shape
             psi_2_shape = self.psi.tensors[central_tensor_ids[1]].shape

@@ -16,14 +16,15 @@ def hamiltonian(config: DotMap):
         # Ensure that config.spin_size.S is set and valid before using it
         if isinstance(config.spin_size.S, DotMap):
             raise ValueError("Please input S value in spin_size")
-
         spin_sizes = ["S=" + str(config.spin_size.S)] * config.N
     else:
         # Ensure that config.spin_size.S is set and valid before using it
         if isinstance(config.spin_size.Si_file, DotMap):
             raise ValueError("Please input Si_file in spin_size")
-
-        spin_sizes = ["S=" + s for s in pd.read_csv(config.spin_size.Si_file, delimiter=",", header=None).values.flatten()]
+        spin_csv = pd.read_csv(config.spin_size.Si_file, delimiter=",", header=None)
+        spin_csv_sorted = spin_csv.sort_values(by=0)
+        spin_size = spin_csv_sorted.iloc[:, 1].values
+        spin_sizes = [f"S={s}" for s in spin_size]
 
     interaction_csv = pd.read_csv(config.model.Jij_file, delimiter=",", header=None)
     interaction_indices = interaction_csv.iloc[:, :2].values
