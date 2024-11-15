@@ -16,7 +16,6 @@ class TwoSiteUpdaterMixin:
         return np.real(ee)
 
     def initial_distance(self):
-        # 隣接リストを作成
         adjacency_list = defaultdict(list)
         for node in self.psi.edges:
             child1, child2, parent = node
