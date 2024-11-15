@@ -70,14 +70,14 @@ def ground_state_search():
                 max_num_sweep=max_num_sweep,
             )
 
-        nodes_list = []
+        nodes_list = {}
         for edge_id in energy.keys():
             tmp = []
             for node_id, edges in enumerate(psi.edges):
                 node_id += config.system.N
                 if edge_id in edges:
                     tmp.append(node_id)
-            nodes_list.append(tmp)
+            nodes_list[edge_id] = tmp
 
         for edge_id in psi.physical_edges:
             tmp = []
@@ -86,18 +86,19 @@ def ground_state_search():
                 node_id += config.system.N
                 if edge_id in edges:
                     tmp.append(node_id)
-            nodes_list.append(tmp)
+            nodes_list[edge_id] = tmp
             energy[edge_id] = 0.0
             error[edge_id] = 0.0
 
         if config.output.basic_file is not DotMap():
-            df = pd.DataFrame(nodes_list, columns=['node1', 'node2'], index=None)
+            all_keys = set(nodes_list.keys())
+            df = pd.DataFrame([nodes_list[k] for k in all_keys], columns=['node1', 'node2'], index=None)
             if config.output.energy.active:
-                df['energy'] = energy.values()
+                df['energy'] = [energy[k] for k in all_keys]
             if config.output.entanglement.active:
-                df['entanglement'] = entanglement.values()
+                df['entanglement'] = [entanglement[k] for k in all_keys]
             if config.output.error.active:
-                df['error'] = error.values()
+                df['error'] = [error[k] for k in all_keys]
 
             path_ = path / f"run{i+1}"
             os.makedirs(path_, exist_ok=True)

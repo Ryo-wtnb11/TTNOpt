@@ -283,7 +283,7 @@ class PhysicsEngine(TwoSiteUpdater):
             eigen_vectors = psi
             return eigen_vectors
         else:
-            e_old = 0
+            e_old = 0.0
             for j in range(1, dim_n):
                 beta[j] = np.linalg.norm(omega)
                 if j == 1 and beta[j] < 1e-14:
@@ -303,11 +303,12 @@ class PhysicsEngine(TwoSiteUpdater):
                         select="i",
                         select_range=(0, 0),
                     )
+                    energy = e[0]
                     if np.abs(e - e_old) < np.max([1.0, np.abs(e)]) * lanczos_tol:
                         d += 1
-                    if d > 3:
+                    if d > 5:
                         break
-                    e_old = e
+                    e_old = energy
 
         v_tilda = np.array(v_tilda.flatten(), dtype=np.complex128)
         v = v_tilda[0] * psi_0.tensor
@@ -337,7 +338,7 @@ class PhysicsEngine(TwoSiteUpdater):
             v_ = v
 
         eigen_vectors = v
-        return eigen_vectors
+        return eigen_vectors, energy
 
     def lanczos_exp_multiply(self, central_tensor_ids, dt, tol=1e-10):
         psi_1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
@@ -429,7 +430,7 @@ class PhysicsEngine(TwoSiteUpdater):
             self._set_block_hamiltonian(tensor_id, ham)
         # gauge_tensor
         central_tensor_ids = self.psi.central_tensor_ids()
-        ground_state = self.lanczos(central_tensor_ids)
+        ground_state, _ = self.lanczos(central_tensor_ids)
         u, s, v, _, _, _ = self.decompose_two_tensors(
             ground_state, self.max_bond_dim, operate_degeneracy=True
         )

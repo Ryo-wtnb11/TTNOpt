@@ -120,7 +120,7 @@ class GroundStateSearch(PhysicsEngine):
 
                 self._set_block_hamiltonian(not_selected_tensor_id)
 
-                ground_state = self.lanczos([selected_tensor_id, connected_tensor_id])
+                ground_state, energy = self.lanczos([selected_tensor_id, connected_tensor_id])
                 psi_edges = (
                     self.psi.edges[selected_tensor_id][:2]
                     + self.psi.edges[connected_tensor_id][:2]
@@ -154,7 +154,6 @@ class GroundStateSearch(PhysicsEngine):
 
                 self.distance = self.initial_distance()
 
-                energy = self.energy()
                 _energy_at_edge[self.psi.canonical_center_edge_id] = energy
                 ee = self.entanglement_entropy(probability)
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
