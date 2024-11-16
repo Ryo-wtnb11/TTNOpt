@@ -153,7 +153,6 @@ class GroundStateSearch(PhysicsEngine):
                 )
 
                 self.distance = self.initial_distance()
-
                 _energy_at_edge[self.psi.canonical_center_edge_id] = energy
                 ee = self.entanglement_entropy(probability)
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee

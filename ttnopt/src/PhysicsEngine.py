@@ -281,14 +281,14 @@ class PhysicsEngine(TwoSiteUpdater):
         d = 0
         if dim_n == 1:
             eigen_vectors = psi
-            return eigen_vectors
+            return eigen_vectors, self.energy()
         else:
             e_old = 0.0
             for j in range(1, dim_n):
                 beta[j] = np.linalg.norm(omega)
                 if j == 1 and beta[j] < 1e-14:
                     eigen_vectors = psi
-                    return eigen_vectors
+                    return eigen_vectors, self.energy()
                 elif j > 1 and beta[j] < 1e-14:
                     break
                 psi = tn.Node(omega / beta[j])
