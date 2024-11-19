@@ -9,9 +9,14 @@ from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.Hamiltonian import Hamiltonian
 from ttnopt.src.Observable import bare_spin_operator, spin_dof
 from ttnopt.src.TwoSiteUpdater import TwoSiteUpdater
-from ttnopt.src.functionTTN import get_renormalization_sequence, get_bare_edges, inner_product
+from ttnopt.src.functionTTN import (
+    get_renormalization_sequence,
+    get_bare_edges,
+    inner_product,
+)
 
 tn.set_default_backend("numpy")
+
 
 class PhysicsEngine(TwoSiteUpdater):
     def __init__(
@@ -22,7 +27,7 @@ class PhysicsEngine(TwoSiteUpdater):
         max_bond_dim: int,
         truncation_error: float,
         edge_spin_operators: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
-        block_hamiltonians: Optional[Dict[int, Dict[str, np.ndarray]]] = None
+        block_hamiltonians: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
     ):
         """Initialize a PhysicsEngine object.
 
@@ -156,6 +161,7 @@ class PhysicsEngine(TwoSiteUpdater):
                 self.move_center()
             return np.real(expval)
         else:  # two-site expectation value
+
             def check_and_calculate(tensor_id, order):
                 return _calculate_double_expval(
                     tensor_id,
@@ -177,7 +183,9 @@ class PhysicsEngine(TwoSiteUpdater):
                             self.psi.edges,
                             self.psi.physical_edges,
                         ):
-                            expval = check_and_calculate(central_tensor_ids[k], list(order)).tensor
+                            expval = check_and_calculate(
+                                central_tensor_ids[k], list(order)
+                            ).tensor
 
                 self.move_center()
             return np.real(expval)
@@ -219,7 +227,7 @@ class PhysicsEngine(TwoSiteUpdater):
         psi = tn.contractors.auto(
             [psi1, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
         )
-        u, s, v, _, _, edge_order= self.decompose_two_tensors(
+        u, s, v, _, _, edge_order = self.decompose_two_tensors(
             psi, self.max_bond_dim, operate_degeneracy=True
         )
         psi_edges = (
@@ -246,14 +254,23 @@ class PhysicsEngine(TwoSiteUpdater):
         )
         self.distance = self.initial_distance()
 
-    def lanczos(self, central_tensor_ids, lanczos_tol=1e-13, inverse_tol=1e-6, init_random=False):
-        if self.psi.tensors[central_tensor_ids[0]].shape[2] !=  self.psi.tensors[central_tensor_ids[1]].shape[2]:
+    def lanczos(
+        self, central_tensor_ids, lanczos_tol=1e-13, inverse_tol=1e-6, init_random=False
+    ):
+        if (
+            self.psi.tensors[central_tensor_ids[0]].shape[2]
+            != self.psi.tensors[central_tensor_ids[1]].shape[2]
+        ):
             psi_1_shape = self.psi.tensors[central_tensor_ids[0]].shape
             psi_2_shape = self.psi.tensors[central_tensor_ids[1]].shape
             if psi_2_shape[2] < psi_1_shape[2]:
-                self.psi.tensors[central_tensor_ids[0]] = self.psi.tensors[central_tensor_ids[0]][:, :, :psi_2_shape[2]]
+                self.psi.tensors[central_tensor_ids[0]] = self.psi.tensors[
+                    central_tensor_ids[0]
+                ][:, :, : psi_2_shape[2]]
             elif psi_1_shape[2] < psi_2_shape[2]:
-                self.psi.tensors[central_tensor_ids[1]] = self.psi.tensors[central_tensor_ids[1]][:, :, :psi_1_shape[2]]
+                self.psi.tensors[central_tensor_ids[1]] = self.psi.tensors[
+                    central_tensor_ids[1]
+                ][:, :, : psi_1_shape[2]]
 
         psi_1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
         psi_2 = tn.Node(self.psi.tensors[central_tensor_ids[1]])
@@ -421,7 +438,9 @@ class PhysicsEngine(TwoSiteUpdater):
         return eigen_vectors
 
     def init_tensors_by_block_hamiltonian(self):
-        sequence = get_renormalization_sequence(self.psi.edges, self.psi.canonical_center_edge_id)
+        sequence = get_renormalization_sequence(
+            self.psi.edges, self.psi.canonical_center_edge_id
+        )
         for tensor_id in sequence:
             ham = self._get_block_hamiltonian(tensor_id)
             self._set_psi_tensor_with_ham(tensor_id, ham)
@@ -437,7 +456,6 @@ class PhysicsEngine(TwoSiteUpdater):
         self.psi.tensors[central_tensor_ids[0]] = u
         self.psi.tensors[central_tensor_ids[1]] = v
         self.psi.gauge_tensor = s
-
 
     def _apply_ham_psi(self, psi, central_tensor_ids):
         psi_tensor = np.zeros(psi.shape, dtype=np.complex128)
@@ -590,8 +608,12 @@ class PhysicsEngine(TwoSiteUpdater):
 
         # if there is no hamiltonian within this block
         if block_hams == []:
-            eye_l = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][0]], dtype=np.complex128)
-            eye_r = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][1]], dtype=np.complex128)
+            eye_l = np.eye(
+                self.psi.edge_dims[self.psi.edges[tensor_id][0]], dtype=np.complex128
+            )
+            eye_r = np.eye(
+                self.psi.edge_dims[self.psi.edges[tensor_id][1]], dtype=np.complex128
+            )
             block_hams.append(np.kron(eye_l, eye_r))
 
         block_hams = np.sum(block_hams, axis=0)
@@ -641,9 +663,7 @@ class PhysicsEngine(TwoSiteUpdater):
 
     def _set_psi_edge_dim(self, tensor_id):
         if self.psi.tensors[tensor_id] is not None:
-            for i, d in enumerate(self.psi.tensors[
-                tensor_id
-            ].shape):
+            for i, d in enumerate(self.psi.tensors[tensor_id].shape):
                 self.psi.edge_dims[self.psi.edges[tensor_id][i]] = d
 
     def _set_edge_spin(self, tensor_id):
@@ -763,7 +783,9 @@ class PhysicsEngine(TwoSiteUpdater):
                     spin_operators = []
                     for n in range(ham.operators_num):
                         operators = ham.operators_list[n]
-                        spin_operator = self._spin_operator_at_edge(key, key, operators[0])
+                        spin_operator = self._spin_operator_at_edge(
+                            key, key, operators[0]
+                        )
                         spin_operator *= ham.coef_list[n]
                         spin_operators.append(spin_operator)
                     block_ham = np.sum(spin_operators, axis=0)
