@@ -11,23 +11,24 @@ from ttnopt.src.Hamiltonian import Hamiltonian
 
 class GroundStateSearch(PhysicsEngine):
     """A class for ground state search algorithm based on DMRG.
-        psi (TreeTensorNetwork): The quantum state.
-        hamiltonians (Hamiltonian): Hamiltonian which is list of Observable.
-        init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
-        max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
-        truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
-        edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
-        block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
+    psi (TreeTensorNetwork): The quantum state.
+    hamiltonians (Hamiltonian): Hamiltonian which is list of Observable.
+    init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
+    max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
+    truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
+    edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
+    block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
     """
+
     def __init__(
         self,
         psi: TreeTensorNetwork,
         hamiltonian: Hamiltonian,
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
-        truncation_error = 1e-11,
+        truncation_error=1e-11,
         edge_spin_operators: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
-        block_hamiltonians: Optional[Dict[int, Dict[str, np.ndarray]]] = None
+        block_hamiltonians: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
     ):
         """Initialize a DMRG object.
 
@@ -47,17 +48,17 @@ class GroundStateSearch(PhysicsEngine):
             max_bond_dim,
             truncation_error,
             edge_spin_operators,
-            block_hamiltonians
+            block_hamiltonians,
         )
 
     def run(
         self,
-        opt_structure : bool = False,
-        energy_convergence_threshold : float = 1e-8,
-        entanglement_convergence_threshold : float = 1e-8,
-        max_num_sweep : int = 5,
-        converged_count : int = 2,
-    )->Tuple[Dict[int, float], Dict[int, float], Dict[int, float]]:
+        opt_structure: bool = False,
+        energy_convergence_threshold: float = 1e-8,
+        entanglement_convergence_threshold: float = 1e-8,
+        max_num_sweep: int = 5,
+        converged_count: int = 2,
+    ) -> Tuple[Dict[int, float], Dict[int, float], Dict[int, float]]:
         """Run DMRG algorithm.
 
         Args:
@@ -87,7 +88,7 @@ class GroundStateSearch(PhysicsEngine):
             # energy
             energy_at_edge = copy.deepcopy(_energy_at_edge)
             ee_at_edge = copy.deepcopy(_ee_at_edge)
-            error_at_edge = copy.deepcopy(_error_at_edge)
+            # error_at_edge = copy.deepcopy(_error_at_edge)
 
             edges = copy.deepcopy(_edges)
 
@@ -120,7 +121,9 @@ class GroundStateSearch(PhysicsEngine):
 
                 self._set_block_hamiltonian(not_selected_tensor_id)
 
-                ground_state, energy = self.lanczos([selected_tensor_id, connected_tensor_id])
+                ground_state, energy = self.lanczos(
+                    [selected_tensor_id, connected_tensor_id]
+                )
                 psi_edges = (
                     self.psi.edges[selected_tensor_id][:2]
                     + self.psi.edges[connected_tensor_id][:2]
@@ -131,7 +134,7 @@ class GroundStateSearch(PhysicsEngine):
                     self.max_bond_dim,
                     opt_structure=opt_structure,
                     operate_degeneracy=True,
-                    epsilon=entanglement_convergence_threshold
+                    epsilon=entanglement_convergence_threshold,
                 )
 
                 self.psi.tensors[selected_tensor_id] = u
@@ -153,11 +156,12 @@ class GroundStateSearch(PhysicsEngine):
                 )
 
                 self.distance = self.initial_distance()
-
                 _energy_at_edge[self.psi.canonical_center_edge_id] = energy
                 ee = self.entanglement_entropy(probability)
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
-                ee_dict = self.entanglement_entropy_at_physical_bond(ground_state, psi_edges)
+                ee_dict = self.entanglement_entropy_at_physical_bond(
+                    ground_state, psi_edges
+                )
                 for key in ee_dict.keys():
                     _ee_at_edge[key] = ee_dict[key]
                 _error_at_edge[self.psi.canonical_center_edge_id] = error
@@ -182,8 +186,13 @@ class GroundStateSearch(PhysicsEngine):
                     ]
                 ):
                     if all(
-                        [energy < energy_convergence_threshold for energy in diff_energy]
-                    ) and all([ee < entanglement_convergence_threshold for ee in diff_ee]):
+                        [
+                            energy < energy_convergence_threshold
+                            for energy in diff_energy
+                        ]
+                    ) and all(
+                        [ee < entanglement_convergence_threshold for ee in diff_ee]
+                    ):
                         converged_num += 1
         print("Converged")
 
