@@ -5,9 +5,11 @@ import scipy
 from scipy.linalg import eigh_tridiagonal
 from scipy.sparse.linalg import expm
 from copy import deepcopy
+from collections import defaultdict
 
 from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.Hamiltonian import Hamiltonian
+from ttnopt.src.Observable import Observable
 from ttnopt.src.Observable import bare_spin_operator, spin_dof
 from ttnopt.src.TwoSiteUpdater import TwoSiteUpdater
 from ttnopt.src.functionTTN import (
@@ -470,55 +472,202 @@ class PhysicsEngine(TwoSiteUpdater):
         return psi_tensor
 
     def _ham_psi(self, psi, edge_ids, apply_ids):
-        psi_tensor = np.zeros(psi.shape, dtype=np.complex128)
-        ham_infos = self._get_ham_infos(edge_ids)
-        for ham_info in ham_infos:
-            edge_order = ham_info["edge_order"]
-            observable = ham_info["observable"]
-            ham_indices = observable.indices
-            for n in range(observable.operators_num):
-                operators = observable.operators_list[n]
+        l_bare_edges = get_bare_edges(
+            edge_ids[0],
+            self.psi.edges,
+            self.psi.physical_edges,
+        )
+        r_bare_edges = get_bare_edges(
+            edge_ids[1],
+            self.psi.edges,
+            self.psi.physical_edges,
+        )
+        spins = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: None)))
+        other_spins = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [])))
+        keys = []
+        if self.psi.edge_dims[edge_ids[0]] >= self.psi.edge_dims[edge_ids[1]]:
+            for ham in self.hamiltonian.observables:
+                if ham.indices[0] in l_bare_edges and ham.indices[1] in r_bare_edges:
+                    for i, op_list in enumerate(ham.operators_list):
+                        if spins[ham.indices[0]][op_list[0]][op_list[1]] is None:
+                            keys.append([ham.indices[0], op_list[0], op_list[1]])
+                            spins[ham.indices[0]][op_list[0]][
+                                op_list[1]
+                            ] = ham.coef_list[i] * self._spin_operator_at_edge(
+                                edge_ids[0], ham.indices[0], op_list[0]
+                            )
+                        else:
+                            spins[ham.indices[0]][op_list[0]][
+                                op_list[1]
+                            ] += ham.coef_list[i] * self._spin_operator_at_edge(
+                                edge_ids[0], ham.indices[0], op_list[0]
+                            )
+
+                        other_spins[ham.indices[0]][op_list[0]][op_list[1]].append(
+                            self._spin_operator_at_edge(
+                                edge_ids[1], ham.indices[1], op_list[1]
+                            )
+                        )
+                if ham.indices[1] in l_bare_edges and ham.indices[0] in r_bare_edges:
+                    for i, op_list in enumerate(ham.operators_list):
+                        if spins[ham.indices[1]][op_list[1]][op_list[0]] is None:
+                            keys.append([ham.indices[1], op_list[1], op_list[0]])
+                            spins[ham.indices[1]][op_list[1]][
+                                op_list[0]
+                            ] = ham.coef_list[i] * self._spin_operator_at_edge(
+                                edge_ids[0], ham.indices[1], op_list[1]
+                            )
+                        else:
+                            spins[ham.indices[1]][op_list[1]][
+                                op_list[0]
+                            ] += ham.coef_list[i] * self._spin_operator_at_edge(
+                                edge_ids[0], ham.indices[1], op_list[1]
+                            )
+
+                        other_spins[ham.indices[1]][op_list[1]][op_list[0]].append(
+                            self._spin_operator_at_edge(
+                                edge_ids[1], ham.indices[0], op_list[0]
+                            )
+                        )
+            psi_tensor = np.zeros(psi.shape, dtype=np.complex128)
+            for ind, op1, op2 in keys:
                 psi_ = psi.copy()
+                spin_op1 = tn.Node(spins[ind][op1][op2])
+                psi_[apply_ids[0]] ^ spin_op1[0]
                 output_edge_order = psi_.get_all_edges()
-                for i, j in enumerate(edge_order):
-                    edge_id = edge_ids[i]
-                    bare_edge_id = ham_indices[j]
-                    spin_operator = self._spin_operator_at_edge(
-                        edge_id, bare_edge_id, operators[i]
-                    )
-                    spin_operator = tn.Node(spin_operator)
-                    psi_[apply_ids[i]] ^ spin_operator[0]
-                    output_edge_order[apply_ids[i]] = spin_operator[1]
+                output_edge_order[apply_ids[0]] = spin_op1[1]
+                psi_ = tn.contractors.auto(
+                    [psi_, spin_op1], output_edge_order=output_edge_order
+                )
+                for spin2 in other_spins[ind][op1][op2]:
+                    spin_op2 = tn.Node(spin2)
+                    psi_[apply_ids[1]] ^ spin_op2[0]
+                    output_edge_order = psi_.get_all_edges()
+                    output_edge_order[apply_ids[1]] = spin_op2[1]
                     psi_ = tn.contractors.auto(
-                        [psi_, spin_operator], output_edge_order=output_edge_order
+                        [psi_, spin_op2], output_edge_order=output_edge_order
                     )
-                psi_tensor += psi_.get_tensor() * observable.coef_list[n]
-        return psi_tensor
+                    psi_tensor += psi_.tensor
+            return psi_tensor
+        else:
+            for ham in self.hamiltonian.observables:
+                if ham.indices[1] in l_bare_edges and ham.indices[0] in r_bare_edges:
+                    for i, op_list in enumerate(ham.operators_list):
+                        if spins[ham.indices[0]][op_list[0]][op_list[1]] is None:
+                            keys.append([ham.indices[0], op_list[0], op_list[1]])
+                            spins[ham.indices[0]][op_list[0]][
+                                op_list[1]
+                            ] = ham.coef_list[i] * self._spin_operator_at_edge(
+                                edge_ids[1], ham.indices[0], op_list[0]
+                            )
+                        else:
+                            spins[ham.indices[0]][op_list[0]][
+                                op_list[1]
+                            ] += ham.coef_list[i] * self._spin_operator_at_edge(
+                                edge_ids[1], ham.indices[0], op_list[0]
+                            )
+
+                        other_spins[ham.indices[0]][op_list[0]][op_list[1]].append(
+                            self._spin_operator_at_edge(
+                                edge_ids[0], ham.indices[1], op_list[1]
+                            )
+                        )
+                if ham.indices[0] in l_bare_edges and ham.indices[1] in r_bare_edges:
+                    for i, op_list in enumerate(ham.operators_list):
+                        if spins[ham.indices[1]][op_list[1]][op_list[0]] is None:
+                            keys.append([ham.indices[1], op_list[1], op_list[0]])
+                            spins[ham.indices[1]][op_list[1]][
+                                op_list[0]
+                            ] = ham.coef_list[i] * self._spin_operator_at_edge(
+                                edge_ids[1], ham.indices[1], op_list[1]
+                            )
+                        else:
+                            spins[ham.indices[1]][op_list[1]][
+                                op_list[0]
+                            ] += ham.coef_list[i] * self._spin_operator_at_edge(
+                                edge_ids[1], ham.indices[1], op_list[1]
+                            )
+
+                        other_spins[ham.indices[1]][op_list[1]][op_list[0]].append(
+                            self._spin_operator_at_edge(
+                                edge_ids[0], ham.indices[0], op_list[0]
+                            )
+                        )
+            psi_tensor = np.zeros(psi.shape, dtype=np.complex128)
+
+            for ind, op1, op2 in keys:
+                psi_ = psi.copy()
+                spin_op1 = tn.Node(spins[ind][op1][op2])
+                psi_[apply_ids[1]] ^ spin_op1[0]
+                output_edge_order = psi_.get_all_edges()
+                output_edge_order[apply_ids[1]] = spin_op1[1]
+                psi_ = tn.contractors.auto(
+                    [psi_, spin_op1], output_edge_order=output_edge_order
+                )
+                for spin2 in other_spins[ind][op1][op2]:
+                    spin_op2 = tn.Node(spin2)
+                    psi_[apply_ids[0]] ^ spin_op2[0]
+                    output_edge_order = psi_.get_all_edges()
+                    output_edge_order[apply_ids[0]] = spin_op2[1]
+                    psi_ = tn.contractors.auto(
+                        [psi_, spin_op2], output_edge_order=output_edge_order
+                    )
+                    psi_tensor += psi_.tensor
+            return psi_tensor
 
     def _get_block_hamiltonian(self, tensor_id):
         block_hams = []
         edge_ids = self.psi.edges[tensor_id][:2]
-        ham_infos = self._get_ham_infos(edge_ids)
-        for ham_info in ham_infos:
-            edge_order = ham_info["edge_order"]
-            observable = ham_info["observable"]
-            ham_indices = observable.indices
-            for n in range(observable.operators_num):
-                spin_operators = [None, None]
-                operators = observable.operators_list[n]
-                for i, j in enumerate(edge_order):
-                    edge_id = edge_ids[i]
-                    bare_edge_id = ham_indices[j]
-                    spin_operators[i] = self._spin_operator_at_edge(
-                        edge_id, bare_edge_id, operators[i]
+        l_bare_edges = get_bare_edges(
+            edge_ids[0],
+            self.psi.edges,
+            self.psi.physical_edges,
+        )
+        r_bare_edges = get_bare_edges(
+            edge_ids[1],
+            self.psi.edges,
+            self.psi.physical_edges,
+        )
+
+        for ham in self.hamiltonian.observables:
+            spin_operators = [None, None]
+
+            if ham.indices[0] in l_bare_edges and ham.indices[1] in r_bare_edges:
+                for n in range(ham.operators_num):
+                    operators = ham.operators_list[n]
+                    spin_operators[0] = self._spin_operator_at_edge(
+                        edge_ids[0], ham.indices[0], operators[0]
                     )
-                block_ham = tn.ncon(
-                    spin_operators,
-                    [["-b0", "-k0"], ["-b1", "-k1"]],
-                    out_order=["-b0", "-b1", "-k0", "-k1"],
-                )
-                block_ham *= observable.coef_list[n]
-                block_hams.append(block_ham)
+                    spin_operators[1] = self._spin_operator_at_edge(
+                        edge_ids[1], ham.indices[1], operators[1]
+                    )
+
+                    block_ham = tn.ncon(
+                        spin_operators,
+                        [["-b0", "-k0"], ["-b1", "-k1"]],
+                        out_order=["-b0", "-b1", "-k0", "-k1"],
+                    )
+                    block_ham *= ham.coef_list[n]
+                    block_hams.append(block_ham)
+
+            if ham.indices[1] in l_bare_edges and ham.indices[0] in r_bare_edges:
+                for n in range(ham.operators_num):
+                    operators = ham.operators_list[n]
+
+                    spin_operators[0] = self._spin_operator_at_edge(
+                        edge_ids[0], ham.indices[1], operators[1]
+                    )
+                    spin_operators[1] = self._spin_operator_at_edge(
+                        edge_ids[1], ham.indices[0], operators[0]
+                    )
+
+                    block_ham = tn.ncon(
+                        spin_operators,
+                        [["-b0", "-k0"], ["-b1", "-k1"]],
+                        out_order=["-b0", "-b1", "-k0", "-k1"],
+                    )
+                    block_ham *= ham.coef_list[n]
+                    block_hams.append(block_ham)
 
         # left block ham
         if self.psi.edges[tensor_id][0] in self.block_hamiltonians.keys():
@@ -553,28 +702,6 @@ class PhysicsEngine(TwoSiteUpdater):
 
         block_hams = np.sum(block_hams, axis=0)
         return block_hams
-
-    def _get_ham_infos(self, edge_ids):
-        ham_info_list = []
-        l_bare_edges = get_bare_edges(
-            edge_ids[0],
-            self.psi.edges,
-            self.psi.physical_edges,
-        )
-        r_bare_edges = get_bare_edges(
-            edge_ids[1],
-            self.psi.edges,
-            self.psi.physical_edges,
-        )
-        for ham in self.hamiltonian.observables:
-            output_edge_order = _output_edges_order(
-                ham.indices, l_bare_edges, r_bare_edges
-            )
-            if set(output_edge_order) == set([0, 1]):
-                ham_info_list.append(
-                    {"edge_order": output_edge_order, "observable": ham}
-                )
-        return ham_info_list
 
     def _set_psi_tensor_with_ham(self, tensor_id, ham, delta=1e-11):
         lower_edge_dims = ham.shape[: len(ham.shape) // 2]
@@ -729,13 +856,3 @@ class PhysicsEngine(TwoSiteUpdater):
                     else:
                         block_hamiltonians[key] += block_ham
         return block_hamiltonians
-
-
-def _output_edges_order(bare_edges, left_bare_edges, right_bare_edges):
-    output_edges_order = []
-    for edge in bare_edges:
-        if edge in left_bare_edges:
-            output_edges_order.append(0)
-        if edge in right_bare_edges:
-            output_edges_order.append(1)
-    return output_edges_order

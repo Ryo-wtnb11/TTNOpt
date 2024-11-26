@@ -37,7 +37,7 @@ def test_run_dmrg():
         init_bond_dim=init_bond_dim,
         max_bond_dim=max_bond_dim,
     )
-    gss.run(opt_structure=True, max_num_sweep=5)
+    gss.run(opt_structure=True, max_num_sweep=10)
     energy = gss.energy
     energy = np.mean(list(energy.values()))
     assert math.isclose(energy, -6.911621, abs_tol=1e-5)
