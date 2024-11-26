@@ -5,6 +5,7 @@ import tensornetwork as tn
 import networkx as nx
 import matplotlib.pyplot as plt
 
+
 class TreeTensorNetwork:
     """A class for Tree Tensor Network (TTN)."""
 
@@ -40,7 +41,12 @@ class TreeTensorNetwork:
             self.edge_dims = self._edge_dims()
 
     @classmethod
-    def mps(cls, size: int, target: Optional[np.ndarray] = None, max_bond_dimension: Optional[int] = None):
+    def mps(
+        cls,
+        size: int,
+        target: Optional[np.ndarray] = None,
+        max_bond_dimension: Optional[int] = None,
+    ):
         """Initialize an State object with matrix product structure.
         Args:
             size : The size of system.
@@ -67,24 +73,39 @@ class TreeTensorNetwork:
 
         if target is not None and max_bond_dimension is not None:
             if len(target.shape) != size:
-                raise ValueError(f"The shape of the tensor is not correct. tensor.shape={target.shape}, size={size}")
+                raise ValueError(
+                    f"The shape of the tensor is not correct. tensor.shape={target.shape}, size={size}"
+                )
             target_node = tn.Node(target)
-            U, S, V, _ = tn.split_node_full_svd(target_node, target_node[:2], target_node[2:], max_singular_values=max_bond_dimension)
+            U, S, V, _ = tn.split_node_full_svd(
+                target_node,
+                target_node[:2],
+                target_node[2:],
+                max_singular_values=max_bond_dimension,
+            )
             tensors = [U.tensor]
             V = tn.contractors.auto([V, S], [S[0]] + V[1:])
             for i in range(2, (size - 2) // 2 + 1):
-                U, S, V, _ = tn.split_node_full_svd(V, [V[0], V[1]], V[2:], max_singular_values=max_bond_dimension)
+                U, S, V, _ = tn.split_node_full_svd(
+                    V, [V[0], V[1]], V[2:], max_singular_values=max_bond_dimension
+                )
                 tensors.append(U.tensor)
                 V = tn.contractors.auto([V, S], [S[0]] + V[1:])
 
-            U, S, V, _ = tn.split_node_full_svd(V, V[:-2], [V[-2], V[-1]], max_singular_values=max_bond_dimension)
+            U, S, V, _ = tn.split_node_full_svd(
+                V, V[:-2], [V[-2], V[-1]], max_singular_values=max_bond_dimension
+            )
             tmp_tensors = [V.reorder_edges([V[1], V[2], V[0]]).tensor]
             U = tn.contractors.auto([U, S], U[:-1] + [S[1]])
             for i in reversed(range((size - 2) // 2 + 2, size - 2)):
-                U, S, V, _ = tn.split_node_full_svd(U, U[:-2], [U[-2], U[-1]], max_singular_values=max_bond_dimension)
+                U, S, V, _ = tn.split_node_full_svd(
+                    U, U[:-2], [U[-2], U[-1]], max_singular_values=max_bond_dimension
+                )
                 U = tn.contractors.auto([U, S], U[:-1] + [S[1]])
                 tmp_tensors.append(V.reorder_edges([V[1], V[2], V[0]]).tensor)
-            U, S, V, _ = tn.split_node_full_svd(U, U[:-2], [U[-2], U[-1]], max_singular_values=max_bond_dimension)
+            U, S, V, _ = tn.split_node_full_svd(
+                U, U[:-2], [U[-2], U[-1]], max_singular_values=max_bond_dimension
+            )
             tmp_tensors.append(V.reorder_edges([V[1], V[2], V[0]]).tensor)
             tensors += reversed(tmp_tensors)
 
