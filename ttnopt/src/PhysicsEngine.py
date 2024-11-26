@@ -4,6 +4,7 @@ import numpy as np
 import scipy
 from scipy.linalg import eigh_tridiagonal
 from scipy.sparse.linalg import expm
+from copy import deepcopy
 
 from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.Hamiltonian import Hamiltonian
@@ -78,30 +79,66 @@ class PhysicsEngine(TwoSiteUpdater):
                 self.psi.edge_dims[k] = spin_dof(self.hamiltonian.spin_size[k])
             self.init_tensors_by_block_hamiltonian()
 
-    def calculate_expval(self, indices, operators):
-        def _calculate_single_expval(index, central_tensor_id, operator):
-            bra = tn.Node(self.psi.tensors[central_tensor_id])
-            gauge = tn.Node(self.psi.gauge_tensor)
-            bra[2] ^ gauge[0]
-            bra = tn.contractors.auto(
-                [bra, gauge], output_edge_order=[bra[0], bra[1], gauge[1]]
+    def expval_onesite(self):
+        """Calculate the expectation values of the one-site operators.
+        Returns:
+            The expectation values of the one-site operators of dict.
+        """
+        central_tensor_ids = self.psi.central_tensor_ids()
+        one_site_expvals = {}
+        indices = [
+            (central_tensor_ids[0], i)
+            for i in self.psi.edges[central_tensor_ids[0]][:2]
+        ] + [
+            (central_tensor_ids[1], i)
+            for i in self.psi.edges[central_tensor_ids[1]][:2]
+        ]
+        for index in indices:
+            tensor_id, edge_id = index
+            if edge_id in self.psi.physical_edges:
+                bra = tn.Node(self.psi.tensors[tensor_id])
+                gauge = tn.Node(self.psi.gauge_tensor)
+                bra[2] ^ gauge[0]
+                bra = tn.contractors.auto(
+                    [bra, gauge], output_edge_order=[bra[0], bra[1], gauge[1]]
+                )
+                ket = bra.copy(conjugate=True)
+                expvals = {}
+                for operator in ["Sx", "Sy", "Sz"]:
+                    spin = tn.Node(
+                        self._spin_operator_at_edge(edge_id, edge_id, operator)
+                    )
+                    if edge_id == self.psi.edges[tensor_id][0]:
+                        bra[0] ^ spin[0]
+                        ket[0] ^ spin[1]
+                        bra[1] ^ ket[1]
+                    if edge_id == self.psi.edges[tensor_id][1]:
+                        bra[1] ^ spin[0]
+                        ket[1] ^ spin[1]
+                        bra[0] ^ ket[0]
+
+                    bra[2] ^ ket[2]
+                    expvals[operator] = np.real(
+                        tn.contractors.auto([bra, spin, ket]).tensor
+                    )
+                one_site_expvals[edge_id] = expvals
+        return one_site_expvals
+
+    def expval_twosite(self):
+        central_tensor_ids = self.psi.central_tensor_ids()
+        two_site_expvals = {}
+        for tensor_id in central_tensor_ids:
+
+            l_bare_edges = get_bare_edges(
+                self.psi.edges[tensor_id][0],
+                self.psi.edges,
+                self.psi.physical_edges,
             )
-            ket = bra.copy(conjugate=True)
-            spin = tn.Node(self._spin_operator_at_edge(index, index, operator))
-
-            if index == self.psi.edges[central_tensor_id][0]:
-                bra[0] ^ spin[0]
-                ket[0] ^ spin[1]
-                bra[1] ^ ket[1]
-            elif index == self.psi.edges[central_tensor_id][1]:
-                bra[1] ^ spin[0]
-                ket[1] ^ spin[1]
-                bra[0] ^ ket[0]
-
-            bra[2] ^ ket[2]
-            return tn.contractors.auto([bra, spin, ket])
-
-        def _calculate_double_expval(tensor_id, indices, operators, order):
+            r_bare_edges = get_bare_edges(
+                self.psi.edges[tensor_id][1],
+                self.psi.edges,
+                self.psi.physical_edges,
+            )
             psi = tn.Node(self.psi.tensors[tensor_id])
             gauge = tn.Node(self.psi.gauge_tensor)
             psi[2] ^ gauge[0]
@@ -109,153 +146,53 @@ class PhysicsEngine(TwoSiteUpdater):
                 [psi, gauge],
                 output_edge_order=[psi[0], psi[1], gauge[1]],
             )
-            ket = bra.copy()
+            ket = bra.copy(conjugate=True)
 
-            spin1 = tn.Node(
-                self._spin_operator_at_edge(
-                    self.psi.edges[tensor_id][order[0]], indices[0], operators[0]
-                )
-            )
+            pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
+            expvals = {}
+            for pair in pairs:
+                for operators in [
+                    ["Sx", "Sx"],
+                    ["Sy", "Sy"],
+                    ["Sz", "Sz"],
+                    ["Sx", "Sy"],
+                    ["Sy", "Sx"],
+                    ["Sy", "Sz"],
+                    ["Sz", "Sy"],
+                    ["Sx", "Sz"],
+                    ["Sz", "Sx"],
+                ]:
+                    spin1 = tn.Node(
+                        self._spin_operator_at_edge(
+                            self.psi.edges[tensor_id][0], pair[0], operators[0]
+                        )
+                    )
 
-            spin2 = tn.Node(
-                self._spin_operator_at_edge(
-                    self.psi.edges[tensor_id][order[1]], indices[1], operators[1]
-                )
-            )
-
-            output_edge_order = bra.get_all_edges()
-            bra[order[0]] ^ spin1[0]
-            output_edge_order[order[0]] = spin1[1]
-            bra = tn.contractors.auto([bra, spin1], output_edge_order=output_edge_order)
-            output_edge_order = bra.get_all_edges()
-            bra[order[1]] ^ spin2[0]
-            output_edge_order[order[1]] = spin2[1]
-            bra = tn.contractors.auto([bra, spin2], output_edge_order=output_edge_order)
-            bra[0] ^ ket[0]
-            bra[1] ^ ket[1]
-            bra[2] ^ ket[2]
-            exp_val = tn.contractors.auto([bra, ket])
-            return exp_val
-
-        self.distance = self.initial_distance()
-        self.flag = self.initial_flag()
-
-        if isinstance(indices, int):  # one-site expectation value
-            index = indices
-            while self.candidate_edge_ids() != []:
-                central_tensor_ids = self.psi.central_tensor_ids()
-                if (
-                    index == self.psi.edges[central_tensor_ids[0]][0]
-                    or index == self.psi.edges[central_tensor_ids[0]][1]
-                ):
-                    expval = _calculate_single_expval(
-                        index, central_tensor_ids[0], operators
-                    ).tensor
-                elif (
-                    index == self.psi.edges[central_tensor_ids[1]][0]
-                    or index == self.psi.edges[central_tensor_ids[1]][1]
-                ):
-                    expval = _calculate_single_expval(
-                        index, central_tensor_ids[1], operators
-                    ).tensor
-                self.move_center()
-            return np.real(expval)
-        else:  # two-site expectation value
-
-            def check_and_calculate(tensor_id, order):
-                return _calculate_double_expval(
-                    tensor_id,
-                    indices,
-                    operators,
-                    order,
-                )
-
-            while self.candidate_edge_ids() != []:
-                central_tensor_ids = self.psi.central_tensor_ids()
-                for k in [0, 1]:
-                    for order in [(0, 1), (1, 0)]:
-                        if indices[order[0]] in get_bare_edges(
-                            self.psi.edges[central_tensor_ids[k]][0],
-                            self.psi.edges,
-                            self.psi.physical_edges,
-                        ) and indices[order[1]] in get_bare_edges(
-                            self.psi.edges[central_tensor_ids[k]][1],
-                            self.psi.edges,
-                            self.psi.physical_edges,
-                        ):
-                            expval = check_and_calculate(
-                                central_tensor_ids[k], list(order)
-                            ).tensor
-
-                self.move_center()
-            return np.real(expval)
-
-    def energy(self):
-        central_tensor_ids = self.psi.central_tensor_ids()
-        psi_ = self.contract_central_tensors()
-        psi_h = psi_.copy()
-        psi_h = self._apply_ham_psi(psi_h, central_tensor_ids)
-        return np.real(inner_product(psi_, psi_h))
-
-    def move_center(self):
-        (
-            edge_id,
-            selected_tensor_id,
-            connected_tensor_id,
-            not_selected_tensor_id,
-        ) = self.local_two_tensor()
-
-        # absorb gauge tensor
-        iso = tn.Node(self.psi.tensors[selected_tensor_id])
-        gauge = tn.Node(self.psi.gauge_tensor)
-        iso[2] ^ gauge[0]
-        iso = tn.contractors.auto(
-            [iso, gauge], output_edge_order=[iso[0], iso[1], gauge[1]]
-        )
-        self.psi.tensors[selected_tensor_id] = iso.get_tensor()
-
-        self.set_flag(not_selected_tensor_id)
-
-        self.set_ttn_properties_at_one_tensor(edge_id, selected_tensor_id)
-
-        self._set_edge_spin(not_selected_tensor_id)
-        self._set_block_hamiltonian(not_selected_tensor_id)
-
-        psi1 = tn.Node(self.psi.tensors[selected_tensor_id])
-        psi2 = tn.Node(self.psi.tensors[connected_tensor_id])
-        psi1[2] ^ psi2[2]
-        psi = tn.contractors.auto(
-            [psi1, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
-        )
-        u, s, v, _, _, edge_order = self.decompose_two_tensors(
-            psi, self.max_bond_dim, operate_degeneracy=True
-        )
-        psi_edges = (
-            self.psi.edges[selected_tensor_id][:2]
-            + self.psi.edges[connected_tensor_id][:2]
-        )
-
-        self.psi.tensors[selected_tensor_id] = u
-        self.psi.tensors[connected_tensor_id] = v
-        self.psi.gauge_tensor = s
-        (
-            self.psi.edges[selected_tensor_id][0],
-            self.psi.edges[selected_tensor_id][1],
-        ) = (
-            psi_edges[edge_order[0]],
-            psi_edges[edge_order[1]],
-        )
-        (
-            self.psi.edges[connected_tensor_id][0],
-            self.psi.edges[connected_tensor_id][1],
-        ) = (
-            psi_edges[edge_order[2]],
-            psi_edges[edge_order[3]],
-        )
-        self.distance = self.initial_distance()
+                    spin2 = tn.Node(
+                        self._spin_operator_at_edge(
+                            self.psi.edges[tensor_id][1], pair[1], operators[1]
+                        )
+                    )
+                    bra[0] ^ spin1[0]
+                    bra[1] ^ spin2[0]
+                    ket[0] ^ spin1[1]
+                    ket[1] ^ spin2[1]
+                    bra[2] ^ ket[2]
+                    exp_val = np.real(
+                        tn.contractors.auto([bra, spin1, spin2, ket]).tensor
+                    )
+                    op_key = (
+                        operators[0] + operators[1]
+                        if pair[0] > pair[1]
+                        else operators[1] + operators[0]
+                    )
+                    expvals[op_key] = exp_val
+                key = (pair[0], pair[1]) if pair[0] < pair[1] else (pair[1], pair[0])
+                two_site_expvals[key] = expvals
+        return two_site_expvals
 
     def lanczos(
-        self, central_tensor_ids, lanczos_tol=1e-13, inverse_tol=1e-6, init_random=False
+        self, central_tensor_ids, lanczos_tol=1e-15, inverse_tol=1e-7, init_random=False
     ):
         if (
             self.psi.tensors[central_tensor_ids[0]].shape[2]
@@ -298,15 +235,14 @@ class PhysicsEngine(TwoSiteUpdater):
         d = 0
         if dim_n == 1:
             eigen_vectors = psi
-            return eigen_vectors, self.energy()
+            raise ValueError(
+                "All bond dimensions in canonical center are 1 set more larger bond dimension to run correctly."
+            )
         else:
             e_old = 0.0
             for j in range(1, dim_n):
                 beta[j] = np.linalg.norm(omega)
-                if j == 1 and beta[j] < 1e-14:
-                    eigen_vectors = psi
-                    return eigen_vectors, self.energy()
-                elif j > 1 and beta[j] < 1e-14:
+                if j > 1 and beta[j] < 1e-14:
                     break
                 psi = tn.Node(omega / beta[j])
                 psi_w = self._apply_ham_psi(psi, central_tensor_ids)
@@ -321,9 +257,9 @@ class PhysicsEngine(TwoSiteUpdater):
                         select_range=(0, 0),
                     )
                     energy = e[0]
-                    if np.abs(e - e_old) < np.max([1.0, np.abs(e)]) * lanczos_tol:
+                    if np.abs(e - e_old) < np.max([1.0, np.abs(e)[0]]) * lanczos_tol:
                         d += 1
-                    if d > 5:
+                    if d > 10:
                         break
                     e_old = energy
 
@@ -561,7 +497,6 @@ class PhysicsEngine(TwoSiteUpdater):
 
     def _get_block_hamiltonian(self, tensor_id):
         block_hams = []
-
         edge_ids = self.psi.edges[tensor_id][:2]
         ham_infos = self._get_ham_infos(edge_ids)
         for ham_info in ham_infos:
@@ -733,6 +668,7 @@ class PhysicsEngine(TwoSiteUpdater):
             if self.psi.edges[tensor_id][1] in self.block_hamiltonians.keys():
                 bra_tensor += self._block_ham_psi(bra, self.psi.edges[tensor_id][1], 1)
             bra_tensor += self._ham_psi(bra, self.psi.edges[tensor_id][:2], [0, 1])
+
             bra_h = tn.Node(bra_tensor)
             bra_h[0] ^ ket[0]
             bra_h[1] ^ ket[1]
@@ -758,7 +694,7 @@ class PhysicsEngine(TwoSiteUpdater):
             sp = self.edge_spin_operators[edge_id][bare_edge_id]["S+"]
             sm = self.edge_spin_operators[edge_id][bare_edge_id]["S+"].conj().T
             op = (sp - sm) / 2.0j
-        elif operator == "Sz^2":
+        elif operator == "Sz2":
             op = self.edge_spin_operators[edge_id][bare_edge_id]["Sz"]
             op = np.dot(op, op)
         return op
@@ -772,24 +708,26 @@ class PhysicsEngine(TwoSiteUpdater):
                     "Sz": bare_spin_operator("Sz", value),
                 }
             }
-
         return edge_spin_operators
 
     def _init_block_hamiltonians(self):
         block_hamiltonians = {}
-        for key in self.hamiltonian.spin_size.keys():
-            for ham in self.hamiltonian.observables:
+        for ham in self.hamiltonian.observables:
+            for key in self.hamiltonian.spin_size.keys():
                 if np.array_equal(ham.indices, [key]):
                     spin_operators = []
                     for n in range(ham.operators_num):
                         operators = ham.operators_list[n]
-                        spin_operator = self._spin_operator_at_edge(
-                            key, key, operators[0]
+                        spin_operator = deepcopy(
+                            self._spin_operator_at_edge(key, key, operators[0])
                         )
                         spin_operator *= ham.coef_list[n]
                         spin_operators.append(spin_operator)
                     block_ham = np.sum(spin_operators, axis=0)
-                    block_hamiltonians[key] = block_ham
+                    if block_hamiltonians.get(key) is None:
+                        block_hamiltonians[key] = block_ham
+                    else:
+                        block_hamiltonians[key] += block_ham
         return block_hamiltonians
 
 

@@ -6,20 +6,22 @@ from ttnopt.src import GroundStateSearchSparse
 from ttnopt.hamiltonian import hamiltonian
 
 import pandas as pd
+import itertools
 import yaml
 import argparse
 from dotmap import DotMap
 from pathlib import Path
-import itertools
 import os
+
 
 def ground_state_search():
     parser = argparse.ArgumentParser(description="Ground state search simulation")
-    parser.add_argument("config_file", type=str, help="Path to the YAML configuration file")
+    parser.add_argument(
+        "config_file", type=str, help="Path to the YAML configuration file"
+    )
     args = parser.parse_args()
 
-
-    with open(args.config_file, 'r') as file:
+    with open(args.config_file, "r") as file:
         config = yaml.safe_load(file)
     config = DotMap(config)
 
@@ -33,7 +35,19 @@ def ground_state_search():
 
     path = Path(config.output.dir)
 
-    for i, (max_bond_dim, max_num_sweep) in enumerate(zip(numerics.max_bond_dimensions, numerics.max_num_sweeps)):
+    save_basic = True if config.output.basic.active else False
+    save_onesite_expval = True if config.output.single_site.active else False
+    save_twosite_expval = True if config.output.two_site.active else False
+    if save_basic is True and config.output.basic.file is DotMap():
+        raise ValueError("Please input basic path file")
+    if save_onesite_expval is True and config.output.single_site.file is DotMap():
+        raise ValueError("Please input single site path file")
+    if save_twosite_expval is True and config.output.two_site.file is DotMap():
+        raise ValueError("Please input two site path file")
+
+    for i, (max_bond_dim, max_num_sweep) in enumerate(
+        zip(numerics.max_bond_dimensions, numerics.max_num_sweeps)
+    ):
         if numerics.U1_symmetry.active:
             gss = GroundStateSearchSparse(
                 psi,
@@ -43,13 +57,17 @@ def ground_state_search():
                 max_bond_dim=max_bond_dim,
                 truncation_error=numerics.truncation_error,
                 edge_spin_operators=edge_op_at_edge,
-                block_hamiltonians=block_ham_at_edge
+                block_hamiltonians=block_ham_at_edge,
             )
 
             energy, entanglement, _ = gss.run(
                 opt_structure=opt_structure,
-                energy_convergence_threshold=float(numerics.energy_convergence_threshold),
-                entanglement_convergence_threshold=float(numerics.entanglement_convergence_threshold),
+                energy_convergence_threshold=float(
+                    numerics.energy_convergence_threshold
+                ),
+                entanglement_convergence_threshold=float(
+                    numerics.entanglement_convergence_threshold
+                ),
                 max_num_sweep=max_num_sweep,
             )
 
@@ -61,17 +79,47 @@ def ground_state_search():
                 max_bond_dim=max_bond_dim,
                 truncation_error=numerics.truncation_error,
                 edge_spin_operators=edge_op_at_edge,
-                block_hamiltonians=block_ham_at_edge
-            )
-            energy, entanglement, error = gss.run(
-                opt_structure=opt_structure,
-                energy_convergence_threshold=float(numerics.energy_convergence_threshold),
-                entanglement_convergence_threshold=float(numerics.entanglement_convergence_threshold),
-                max_num_sweep=max_num_sweep,
+                block_hamiltonians=block_ham_at_edge,
             )
 
+            if i == 0:
+                gss.run(
+                    opt_structure=opt_structure,
+                    energy_convergence_threshold=float(
+                        numerics.energy_convergence_threshold
+                    ),
+                    entanglement_convergence_threshold=float(
+                        numerics.entanglement_convergence_threshold
+                    ),
+                    max_num_sweep=max_num_sweep,
+                )
+                # re-run the first iteration to save the expectation values
+                gss.run(
+                    opt_structure=False,
+                    max_num_sweep=1,
+                    eval_onesite_expval=save_onesite_expval,
+                    eval_twosite_expval=save_twosite_expval,
+                )
+            else:
+                gss.run(
+                    opt_structure=False,
+                    energy_convergence_threshold=float(
+                        numerics.energy_convergence_threshold
+                    ),
+                    entanglement_convergence_threshold=float(
+                        numerics.entanglement_convergence_threshold
+                    ),
+                    max_num_sweep=max_num_sweep,
+                    eval_onesite_expval=save_onesite_expval,
+                    eval_twosite_expval=save_twosite_expval,
+                )
+
+        # reset parameters for the next iteration
+        edge_op_at_edge = gss.edge_spin_operators
+        block_ham_at_edge = gss.block_hamiltonians
+
         nodes_list = {}
-        for edge_id in energy.keys():
+        for edge_id in gss.energy.keys():
             tmp = []
             for node_id, edges in enumerate(psi.edges):
                 node_id += config.system.N
@@ -87,74 +135,50 @@ def ground_state_search():
                 if edge_id in edges:
                     tmp.append(node_id)
             nodes_list[edge_id] = tmp
-            energy[edge_id] = 0.0
-            error[edge_id] = 0.0
+            gss.energy[edge_id] = 0.0
+            gss.error[edge_id] = 0.0
 
-        if config.output.basic_file is not DotMap():
+        if save_basic is True:
             all_keys = set(nodes_list.keys())
-            df = pd.DataFrame([nodes_list[k] for k in all_keys], columns=['node1', 'node2'], index=None)
-            if config.output.energy.active:
-                df['energy'] = [energy[k] for k in all_keys]
-            if config.output.entanglement.active:
-                df['entanglement'] = [entanglement[k] for k in all_keys]
-            if config.output.error.active:
-                df['error'] = [error[k] for k in all_keys]
+            df = pd.DataFrame(
+                [nodes_list[k] for k in all_keys],
+                columns=["node1", "node2"],
+                index=None,
+            )
+            df["energy"] = [gss.energy[k] for k in all_keys]
+            df["entanglement"] = [gss.entanglement[k] for k in all_keys]
+            df["error"] = [gss.error[k] for k in all_keys]
 
-            path_ = path / f"run{i+1}"
+            path_ = path / f"run{i + 1}"
             os.makedirs(path_, exist_ok=True)
 
-            df.to_csv(path_ / config.output.basic_file, header=True, index=None)
+            df.to_csv(path_ / config.output.basic.file, header=True, index=None)
 
-        if config.output.single_site_file is not DotMap():
-            df = pd.DataFrame(psi.physical_edges, columns=['site'], index=None)
+        if save_onesite_expval is True:
+            df = pd.DataFrame(psi.physical_edges, columns=["site"], index=None)
+            df["Sx"] = [
+                gss.one_site_expval[edge_id]["Sx"] for edge_id in psi.physical_edges
+            ]
+            df["Sy"] = [
+                gss.one_site_expval[edge_id]["Sy"] for edge_id in psi.physical_edges
+            ]
+            df["Sz"] = [
+                gss.one_site_expval[edge_id]["Sz"] for edge_id in psi.physical_edges
+            ]
+            df.to_csv(path_ / config.output.single_site.file, header=True, index=None)
 
-            if config.output.single_site.Sx.active:
-                sx = [gss.calculate_expval(edge_id, "Sx") for edge_id in psi.physical_edges]
-                df['Sx'] = sx
-            if config.output.single_site.Sy.active:
-                sy = [gss.calculate_expval(edge_id, "Sy") for edge_id in psi.physical_edges]
-                df['Sy'] = sy
-            if config.output.single_site.Sz.active:
-                sz = [gss.calculate_expval(edge_id, "Sz") for edge_id in psi.physical_edges]
-                df['Sz'] = sz
-            df.to_csv(path_ / config.output.single_site_file , header=True, index=None)
-
-        if config.output.two_site_file is not DotMap():
-            pairs =  [(i, j) for i, j in itertools.combinations(psi.physical_edges, 2)]
-            df = pd.DataFrame(pairs, columns=['site1', 'site2'], index=None)
-            if config.output.two_site.SxSx.active:
-                xx = [gss.calculate_expval(pair, ["Sx", "Sx"]) for pair in pairs]
-                df['SxSx'] = xx
-            if config.output.two_site.SySy.active:
-                yy = [gss.calculate_expval(pair, ["Sy", "Sy"]) for pair in pairs]
-                df['SySy'] = yy
-            if config.output.two_site.SzSz.active:
-                zz = [gss.calculate_expval(pair, ["Sz", "Sz"]) for pair in pairs]
-                df['SzSz'] = zz
-            if config.output.two_site.SySz.active:
-                yz = [gss.calculate_expval(pair, ["Sy", "Sz"]) for pair in pairs]
-                df['SySz'] = yz
-            if config.output.two_site.SzSy.active:
-                zy = [gss.calculate_expval(pair, ["Sz", "Sy"]) for pair in pairs]
-                df['SzSy'] = zy
-            if config.output.two_site.SzSx.active:
-                zx = [gss.calculate_expval(pair, ["Sz", "Sx"]) for pair in pairs]
-                df['SzSx'] = zx
-            if config.output.two_site.SzSx.active:
-                xz = [gss.calculate_expval(pair, ["Sx", "Sz"]) for pair in pairs]
-                df['SxSz'] = xz
-            if config.output.two_site.SxSy.active:
-                xy = [gss.calculate_expval(pair, ["Sx", "Sy"]) for pair in pairs]
-                df['SxSy'] = xy
-            if config.output.two_site.SySx.active:
-                yx = [gss.calculate_expval(pair, ["Sy", "Sx"]) for pair in pairs]
-                df['SySx'] = yx
-            df.to_csv(path_ / config.output.two_site_file, header=True, index=None)
-
-        # reset parameters for the next iteration
-        opt_structure = 0
-        edge_op_at_edge = gss.edge_spin_operators
-        block_ham_at_edge = gss.block_hamiltonians
-
+        if save_twosite_expval is True:
+            pairs = [(i, j) for i, j in itertools.combinations(psi.physical_edges, 2)]
+            df = pd.DataFrame(pairs, columns=["site1", "site2"], index=None)
+            df["SxSx"] = [gss.two_site_expval[pair]["SxSx"] for pair in pairs]
+            df["SySy"] = [gss.two_site_expval[pair]["SySy"] for pair in pairs]
+            df["SzSz"] = [gss.two_site_expval[pair]["SzSz"] for pair in pairs]
+            df["SxSy"] = [gss.two_site_expval[pair]["SxSy"] for pair in pairs]
+            df["SySx"] = [gss.two_site_expval[pair]["SySx"] for pair in pairs]
+            df["SySz"] = [gss.two_site_expval[pair]["SySz"] for pair in pairs]
+            df["SzSy"] = [gss.two_site_expval[pair]["SzSy"] for pair in pairs]
+            df["SzSx"] = [gss.two_site_expval[pair]["SzSx"] for pair in pairs]
+            df["SxSz"] = [gss.two_site_expval[pair]["SxSz"] for pair in pairs]
+            df.to_csv(path_ / config.output.two_site.file, header=True, index=None)
 
     return 0

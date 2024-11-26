@@ -3,6 +3,7 @@ import tensornetwork as tn
 import itertools
 from collections import deque, defaultdict
 
+
 class TwoSiteUpdaterMixin:
     def initial_flag(self):
         edge_ids = set(itertools.chain.from_iterable(self.psi.edges))
@@ -135,7 +136,7 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
             edge_order = [0, 1, 2, 3]
         else:
             candidates = [[0, 1, 2, 3], [0, 2, 1, 3], [1, 2, 3, 0]]
-            ee = 1e10
+            ee = 1e13
             for edges in candidates:
                 psi_ = psi.copy()
                 a = psi_[edges[0]]
@@ -182,18 +183,24 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
                 ee_at_physical_bond[edge] = 0.0
         for edge_id in ee_at_physical_bond.keys():
             psi_ = psi.copy()
-            matching_index = list({i for i, v in enumerate(psi_edges) if v == edge_id})[0]
-            non_matching_indices = list({i for i in range(len(psi_edges)) if i != matching_index})
+            matching_index = list({i for i, v in enumerate(psi_edges) if v == edge_id})[
+                0
+            ]
+            non_matching_indices = list(
+                {i for i in range(len(psi_edges)) if i != matching_index}
+            )
             psi_dag = psi_.copy(conjugate=True)
             for i in non_matching_indices:
                 psi_[i] ^ psi_dag[i]
-            rho = tn.contractors.auto([psi_, psi_dag], output_edge_order=[psi_[matching_index], psi_dag[matching_index]])
+            rho = tn.contractors.auto(
+                [psi_, psi_dag],
+                output_edge_order=[psi_[matching_index], psi_dag[matching_index]],
+            )
             (u, s, v, terr) = tn.split_node_full_svd(rho, [rho[0]], [rho[1]])
             p_ = np.diagonal(s.get_tensor())
             p_ = np.sqrt(p_)
             ee_at_physical_bond[edge_id] = self.entanglement_entropy(probability=p_)
         return ee_at_physical_bond
-
 
     def set_ttn_properties_at_one_tensor(self, edge_id, selected_tensor_id):
         # update_ttn_properties

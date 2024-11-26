@@ -11,18 +11,18 @@ setup(
     zip_safe=False,
     install_requires=[],
     python_requires=">=3.6",
-    license='Apache License 2.0',
+    license="Apache License 2.0",
     classifiers=[
         "Development Status :: 1 - Planning",
         "Intended Audience :: Developers",
-        'License :: OSI Approved :: Apache Software License',
+        "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
     ],
     entry_points={
-        'console_scripts': [
-            'gss=ttnopt:ground_state_search',  # Link ttnopt_gss command to your main function
-            'ft=ttnopt:factorize_tensor',  # Link ttnopt_gss command to your main function
-            'samplettn=ttnopt:sample',  # Link ttnopt_sample command to your sample function
+        "console_scripts": [
+            "gss=ttnopt:ground_state_search",  # Link ttnopt_gss command to your main function
+            "ft=ttnopt:factorize_tensor",  # Link ttnopt_gss command to your main function
+            "samplettn=ttnopt:sample",  # Link ttnopt_sample command to your sample function
         ],
     },
 )
