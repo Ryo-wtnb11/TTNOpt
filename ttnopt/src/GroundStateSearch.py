@@ -41,11 +41,11 @@ class GroundStateSearch(PhysicsEngine):
             edge_spin_operators : Spin operators at each edge.
             block_hamiltonians : Block hamiltonian at each edge.
         """
-        self.energy = None
-        self.entanglement = None
-        self.error = None
-        self.one_site_expval = None
-        self.two_site_expval = None
+        self.energy: Dict[int, float] = {}
+        self.entanglement: Dict[int, float] = {}
+        self.error: Dict[int, float] = {}
+        self.one_site_expval: Dict[int, Dict[str, float]] = {}
+        self.two_site_expval: Dict[Tuple[int, int], Dict[str, float]] = {}
 
         super().__init__(
             psi,
