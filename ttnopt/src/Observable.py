@@ -1,7 +1,6 @@
 from typing import List
 
 import numpy as np
-from fractions import Fraction
 
 
 class Observable:
@@ -52,20 +51,26 @@ def bare_spin_operator(spin, spin_num):
     spin_value = spin_ind(spin_num)  # Get both string form and numeric value
     # Check if spin_value is valid
     if not (spin_value == int(spin_value) or spin_value == int(spin_value) + 0.5):
-        raise ValueError("Invalid spin number. Spin number must be an integer or half-integer.")
+        raise ValueError(
+            "Invalid spin number. Spin number must be an integer or half-integer."
+        )
     dim = int(2 * spin_value + 1)  # Dimension of the matrix based on the spin value
     if spin == "S+":
         # Construct the raising operator S+
         S_plus = np.zeros((dim, dim), dtype=np.complex128)
         for m in range(dim - 1):
-            S_plus[m, m + 1] = np.sqrt(spin_value * (spin_value + 1) - (spin_value - m) * (spin_value - m - 1))
+            S_plus[m, m + 1] = np.sqrt(
+                spin_value * (spin_value + 1) - (spin_value - m) * (spin_value - m - 1)
+            )
         return S_plus
 
     elif spin == "S-":
         # Construct the raising operator S+
         S_plus = np.zeros((dim, dim), dtype=np.complex128)
         for m in range(dim - 1):
-            S_plus[m, m + 1] = np.sqrt(spin_value * (spin_value + 1) - (spin_value - m) * (spin_value - m - 1))
+            S_plus[m, m + 1] = np.sqrt(
+                spin_value * (spin_value + 1) - (spin_value - m) * (spin_value - m - 1)
+            )
         S_minus = np.transpose(S_plus)
         return S_minus
 
