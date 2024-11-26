@@ -1,8 +1,8 @@
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, Dict, Tuple
 
 import numpy as np
 import tensornetwork as tn
-import copy
+from copy import deepcopy
 
 from ttnopt.src.PhysicsEngine import PhysicsEngine
 from ttnopt.src.TTN import TreeTensorNetwork
@@ -41,6 +41,12 @@ class GroundStateSearch(PhysicsEngine):
             edge_spin_operators : Spin operators at each edge.
             block_hamiltonians : Block hamiltonian at each edge.
         """
+        self.energy = None
+        self.entanglement = None
+        self.error = None
+        self.one_site_expval = None
+        self.two_site_expval = None
+
         super().__init__(
             psi,
             hamiltonian,
@@ -58,7 +64,9 @@ class GroundStateSearch(PhysicsEngine):
         entanglement_convergence_threshold: float = 1e-8,
         max_num_sweep: int = 5,
         converged_count: int = 2,
-    ) -> Tuple[Dict[int, float], Dict[int, float], Dict[int, float]]:
+        eval_onesite_expval: bool = False,
+        eval_twosite_expval: bool = False,
+    ):
         """Run DMRG algorithm.
 
         Args:
@@ -76,21 +84,23 @@ class GroundStateSearch(PhysicsEngine):
         _energy_at_edge: Dict[int, float] = {}
         ee_at_edge: Dict[int, float] = {}
         _ee_at_edge: Dict[int, float] = {}
-        error_at_edge: Dict[int, float] = {}
         _error_at_edge: Dict[int, float] = {}
+        onesite_expval: Dict[int, Dict[str, float]] = {}
+        twosite_expval: Dict[Tuple[int, int], Dict[str, float]] = {}
 
-        edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
+        edges, _edges = deepcopy(self.psi.edges), deepcopy(self.psi.edges)
 
         converged_num = 0
 
         sweep_num = 0
         while converged_num < converged_count and sweep_num < max_num_sweep:
             # energy
-            energy_at_edge = copy.deepcopy(_energy_at_edge)
-            ee_at_edge = copy.deepcopy(_ee_at_edge)
+            energy_at_edge = deepcopy(_energy_at_edge)
+            ee_at_edge = deepcopy(_ee_at_edge)
+
             # error_at_edge = copy.deepcopy(_error_at_edge)
 
-            edges = copy.deepcopy(_edges)
+            edges = deepcopy(_edges)
 
             self.distance = self.initial_distance()
             self.flag = self.initial_flag()
@@ -164,11 +174,20 @@ class GroundStateSearch(PhysicsEngine):
                 )
                 for key in ee_dict.keys():
                     _ee_at_edge[key] = ee_dict[key]
+
+                if eval_onesite_expval:
+                    onesite_expval_dict = self.expval_onesite()
+                    for key in onesite_expval_dict.keys():
+                        onesite_expval[key] = onesite_expval_dict[key]
+                if eval_twosite_expval:
+                    twosite_expval_dict = self.expval_twosite()
+                    for key in twosite_expval_dict.keys():
+                        twosite_expval[key] = twosite_expval_dict[key]
+
                 _error_at_edge[self.psi.canonical_center_edge_id] = error
 
-            _edges = copy.deepcopy(self.psi.edges)
+            _edges = deepcopy(self.psi.edges)
 
-            # 終了判定
             sweep_num += 1
             if sweep_num > 2:
                 diff_energy = [
@@ -196,4 +215,9 @@ class GroundStateSearch(PhysicsEngine):
                         converged_num += 1
         print("Converged")
 
-        return _energy_at_edge, _ee_at_edge, _error_at_edge
+        self.energy = _energy_at_edge
+        self.entanglement = _ee_at_edge
+        self.error = _error_at_edge
+        self.one_site_expval = onesite_expval
+        self.two_site_expval = twosite_expval
+        return 0

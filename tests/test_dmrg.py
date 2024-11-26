@@ -3,6 +3,8 @@ from ttnopt.src import TreeTensorNetwork
 from ttnopt.src import GroundStateSearch
 
 import math
+import numpy as np
+
 
 def open_adjacent_indexs(d: int):
     n = 2**d
@@ -18,7 +20,9 @@ def heisenberg_chain_hamiltonian(d, coef_j=1.0):
     indices = open_adjacent_indexs(d)
     interaction_coefs = [[coef_j, coef_j] for _ in indices]
     model = "XXZ"
-    return Hamiltonian(d**2, spin_size, model, indices, interaction_coefs=interaction_coefs)
+    return Hamiltonian(
+        d**2, spin_size, model, indices, interaction_coefs=interaction_coefs
+    )
 
 
 def test_run_dmrg():
@@ -27,12 +31,13 @@ def test_run_dmrg():
     hamiltonian = heisenberg_chain_hamiltonian(d)
     init_bond_dim = 4
     max_bond_dim = 10
-    dmrg = GroundStateSearch(
+    gss = GroundStateSearch(
         psi=psi,
         hamiltonian=hamiltonian,
         init_bond_dim=init_bond_dim,
         max_bond_dim=max_bond_dim,
     )
-    dmrg.run(opt_structure=True, max_num_sweep=1)
-    energy = dmrg.energy()
-    assert math.isclose(energy, -6.9116111, abs_tol=1e-5)
+    gss.run(opt_structure=True, max_num_sweep=5)
+    energy = gss.energy
+    energy = np.mean(list(energy.values()))
+    assert math.isclose(energy, -6.911621, abs_tol=1e-5)
