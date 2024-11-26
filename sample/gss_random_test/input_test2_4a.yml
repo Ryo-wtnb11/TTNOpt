@@ -1,0 +1,106 @@
+system:
+    N: 12 # Number of spins
+
+    # Spin size configuration
+    spin_size:
+        uniform: 0 # 1 for uniform spin size, 0 for non-uniform
+        S: 1/2 # Spin size (used only if uniform is 1)
+        Si_file: Spinsize.dat # File containing spin sizes per site (used if uniform is 0)
+
+    # Exchange coupling for the XXZ or XYZ model
+    model:
+        type: XYZ # Choose XXZ or XYZ
+        Jij_file: XYZ.dat # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
+
+    # External magnetic field settings
+    MF_X:
+        active: 1 # 1 for adding magnetic field, 0 for no magnetic field
+        uniform: 0 # 1 for uniform magnetic field, 0 for non-uniform
+        hi_file: MFx.dat # Site-variable file for non-uniform magnetic field (used if uniform is 0)
+
+    MF_Y:
+        active: 1 # 1 for adding magnetic field, 0 for no magnetic field
+        uniform: 0 # 1 for uniform magnetic field, 0 for non-uniform
+        hi_file: MFy.dat # Site-variable file for non-uniform magnetic field (used if uniform is 0)
+
+    MF_Z:
+        active: 1 # 1 for adding magnetic field, 0 for no magnetic field
+        uniform: 0 # 1 for uniform magnetic field, 0 for non-uniform
+        hi_file: MFz.dat # Site-variable file for non-uniform magnetic field (used if uniform is 0)
+
+    # Single-ion anisotropy settings
+    SIA:
+        active: 1 # 1 for adding single-ion anisotropy, 0 for none
+        uniform: 0 # 1 for uniform anisotropy, 0 for non-uniform
+        # D: 0.3 # Anisotropy value (used if uniform is 1)
+        Di_file: Di.dat # Site-variable file for non-uniform anisotropy (used if uniform is 0)
+
+    # DM interaction settings
+    DM_X:
+        active: 0 # 1 for adding DM interaction, 0 for none
+        DM_file: DMx.dat # Pair-variable file containing DM interaction values
+
+    DM_Y:
+        active: 0 # 1 for adding DM interaction, 0 for none
+        DM_file: DMy.dat # Pair-variable file containing DM interaction values
+
+    DM_Z:
+        active: 0 # 1 for adding DM interaction, 0 for none
+        DM_file: DMz.dat # Pair-variable file containing DM interaction values
+
+numerics:
+    init_structure:
+        tree: 0
+    opt_structure:
+        active: 1
+    U1_symmetry:
+        # Jx == Jy and Hx = Hy == 0 and DM_x = DM_y == 0
+        active: 0 # 1 for active, 0 for inactive
+        magnetization: 0 # Total magnetization (used if U(1) symmetry is active)
+    initial_bond_dimension: 10
+    max_bond_dimensions: [10, 20, 40] # Maximum bond dimension for each repetition
+    max_num_sweeps: [20, 5, 5]
+    truncation_error: 1e-10
+    energy_convergence_threshold: 1e-7
+    entanglement_convergence_threshold: 1e-7
+    energy_degeneracy_threshold: 1e-14
+    entanglement_degeneracy_threshold: 0.1
+
+output:
+    dir: data_XYZ1111000
+    basic_file: basic.csv
+    single_site_file: single_site.csv
+    two_site_file: two_site.csv
+
+    energy:
+        active: 1
+    entanglement:
+        active: 1
+    error:
+        active: 1
+    single_site:
+        Sx:
+            active: 1
+        Sy:
+            active: 1
+        Sz:
+            active: 1
+    two_site:
+        SxSx:
+            active: 1
+        SySy:
+            active: 1
+        SzSz:
+            active: 1
+        SySz:
+            active: 1
+        SzSy:
+            active: 1
+        SzSx:
+            active: 1
+        SxSz:
+            active: 1
+        SxSy:
+            active: 1
+        SySx:
+            active: 1
