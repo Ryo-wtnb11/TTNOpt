@@ -1,0 +1,35 @@
+system:
+    N: 256 # Number of spins
+
+    # Spin size configuration
+    spin_size:
+        uniform: 1
+        S: 1/2 # Spin size (used only if uniform is 1)
+
+    # Exchange coupling for the XXZ or XYZ model
+    model:
+        type: XYZ # Choose XXZ or XYZ
+        Jij_file: ../coupling.csv # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
+
+    MF_Z:
+        active: 1 # 1 for adding magnetic field, 0 for no magnetic field
+        uniform: 1 # 1 for uniform magnetic field, 0 for non-uniform
+        h: -1.98694
+
+numerics:
+    init_structure:
+        tree: 0
+    opt_structure:
+        active: 1
+    initial_bond_dimension: 4
+    max_bond_dimensions: [32] # Maximum bond dimension for each repetition
+    max_num_sweeps: [25]
+    energy_convergence_threshold: 1e-8
+    entanglement_convergence_threshold: 1e-8
+    energy_degeneracy_threshold: 1e-13
+    entanglement_degeneracy_threshold: 0.1
+
+output:
+    dir: data
+    basic:
+        file: basic.csv

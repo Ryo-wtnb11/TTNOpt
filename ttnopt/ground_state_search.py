@@ -35,15 +35,13 @@ def ground_state_search():
 
     path = Path(config.output.dir)
 
-    save_basic = True if config.output.basic.active else False
-    save_onesite_expval = True if config.output.single_site.active else False
-    save_twosite_expval = True if config.output.two_site.active else False
-    if save_basic is True and config.output.basic.file is DotMap():
-        raise ValueError("Please input basic path file")
-    if save_onesite_expval is True and config.output.single_site.file is DotMap():
-        raise ValueError("Please input single site path file")
-    if save_twosite_expval is True and config.output.two_site.file is DotMap():
-        raise ValueError("Please input two site path file")
+    save_basic = True if not isinstance(config.output.basic.file, DotMap) else False
+    save_onesite_expval = (
+        True if not isinstance(config.output.single_site.file, DotMap) else False
+    )
+    save_twosite_expval = (
+        True if not isinstance(config.output.two_site.file, DotMap) else False
+    )
 
     for i, (max_bond_dim, max_num_sweep) in enumerate(
         zip(numerics.max_bond_dimensions, numerics.max_num_sweeps)
@@ -60,7 +58,7 @@ def ground_state_search():
                 block_hamiltonians=block_ham_at_edge,
             )
 
-            energy, entanglement, _ = gss.run(
+            gss.run(
                 opt_structure=opt_structure,
                 energy_convergence_threshold=float(
                     numerics.energy_convergence_threshold
@@ -165,6 +163,9 @@ def ground_state_search():
             df["Sz"] = [
                 gss.one_site_expval[edge_id]["Sz"] for edge_id in psi.physical_edges
             ]
+
+            path_ = path / f"run{i + 1}"
+            os.makedirs(path_, exist_ok=True)
             df.to_csv(path_ / config.output.single_site.file, header=True, index=None)
 
         if save_twosite_expval is True:
@@ -179,6 +180,8 @@ def ground_state_search():
             df["SzSy"] = [gss.two_site_expval[pair]["SzSy"] for pair in pairs]
             df["SzSx"] = [gss.two_site_expval[pair]["SzSx"] for pair in pairs]
             df["SxSz"] = [gss.two_site_expval[pair]["SxSz"] for pair in pairs]
+            path_ = path / f"run{i + 1}"
+            os.makedirs(path_, exist_ok=True)
             df.to_csv(path_ / config.output.two_site.file, header=True, index=None)
 
     return 0

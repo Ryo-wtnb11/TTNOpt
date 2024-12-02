@@ -91,7 +91,7 @@ class TwoSiteUpdaterMixin:
             and self.flag[self.psi.edges[not_selected_tensor_id][1]] == 1
         ):
             if self.psi.canonical_center_edge_id != self.psi.top_edge_id:
-                self.flag[self.psi.edges[not_selected_tensor_id][2]] = 1
+                self.flag[self.psi.canonical_center_edge_id] = 1
         return
 
     def contract_central_tensors(self):
