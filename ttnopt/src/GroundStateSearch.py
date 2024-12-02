@@ -125,6 +125,17 @@ class GroundStateSearch(PhysicsEngine):
 
                 self.set_flag(not_selected_tensor_id)
 
+                # eval expval
+                if self.flag[self.psi.canonical_center_edge_id] == 1:
+                    if eval_onesite_expval:
+                        onesite_expval_dict = self.expval_onesite()
+                        for key in onesite_expval_dict.keys():
+                            onesite_expval[key] = onesite_expval_dict[key]
+                    if eval_twosite_expval:
+                        twosite_expval_dict = self.expval_twosite()
+                        for key in twosite_expval_dict.keys():
+                            twosite_expval[key] = twosite_expval_dict[key]
+
                 self.set_ttn_properties_at_one_tensor(edge_id, selected_tensor_id)
 
                 self._set_edge_spin(not_selected_tensor_id)
@@ -175,16 +186,6 @@ class GroundStateSearch(PhysicsEngine):
                 )
                 for key in ee_dict.keys():
                     _ee_at_edge[key] = ee_dict[key]
-
-                if eval_onesite_expval:
-                    onesite_expval_dict = self.expval_onesite()
-                    for key in onesite_expval_dict.keys():
-                        onesite_expval[key] = onesite_expval_dict[key]
-                if eval_twosite_expval:
-                    twosite_expval_dict = self.expval_twosite()
-                    for key in twosite_expval_dict.keys():
-                        twosite_expval[key] = twosite_expval_dict[key]
-
                 _error_at_edge[self.psi.canonical_center_edge_id] = error
 
             _edges = deepcopy(self.psi.edges)

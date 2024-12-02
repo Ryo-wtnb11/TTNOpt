@@ -32,11 +32,4 @@ numerics:
 output:
     dir: data
     basic:
-        active: 1
         file: basic.csv
-    single_site:
-        active: 1
-        file: single_site.csv
-    two_site:
-        active: 1
-        file: two_site.csv
