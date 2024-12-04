@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Dict
 
 import numpy as np
 import tensornetwork as tn
@@ -24,7 +24,7 @@ class FactorizeTensor(DataEngine):
         target: np.ndarray,
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
-        truncation_error = 1e-11,
+        truncation_error=1e-11,
     ):
         """Initialize a FactorizeTensor object.
 
@@ -35,13 +35,9 @@ class FactorizeTensor(DataEngine):
             max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
             truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
         """
-        super().__init__(
-            psi,
-            target,
-            init_bond_dim,
-            max_bond_dim,
-            truncation_error
-        )
+        self.entanglement: Dict[int, float] = {}
+        self.fidelity: Dict[int, float] = {}
+        super().__init__(psi, target, init_bond_dim, max_bond_dim, truncation_error)
 
     def run(
         self,
@@ -51,7 +47,6 @@ class FactorizeTensor(DataEngine):
         entanglement_convergence_threshold=1e-8,
         max_num_sweep=5,
         converged_count=2,
-
     ):
         """Run FactorizingTensor algorithm.
 
@@ -62,8 +57,14 @@ class FactorizeTensor(DataEngine):
             opt_structure (bool, optional): If optimize the tree structure or not. Defaults to False.
         """
 
-        _ee_at_edge: Dict[int, float] = {}
-        _fidelity_at_edge: Dict[int, float] = {}
+        # _ee_at_edge: Dict[int, float] = {}
+        # ee_at_edge: Dict[int, float] = {}
+        # _fidelity_at_edge: Dict[int, float] = {}
+        # fidelity_at_edge: Dict[int, float] = {}
+        _ee_at_edge = {}
+        ee_at_edge = {}
+        _fidelity_at_edge = {}
+        fidelity_at_edge = {}
 
         edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
 
@@ -92,7 +93,9 @@ class FactorizeTensor(DataEngine):
                 self.set_ttn_properties_at_one_tensor(edge_id, selected_tensor_id)
 
                 if opt_fidelity:
-                    new_tensor = self.update_tensor([selected_tensor_id, connected_tensor_id])
+                    new_tensor = self.update_tensor(
+                        [selected_tensor_id, connected_tensor_id]
+                    )
                 else:
                     iso1 = tn.Node(self.psi.tensors[selected_tensor_id])
                     iso2 = tn.Node(self.psi.tensors[connected_tensor_id])
@@ -100,7 +103,8 @@ class FactorizeTensor(DataEngine):
                     iso1[2] ^ gauge[0]
                     iso2[2] ^ gauge[1]
                     new_tensor = tn.contractors.auto(
-                        [iso1, iso2], output_edge_order=[iso1[0], iso1[1], iso2[0], iso2[1]]
+                        [iso1, iso2],
+                        output_edge_order=[iso1[0], iso1[1], iso2[0], iso2[1]],
                     )
 
                 psi_edges = (
@@ -159,9 +163,18 @@ class FactorizeTensor(DataEngine):
                         for edge, _edge in zip(edges, _edges)
                     ]
                 ):
-                    if all([ee < entanglement_convergence_threshold for ee in diff_ee]) and all(
-                        [fidelity < fidelity_convergence_threshold for fidelity in diff_fidelity]):
+                    if all(
+                        [ee < entanglement_convergence_threshold for ee in diff_ee]
+                    ) and all(
+                        [
+                            fidelity < fidelity_convergence_threshold
+                            for fidelity in diff_fidelity
+                        ]
+                    ):
                         converged_num += 1
         print("Converged")
 
-        return _fidelity_at_edge, _ee_at_edge
+        self.entanglement = _ee_at_edge
+        self.fidelity = _fidelity_at_edge
+
+        return

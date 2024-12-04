@@ -26,10 +26,19 @@ def ground_state_search():
     config = DotMap(config)
 
     psi = TreeTensorNetwork.mps(config.system.N)
+    if config.numerics.init_tree:
+        if config.system.N > 0 and (config.system.N & (config.system.N - 1)) == 0:
+            psi = TreeTensorNetwork.tree(config.system.N)
+        else:
+            print("=" * 50)
+            print("⚠️  Note: N is not a power of 2.")
+            print("     Using MPS structure as the default.")
+            print("=" * 50)
+
     ham = hamiltonian(config.system)
 
     numerics = config.numerics
-    opt_structure = 1 if numerics.opt_structure.active else 0
+    opt_structure = 1 if numerics.opt_structure else 0
     edge_op_at_edge = None
     block_ham_at_edge = None
 
@@ -46,7 +55,7 @@ def ground_state_search():
     for i, (max_bond_dim, max_num_sweep) in enumerate(
         zip(numerics.max_bond_dimensions, numerics.max_num_sweeps)
     ):
-        if numerics.U1_symmetry.active:
+        if not isinstance(numerics.U1_symmetry.magnitude, DotMap):
             gss = GroundStateSearchSparse(
                 psi,
                 ham,
@@ -80,7 +89,7 @@ def ground_state_search():
                 block_hamiltonians=block_ham_at_edge,
             )
 
-            if i == 0:
+            if opt_structure:
                 gss.run(
                     opt_structure=opt_structure,
                     energy_convergence_threshold=float(
@@ -91,6 +100,7 @@ def ground_state_search():
                     ),
                     max_num_sweep=max_num_sweep,
                 )
+                print("Calculating the expectation values for the initial structure")
                 # re-run the first iteration to save the expectation values
                 gss.run(
                     opt_structure=False,
@@ -98,6 +108,7 @@ def ground_state_search():
                     eval_onesite_expval=save_onesite_expval,
                     eval_twosite_expval=save_twosite_expval,
                 )
+                opt_structure = 0
             else:
                 gss.run(
                     opt_structure=False,
@@ -150,7 +161,10 @@ def ground_state_search():
             path_ = path / f"run{i + 1}"
             os.makedirs(path_, exist_ok=True)
 
-            df.to_csv(path_ / config.output.basic.file, header=True, index=None)
+            if not isinstance(config.output.basic.file, DotMap):
+                df.to_csv(path_ / config.output.basic.file, header=True, index=None)
+            else:
+                df.to_csv(path_ / "basic", header=True, index=None)
 
         if save_onesite_expval is True:
             df = pd.DataFrame(psi.physical_edges, columns=["site"], index=None)
