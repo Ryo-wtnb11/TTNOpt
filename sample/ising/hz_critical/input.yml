@@ -11,9 +11,7 @@ system:
         type: XYZ # Choose XXZ or XYZ
         Jij_file: ../coupling.csv # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
 
-    MF_Z:
-        active: 1 # 1 for adding magnetic field, 0 for no magnetic field
-        uniform: 1 # 1 for uniform magnetic field, 0 for non-uniform
+    MF_X:
         h: -1.98694
 
 numerics:

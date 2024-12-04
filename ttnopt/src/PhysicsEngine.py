@@ -80,20 +80,14 @@ class PhysicsEngine(TwoSiteUpdater):
                 self.psi.edge_dims[k] = spin_dof(self.hamiltonian.spin_size[k])
             self.init_tensors_by_block_hamiltonian()
 
-    def expval_onesite(self):
+    def expval_onesite(self, tensor_id):
         """Calculate the expectation values of the one-site operators.
         Returns:
             The expectation values of the one-site operators of dict.
         """
-        central_tensor_ids = self.psi.central_tensor_ids()
         one_site_expvals = {}
-        indices = [
-            (central_tensor_ids[0], i)
-            for i in self.psi.edges[central_tensor_ids[0]][:2]
-        ] + [
-            (central_tensor_ids[1], i)
-            for i in self.psi.edges[central_tensor_ids[1]][:2]
-        ]
+        indices = [(tensor_id, i) for i in self.psi.edges[tensor_id][:2]]
+
         for index in indices:
             tensor_id, edge_id = index
             if edge_id in self.psi.physical_edges:
@@ -119,86 +113,79 @@ class PhysicsEngine(TwoSiteUpdater):
                         bra = tn.contractors.auto(
                             [bra, spin], output_edge_order=[bra[0], spin[1], bra[2]]
                         )
-
-                    ket[0] ^ ket[0]
+                    bra[0] ^ ket[0]
                     bra[1] ^ ket[1]
                     bra[2] ^ ket[2]
                     expvals[operator] = np.real(tn.contractors.auto([bra, ket]).tensor)
                 one_site_expvals[edge_id] = expvals
         return one_site_expvals
 
-    def expval_twosite(self, keys={}):
-        central_tensor_ids = self.psi.central_tensor_ids()
+    def expval_twosite(self, tensor_id):
         two_site_expvals = {}
-        for tensor_id in central_tensor_ids:
+        l_bare_edges = get_bare_edges(
+            self.psi.edges[tensor_id][0],
+            self.psi.edges,
+            self.psi.physical_edges,
+        )
+        r_bare_edges = get_bare_edges(
+            self.psi.edges[tensor_id][1],
+            self.psi.edges,
+            self.psi.physical_edges,
+        )
+        psi = tn.Node(self.psi.tensors[tensor_id])
+        gauge = tn.Node(self.psi.gauge_tensor)
+        psi[2] ^ gauge[0]
+        bra = tn.contractors.auto(
+            [psi, gauge],
+            output_edge_order=[psi[0], psi[1], gauge[1]],
+        )
+        ket = bra.copy(conjugate=True)
 
-            l_bare_edges = get_bare_edges(
-                self.psi.edges[tensor_id][0],
-                self.psi.edges,
-                self.psi.physical_edges,
-            )
-            r_bare_edges = get_bare_edges(
-                self.psi.edges[tensor_id][1],
-                self.psi.edges,
-                self.psi.physical_edges,
-            )
-            psi = tn.Node(self.psi.tensors[tensor_id])
-            gauge = tn.Node(self.psi.gauge_tensor)
-            psi[2] ^ gauge[0]
-            bra = tn.contractors.auto(
-                [psi, gauge],
-                output_edge_order=[psi[0], psi[1], gauge[1]],
-            )
-            ket = bra.copy(conjugate=True)
-
-            pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
-            expvals = {}
-            for pair in pairs:
-                if pair not in keys:
-                    for operators in [
-                        ["Sx", "Sx"],
-                        ["Sy", "Sy"],
-                        ["Sz", "Sz"],
-                        ["Sx", "Sy"],
-                        ["Sy", "Sx"],
-                        ["Sy", "Sz"],
-                        ["Sz", "Sy"],
-                        ["Sx", "Sz"],
-                        ["Sz", "Sx"],
-                    ]:
-                        spin1 = tn.Node(
-                            self._spin_operator_at_edge(
-                                self.psi.edges[tensor_id][0], pair[0], operators[0]
-                            )
-                        )
-
-                        spin2 = tn.Node(
-                            self._spin_operator_at_edge(
-                                self.psi.edges[tensor_id][1], pair[1], operators[1]
-                            )
-                        )
-                        bra[0] ^ spin1[0]
-                        bra = tn.contractors.auto(
-                            [bra, spin1], output_edge_order=[spin1[1], bra[1], bra[2]]
-                        )
-                        bra[1] ^ spin2[0]
-                        bra = tn.contractors.auto(
-                            [bra, spin2], output_edge_order=[bra[0], spin2[1], bra[2]]
-                        )
-                        bra[0] ^ ket[0]
-                        bra[1] ^ ket[1]
-                        bra[2] ^ ket[2]
-                        exp_val = np.real(tn.contractors.auto([bra, ket]).tensor)
-                        op_key = (
-                            operators[0] + operators[1]
-                            if pair[0] > pair[1]
-                            else operators[1] + operators[0]
-                        )
-                        expvals[op_key] = exp_val
-                    key = (
-                        (pair[0], pair[1]) if pair[0] < pair[1] else (pair[1], pair[0])
+        pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
+        expvals = {}
+        for pair in pairs:
+            for operators in [
+                ["Sx", "Sx"],
+                ["Sy", "Sy"],
+                ["Sz", "Sz"],
+                ["Sx", "Sy"],
+                ["Sy", "Sx"],
+                ["Sy", "Sz"],
+                ["Sz", "Sy"],
+                ["Sx", "Sz"],
+                ["Sz", "Sx"],
+            ]:
+                spin1 = tn.Node(
+                    self._spin_operator_at_edge(
+                        self.psi.edges[tensor_id][0], pair[0], operators[0]
                     )
-                    two_site_expvals[key] = expvals
+                )
+
+                spin2 = tn.Node(
+                    self._spin_operator_at_edge(
+                        self.psi.edges[tensor_id][1], pair[1], operators[1]
+                    )
+                )
+                bra[0] ^ spin1[0]
+                bra = tn.contractors.auto(
+                    [bra, spin1], output_edge_order=[spin1[1], bra[1], bra[2]]
+                )
+                bra[1] ^ spin2[0]
+                bra = tn.contractors.auto(
+                    [bra, spin2], output_edge_order=[bra[0], spin2[1], bra[2]]
+                )
+                bra[0] ^ ket[0]
+                bra[1] ^ ket[1]
+                bra[2] ^ ket[2]
+                exp_val = np.real(tn.contractors.auto([bra, ket]).tensor)
+                op_key = (
+                    operators[0] + operators[1]
+                    if pair[0] > pair[1]
+                    else operators[1] + operators[0]
+                )
+                expvals[op_key] = exp_val
+            key = (pair[0], pair[1]) if pair[0] < pair[1] else (pair[1], pair[0])
+            two_site_expvals[key] = expvals
         return two_site_expvals
 
     def lanczos(

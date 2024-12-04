@@ -114,6 +114,21 @@ class GroundStateSearch(PhysicsEngine):
                     not_selected_tensor_id,
                 ) = self.local_two_tensor()
 
+                self.set_flag(not_selected_tensor_id)
+                # eval expval
+                if self.flag[self.psi.canonical_center_edge_id] == 1:
+                    if eval_onesite_expval:
+                        onesite_expval_dict = self.expval_onesite(
+                            not_selected_tensor_id
+                        )
+                        for key in onesite_expval_dict.keys():
+                            onesite_expval[key] = onesite_expval_dict[key]
+                    if eval_twosite_expval:
+                        for i in self.psi.central_tensor_ids():
+                            twosite_expval_dict = self.expval_twosite(i)
+                            for key in twosite_expval_dict.keys():
+                                twosite_expval[key] = twosite_expval_dict[key]
+
                 # absorb gauge tensor
                 iso = tn.Node(self.psi.tensors[selected_tensor_id])
                 gauge = tn.Node(self.psi.gauge_tensor)
@@ -122,19 +137,6 @@ class GroundStateSearch(PhysicsEngine):
                     [iso, gauge], output_edge_order=[iso[0], iso[1], gauge[1]]
                 )
                 self.psi.tensors[selected_tensor_id] = iso.get_tensor()
-
-                self.set_flag(not_selected_tensor_id)
-
-                # eval expval
-                if self.flag[self.psi.canonical_center_edge_id] == 1:
-                    if eval_onesite_expval:
-                        onesite_expval_dict = self.expval_onesite()
-                        for key in onesite_expval_dict.keys():
-                            onesite_expval[key] = onesite_expval_dict[key]
-                    if eval_twosite_expval:
-                        twosite_expval_dict = self.expval_twosite()
-                        for key in twosite_expval_dict.keys():
-                            twosite_expval[key] = twosite_expval_dict[key]
 
                 self.set_ttn_properties_at_one_tensor(edge_id, selected_tensor_id)
 
@@ -187,6 +189,17 @@ class GroundStateSearch(PhysicsEngine):
                 for key in ee_dict.keys():
                     _ee_at_edge[key] = ee_dict[key]
                 _error_at_edge[self.psi.canonical_center_edge_id] = error
+
+            if eval_onesite_expval:
+                for i in self.psi.central_tensor_ids():
+                    onesite_expval_dict = self.expval_onesite(i)
+                    for key in onesite_expval_dict.keys():
+                        onesite_expval[key] = onesite_expval_dict[key]
+            if eval_twosite_expval:
+                for i in self.psi.central_tensor_ids():
+                    twosite_expval_dict = self.expval_twosite(i)
+                    for key in twosite_expval_dict.keys():
+                        twosite_expval[key] = twosite_expval_dict[key]
 
             _edges = deepcopy(self.psi.edges)
 
