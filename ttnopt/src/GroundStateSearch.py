@@ -118,11 +118,10 @@ class GroundStateSearch(PhysicsEngine):
                 # eval expval
                 if self.flag[self.psi.canonical_center_edge_id] == 1:
                     if eval_onesite_expval:
-                        onesite_expval_dict = self.expval_onesite(
-                            not_selected_tensor_id
-                        )
-                        for key in onesite_expval_dict.keys():
-                            onesite_expval[key] = onesite_expval_dict[key]
+                        for i in self.psi.central_tensor_ids():
+                            onesite_expval_dict = self.expval_onesite(i)
+                            for key in onesite_expval_dict.keys():
+                                onesite_expval[key] = onesite_expval_dict[key]
                     if eval_twosite_expval:
                         for i in self.psi.central_tensor_ids():
                             twosite_expval_dict = self.expval_twosite(i)
