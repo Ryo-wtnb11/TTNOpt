@@ -43,7 +43,7 @@ def hamiltonian(config: DotMap):
     magnetic_field_X = None
     if not isinstance(config.MF_X.h, DotMap):
         magnetic_field_X_indices = [i for i in range(config.N)]
-        magnetic_field_X = [np.float(config.MF_X.h)] * config.N
+        magnetic_field_X = [config.MF_X.h] * config.N
     if not isinstance(config.MF_X.file, DotMap):
         if not isinstance(config.MF_X.h, DotMap):
             print("=" * 50)
