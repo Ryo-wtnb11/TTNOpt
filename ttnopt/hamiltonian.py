@@ -1,7 +1,6 @@
 from ttnopt.src import Hamiltonian
 import pandas as pd
 from dotmap import DotMap
-import numpy as np
 
 
 def hamiltonian(config: DotMap):
@@ -74,8 +73,8 @@ def hamiltonian(config: DotMap):
     magnetic_field_Z_indices = None
     magnetic_field_Z = None
     if not isinstance(config.MF_Z.h, DotMap):
-        magnetic_field_Y_indices = [i for i in range(config.N)]
-        magnetic_field_Y = [config.MF_Z.h] * config.N
+        magnetic_field_Z_indices = [i for i in range(config.N)]
+        magnetic_field_Z = [config.MF_Z.h] * config.N
     if not isinstance(config.MF_Z.file, DotMap):
         if not isinstance(config.MF_Z.h, DotMap):
             print("=" * 50)

@@ -3,6 +3,7 @@ from typing import Optional, Dict, Tuple
 import numpy as np
 import tensornetwork as tn
 from copy import deepcopy
+import time
 
 from ttnopt.src.PhysicsEngine import PhysicsEngine
 from ttnopt.src.TTN import TreeTensorNetwork
@@ -11,13 +12,14 @@ from ttnopt.src.Hamiltonian import Hamiltonian
 
 class GroundStateSearch(PhysicsEngine):
     """A class for ground state search algorithm based on DMRG.
-    psi (TreeTensorNetwork): The quantum state.
-    hamiltonians (Hamiltonian): Hamiltonian which is list of Observable.
-    init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
-    max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
-    truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
-    edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
-    block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
+    Args:
+        psi (TreeTensorNetwork): The quantum state.
+        hamiltonians (Hamiltonian): Hamiltonian which is list of Observable.
+        init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
+        max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
+        truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
+        edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
+        block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
     """
 
     def __init__(
@@ -70,15 +72,12 @@ class GroundStateSearch(PhysicsEngine):
         """Run DMRG algorithm.
 
         Args:
-            energy_threshold : Energy threshold for convergence.
-            ee_threshold : Entanglement entropy threshold for automatic optimization.
-            converged_count : Converged count.
-            opt_structure : If optimize the tree structure or not.
-
-        Returns:
-            The result of DMRG algorithm.
-                * energy : A dictionary mapping the edges to the energy.
-                * entanglement : A dictionary mapping the edges to the entanglement entropy.
+            opt_structure (bool, optional): If optimize the tree structure or not. Defaults to False.
+            energy_convergence_threshold (float, optional): Energy threshold for convergence. Defaults to 1e-8.
+            entanglement_convergence_threshold (float, optional): Entanglement entropy threshold for automatic optimization. Defaults to 1e-8.
+            converged_count (int, optional): Converged count. Defaults to 1.
+            eval_onesite_expval (bool): If evaluate one-site expectation value or not.
+            eval_twosite_expval (bool): If evaluate two-site expectation value or not.
         """
         energy_at_edge: Dict[int, float] = {}
         _energy_at_edge: Dict[int, float] = {}
@@ -97,9 +96,6 @@ class GroundStateSearch(PhysicsEngine):
             # energy
             energy_at_edge = deepcopy(_energy_at_edge)
             ee_at_edge = deepcopy(_ee_at_edge)
-
-            # error_at_edge = copy.deepcopy(_error_at_edge)
-
             edges = deepcopy(_edges)
 
             self.distance = self.initial_distance()
@@ -143,9 +139,12 @@ class GroundStateSearch(PhysicsEngine):
 
                 self._set_block_hamiltonian(not_selected_tensor_id)
 
+                start_time = time.perf_counter()
                 ground_state, energy = self.lanczos(
                     [selected_tensor_id, connected_tensor_id]
                 )
+                end = time.perf_counter()
+                print(f"Time: {end - start_time}")
                 psi_edges = (
                     self.psi.edges[selected_tensor_id][:2]
                     + self.psi.edges[connected_tensor_id][:2]

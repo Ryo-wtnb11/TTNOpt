@@ -6,6 +6,7 @@ from scipy.linalg import eigh_tridiagonal
 from scipy.sparse.linalg import expm
 from copy import deepcopy
 from collections import defaultdict
+import time
 
 from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.Hamiltonian import Hamiltonian
@@ -16,8 +17,6 @@ from ttnopt.src.functionTTN import (
     get_bare_edges,
     inner_product,
 )
-
-tn.set_default_backend("numpy")
 
 
 class PhysicsEngine(TwoSiteUpdater):
@@ -189,7 +188,7 @@ class PhysicsEngine(TwoSiteUpdater):
         return two_site_expvals
 
     def lanczos(
-        self, central_tensor_ids, lanczos_tol=1e-14, inverse_tol=1e-7, init_random=False
+        self, central_tensor_ids, lanczos_tol=1e-13, inverse_tol=1e-7, init_random=False
     ):
         if (
             self.psi.tensors[central_tensor_ids[0]].shape[2]
@@ -224,7 +223,10 @@ class PhysicsEngine(TwoSiteUpdater):
         alpha = np.zeros(dim_n, dtype=np.float64)
         beta = np.zeros(dim_n, dtype=np.float64)
 
+        start_time = time.perf_counter()
         psi_w = self._apply_ham_psi(psi, central_tensor_ids)
+        end_time = time.perf_counter()
+        print(f"Apply Elapsed time: {end_time - start_time}")
 
         alpha[0] = np.real(inner_product(psi_w, psi))
         omega = psi_w.tensor - np.array(alpha[0]) * psi.tensor
@@ -395,10 +397,13 @@ class PhysicsEngine(TwoSiteUpdater):
     def _apply_ham_psi(self, psi, central_tensor_ids):
         psi_tensor = np.zeros(psi.shape, dtype=np.complex128)
 
+        start_time = time.perf_counter()
         if self.psi.edges[central_tensor_ids[0]][0] in self.block_hamiltonians.keys():
             psi_tensor += self._block_ham_psi(
                 psi, self.psi.edges[central_tensor_ids[0]][0], 0
             )
+        end_time = time.perf_counter()
+        print(f"Block Ham Elapsed time: {end_time - start_time}")
 
         if self.psi.edges[central_tensor_ids[0]][1] in self.block_hamiltonians.keys():
             psi_tensor += self._block_ham_psi(
@@ -415,9 +420,12 @@ class PhysicsEngine(TwoSiteUpdater):
                 psi, self.psi.edges[central_tensor_ids[1]][1], 3
             )
 
+        start_time = time.perf_counter()
         psi_tensor += self._ham_psi(
             psi, self.psi.edges[central_tensor_ids[0]][:2], [0, 1]
         )
+        end_time = time.perf_counter()
+        print(f"Cross Ham Elapsed time: {end_time - start_time}")
         psi_tensor += self._ham_psi(
             psi, self.psi.edges[central_tensor_ids[1]][:2], [2, 3]
         )
@@ -472,6 +480,7 @@ class PhysicsEngine(TwoSiteUpdater):
         def get_psi_tensor(psi, spins, other_spins, keys, apply_ids):
             psi_tensor = np.zeros(psi.shape, dtype=np.complex128)
             for pair1, pair2 in keys:
+                start_time = time.perf_counter()
                 psi_ = psi.copy()
                 spin_op1 = tn.Node(spins[pair1][pair2])
                 psi_[apply_ids[0]] ^ spin_op1[0]
@@ -488,6 +497,8 @@ class PhysicsEngine(TwoSiteUpdater):
                     [psi_, spin_op2], output_edge_order=output_edge_order
                 )
                 psi_tensor += psi__.tensor
+                end_time = time.perf_counter()
+                print(f"Sum time: {end_time - start_time}")
             return psi_tensor
 
         l_bare_edges = get_bare_edges(
@@ -787,9 +798,7 @@ class PhysicsEngine(TwoSiteUpdater):
             block_ham = tn.contractors.auto(
                 [bra, ham, ket], output_edge_order=[bra[2], ket[2]]
             )
-            self.block_hamiltonians[self.psi.edges[tensor_id][2]] = (
-                block_ham.get_tensor()
-            )
+            self.block_hamiltonians[self.psi.edges[tensor_id][2]] = block_ham.tensor
         else:
             bra = self.psi.tensors[tensor_id]
             bra_tensor = np.zeros(bra.shape, dtype=np.complex128)

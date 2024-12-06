@@ -81,6 +81,18 @@ def bare_spin_operator(spin, spin_num):
             Sz[m, m] = spin_value - m
         return Sz
 
+    elif spin == "Sx":
+        Sp = bare_spin_operator("S+", spin_num)
+        Sm = bare_spin_operator("S-", spin_num)
+        Sx = (Sp + Sm) / 2.0
+        return Sx
+
+    elif spin == "Sy":
+        Sp = bare_spin_operator("S+", spin_num)
+        Sm = bare_spin_operator("S-", spin_num)
+        Sy = (Sp - Sm) / 2.0j
+        return Sy
+
 
 def spin_dof(spin_num):
     spin_value = spin_ind(spin_num)
