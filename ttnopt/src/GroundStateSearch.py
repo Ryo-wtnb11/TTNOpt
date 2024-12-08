@@ -3,7 +3,6 @@ from typing import Optional, Dict, Tuple
 import numpy as np
 import tensornetwork as tn
 from copy import deepcopy
-import time
 
 from ttnopt.src.PhysicsEngine import PhysicsEngine
 from ttnopt.src.TTN import TreeTensorNetwork
@@ -118,6 +117,7 @@ class GroundStateSearch(PhysicsEngine):
                             onesite_expval_dict = self.expval_onesite(i)
                             for key in onesite_expval_dict.keys():
                                 onesite_expval[key] = onesite_expval_dict[key]
+
                     if eval_twosite_expval:
                         for i in self.psi.central_tensor_ids():
                             twosite_expval_dict = self.expval_twosite(i)
@@ -139,12 +139,9 @@ class GroundStateSearch(PhysicsEngine):
 
                 self._set_block_hamiltonian(not_selected_tensor_id)
 
-                start_time = time.perf_counter()
                 ground_state, energy = self.lanczos(
                     [selected_tensor_id, connected_tensor_id]
                 )
-                end = time.perf_counter()
-                print(f"Time: {end - start_time}")
                 psi_edges = (
                     self.psi.edges[selected_tensor_id][:2]
                     + self.psi.edges[connected_tensor_id][:2]
@@ -193,11 +190,15 @@ class GroundStateSearch(PhysicsEngine):
                     onesite_expval_dict = self.expval_onesite(i)
                     for key in onesite_expval_dict.keys():
                         onesite_expval[key] = onesite_expval_dict[key]
+
             if eval_twosite_expval:
                 for i in self.psi.central_tensor_ids():
                     twosite_expval_dict = self.expval_twosite(i)
                     for key in twosite_expval_dict.keys():
                         twosite_expval[key] = twosite_expval_dict[key]
+                twosite_expval_dict = self.expval_twosite_origin(twosite_expval.keys())
+                for key in twosite_expval_dict.keys():
+                    twosite_expval[key] = twosite_expval_dict[key]
 
             _edges = deepcopy(self.psi.edges)
 

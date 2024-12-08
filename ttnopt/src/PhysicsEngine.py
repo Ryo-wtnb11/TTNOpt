@@ -6,7 +6,6 @@ from scipy.linalg import eigh_tridiagonal
 from scipy.sparse.linalg import expm
 from copy import deepcopy
 from collections import defaultdict
-import time
 
 from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.Hamiltonian import Hamiltonian
@@ -93,12 +92,14 @@ class PhysicsEngine(TwoSiteUpdater):
                 bra = tn.Node(self.psi.tensors[tensor_id])
                 gauge = tn.Node(self.psi.gauge_tensor)
                 bra[2] ^ gauge[0]
-                bra = tn.contractors.auto(
+                bra_tensor = tn.contractors.auto(
                     [bra, gauge], output_edge_order=[bra[0], bra[1], gauge[1]]
                 )
-                ket = bra.copy(conjugate=True)
+                ket_tensor = bra.copy(conjugate=True)
                 expvals = {}
-                for operator in ["Sx", "Sy", "Sz"]:
+                for operator in ["S+", "S-", "Sz"]:
+                    bra = bra_tensor.copy()
+                    ket = ket_tensor.copy()
                     spin = tn.Node(
                         self._spin_operator_at_edge(edge_id, edge_id, operator)
                     )
@@ -134,26 +135,29 @@ class PhysicsEngine(TwoSiteUpdater):
         psi = tn.Node(self.psi.tensors[tensor_id])
         gauge = tn.Node(self.psi.gauge_tensor)
         psi[2] ^ gauge[0]
-        bra = tn.contractors.auto(
+        bra_tensor = tn.contractors.auto(
             [psi, gauge],
             output_edge_order=[psi[0], psi[1], gauge[1]],
         )
-        ket = bra.copy(conjugate=True)
+        ket_tensor = bra_tensor.copy(conjugate=True)
 
         pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
         expvals = {}
         for pair in pairs:
             for operators in [
-                ["Sx", "Sx"],
-                ["Sy", "Sy"],
+                ["S+", "S+"],
+                ["S-", "S-"],
                 ["Sz", "Sz"],
-                ["Sx", "Sy"],
-                ["Sy", "Sx"],
-                ["Sy", "Sz"],
-                ["Sz", "Sy"],
-                ["Sx", "Sz"],
-                ["Sz", "Sx"],
+                ["S+", "S-"],
+                ["S-", "S+"],
+                ["Sz", "S+"],
+                ["S+", "Sz"],
+                ["Sz", "S-"],
+                ["S-", "Sz"],
             ]:
+                bra = bra_tensor.copy()
+                ket = ket_tensor.copy()
+
                 spin1 = tn.Node(
                     self._spin_operator_at_edge(
                         self.psi.edges[tensor_id][0], pair[0], operators[0]
@@ -177,6 +181,86 @@ class PhysicsEngine(TwoSiteUpdater):
                 bra[1] ^ ket[1]
                 bra[2] ^ ket[2]
                 exp_val = np.real(tn.contractors.auto([bra, ket]).tensor)
+                op_key = (
+                    operators[0] + operators[1]
+                    if pair[0] > pair[1]
+                    else operators[1] + operators[0]
+                )
+                expvals[op_key] = exp_val
+            key = (pair[0], pair[1]) if pair[0] < pair[1] else (pair[1], pair[0])
+            two_site_expvals[key] = expvals
+        return two_site_expvals
+
+    def expval_twosite_origin(self, keys):
+        tensor_ids = self.psi.central_tensor_ids()
+        two_site_expvals = {}
+        l_bare_edges = get_bare_edges(
+            self.psi.edges[tensor_ids[0]][0],
+            self.psi.edges,
+            self.psi.physical_edges,
+        )
+        l_bare_edges += get_bare_edges(
+            self.psi.edges[tensor_ids[0]][1],
+            self.psi.edges,
+            self.psi.physical_edges,
+        )
+
+        r_bare_edges = get_bare_edges(
+            self.psi.edges[tensor_ids[1]][0],
+            self.psi.edges,
+            self.psi.physical_edges,
+        )
+        r_bare_edges += get_bare_edges(
+            self.psi.edges[tensor_ids[1]][1],
+            self.psi.edges,
+            self.psi.physical_edges,
+        )
+        gauge_tensor = tn.Node(self.psi.gauge_tensor)
+
+        left_spins = self._set_edge_spin(tensor_ids[0])
+        right_spins = self._set_edge_spin(tensor_ids[1])
+
+        pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
+        pairs = [pair for pair in pairs if pair not in keys]
+        expvals = {}
+        for pair in pairs:
+            for operators in [
+                ["S+", "S+"],
+                ["S-", "S-"],
+                ["Sz", "Sz"],
+                ["S+", "S-"],
+                ["S-", "S+"],
+                ["Sz", "S+"],
+                ["S+", "Sz"],
+                ["Sz", "S-"],
+                ["S-", "Sz"],
+            ]:
+                gauge = gauge_tensor.copy()
+                ket_gauge = gauge_tensor.copy(conjugate=True)
+                if operators[0] == "S-":
+                    left_spin = left_spins[pair[0]]["S+"].conj().T
+                else:
+                    left_spin = left_spins[pair[0]][operators[0]]
+                if operators[1] == "S-":
+                    right_spin = right_spins[pair[1]]["S+"].conj().T
+                else:
+                    right_spin = right_spins[pair[1]][operators[1]]
+
+                spin1 = tn.Node(left_spin)
+
+                spin2 = tn.Node(right_spin)
+
+                gauge[0] ^ spin1[0]
+                gauge = tn.contractors.auto(
+                    [gauge, spin1], output_edge_order=[spin1[1], gauge[1]]
+                )
+                gauge[1] ^ spin2[0]
+                gauge = tn.contractors.auto(
+                    [gauge, spin2], output_edge_order=[gauge[0], spin2[1]]
+                )
+                gauge[0] ^ ket_gauge[0]
+                gauge[1] ^ ket_gauge[1]
+                exp_val = np.real(tn.contractors.auto([gauge, ket_gauge]).tensor)
                 op_key = (
                     operators[0] + operators[1]
                     if pair[0] > pair[1]
@@ -223,10 +307,7 @@ class PhysicsEngine(TwoSiteUpdater):
         alpha = np.zeros(dim_n, dtype=np.float64)
         beta = np.zeros(dim_n, dtype=np.float64)
 
-        start_time = time.perf_counter()
         psi_w = self._apply_ham_psi(psi, central_tensor_ids)
-        end_time = time.perf_counter()
-        print(f"Apply Elapsed time: {end_time - start_time}")
 
         alpha[0] = np.real(inner_product(psi_w, psi))
         omega = psi_w.tensor - np.array(alpha[0]) * psi.tensor
@@ -397,14 +478,10 @@ class PhysicsEngine(TwoSiteUpdater):
     def _apply_ham_psi(self, psi, central_tensor_ids):
         psi_tensor = np.zeros(psi.shape, dtype=np.complex128)
 
-        start_time = time.perf_counter()
         if self.psi.edges[central_tensor_ids[0]][0] in self.block_hamiltonians.keys():
             psi_tensor += self._block_ham_psi(
                 psi, self.psi.edges[central_tensor_ids[0]][0], 0
             )
-        end_time = time.perf_counter()
-        print(f"Block Ham Elapsed time: {end_time - start_time}")
-
         if self.psi.edges[central_tensor_ids[0]][1] in self.block_hamiltonians.keys():
             psi_tensor += self._block_ham_psi(
                 psi, self.psi.edges[central_tensor_ids[0]][1], 1
@@ -420,12 +497,9 @@ class PhysicsEngine(TwoSiteUpdater):
                 psi, self.psi.edges[central_tensor_ids[1]][1], 3
             )
 
-        start_time = time.perf_counter()
         psi_tensor += self._ham_psi(
             psi, self.psi.edges[central_tensor_ids[0]][:2], [0, 1]
         )
-        end_time = time.perf_counter()
-        print(f"Cross Ham Elapsed time: {end_time - start_time}")
         psi_tensor += self._ham_psi(
             psi, self.psi.edges[central_tensor_ids[1]][:2], [2, 3]
         )
@@ -480,7 +554,6 @@ class PhysicsEngine(TwoSiteUpdater):
         def get_psi_tensor(psi, spins, other_spins, keys, apply_ids):
             psi_tensor = np.zeros(psi.shape, dtype=np.complex128)
             for pair1, pair2 in keys:
-                start_time = time.perf_counter()
                 psi_ = psi.copy()
                 spin_op1 = tn.Node(spins[pair1][pair2])
                 psi_[apply_ids[0]] ^ spin_op1[0]
@@ -497,8 +570,6 @@ class PhysicsEngine(TwoSiteUpdater):
                     [psi_, spin_op2], output_edge_order=output_edge_order
                 )
                 psi_tensor += psi__.tensor
-                end_time = time.perf_counter()
-                print(f"Sum time: {end_time - start_time}")
             return psi_tensor
 
         l_bare_edges = get_bare_edges(
@@ -784,6 +855,7 @@ class PhysicsEngine(TwoSiteUpdater):
                 renormalized_spin_operators[key] = spin.get_tensor()
             new_spin_operators[bare_edge] = renormalized_spin_operators
         self.edge_spin_operators[self.psi.edges[tensor_id][2]] = new_spin_operators
+        return new_spin_operators
 
     def _set_block_hamiltonian(self, tensor_id, ham=None):
         if ham is not None:

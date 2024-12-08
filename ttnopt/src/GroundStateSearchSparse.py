@@ -3,11 +3,12 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 import tensornetwork as tn
 from copy import deepcopy
-import time
 
 from ttnopt.src.PhysicsEngineSparse import PhysicsEngineSparse
 from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.Hamiltonian import Hamiltonian
+
+tn.block_sparse.enable_caching()
 
 
 class GroundStateSearchSparse(PhysicsEngineSparse):
@@ -118,6 +119,18 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                 ) = self.local_two_tensor()
 
                 self.set_flag(not_selected_tensor_id)
+                # eval expval
+                if self.flag[self.psi.canonical_center_edge_id] == 1:
+                    if eval_onesite_expval:
+                        for i in self.psi.central_tensor_ids():
+                            onesite_expval_dict = self.expval_onesite(i)
+                            for key in onesite_expval_dict.keys():
+                                onesite_expval[key] = onesite_expval_dict[key]
+                    if eval_twosite_expval:
+                        for i in self.psi.central_tensor_ids():
+                            twosite_expval_dict = self.expval_twosite(i)
+                            for key in twosite_expval_dict.keys():
+                                twosite_expval[key] = twosite_expval_dict[key]
 
                 # absorb gauge tensor
                 iso = tn.Node(
@@ -137,11 +150,9 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
 
                 self._set_block_hamiltonian(not_selected_tensor_id)
 
-                start_time = time.perf_counter()
                 ground_state, energy = self.lanczos(
                     [selected_tensor_id, connected_tensor_id]
                 )
-                print("Elapsed time: ", time.perf_counter() - start_time)
 
                 psi_edges = (
                     self.psi.edges[selected_tensor_id][:2]
@@ -178,12 +189,28 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                 print(energy)
                 ee = self.entanglement_entropy(probability)
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
-                # ee_dict = self.entanglement_entropy_at_physical_bond(
-                #     ground_state, psi_edges
-                # )
-                # for key in ee_dict.keys():
-                #     _ee_at_edge[key] = ee_dict[key]
-                # _error_at_edge[self.psi.canonical_center_edge_id] = error
+                ee_dict = self.entanglement_entropy_at_physical_bond(
+                    ground_state, psi_edges
+                )
+                for key in ee_dict.keys():
+                    _ee_at_edge[key] = ee_dict[key]
+                _error_at_edge[self.psi.canonical_center_edge_id] = error
+
+            if eval_onesite_expval:
+                for i in self.psi.central_tensor_ids():
+                    onesite_expval_dict = self.expval_onesite(i)
+                    for key in onesite_expval_dict.keys():
+                        onesite_expval[key] = onesite_expval_dict[key]
+            if eval_twosite_expval:
+                for i in self.psi.central_tensor_ids():
+                    twosite_expval_dict = self.expval_twosite(i)
+                    for key in twosite_expval_dict.keys():
+                        twosite_expval[key] = twosite_expval_dict[key]
+                    twosite_expval_dict = self.expval_twosite_origin(
+                        twosite_expval.keys()
+                    )
+                    for key in twosite_expval_dict.keys():
+                        twosite_expval[key] = twosite_expval_dict[key]
 
             _edges = deepcopy(self.psi.edges)
 
