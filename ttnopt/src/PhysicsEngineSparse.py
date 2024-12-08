@@ -1122,20 +1122,3 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
             output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1], gauge[2]],
         )
         return psi
-
-
-import functools
-
-
-@functools.cache
-def charge_change(
-    data,
-    charges,
-    flows,
-):
-    tensor = BlockSparseTensor(
-        data=data,
-        charges=[U1Charge(c) for c in charges],
-        flows=flows,
-    )
-    return tensor
