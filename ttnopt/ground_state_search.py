@@ -54,9 +54,10 @@ def ground_state_search():
         True if not isinstance(numerics.U1_symmetry.magnitude, DotMap) else False
     )
     if u1_symmetry and config.model.type == "XYZ":
-        raise ValueError(
-            "U1 symmetry is not supported for the XYZ model. Please set the U1 symmetry to False or change the model to XXZ."
-        )
+        print("=" * 50)
+        print("⚠️  Error: U1 symmetry is not supported for the XYZ model.")
+        print("     Please set the U1 symmetry to False or change the model to XXZ.")
+        print("=" * 50)
 
     if u1_symmetry:
         gss = GroundStateSearchSparse(

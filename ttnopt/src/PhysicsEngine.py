@@ -290,9 +290,13 @@ class PhysicsEngine(TwoSiteUpdater):
         d = 0
         if dim_n == 1:
             eigen_vectors = psi
-            raise ValueError(
-                "All bond dimensions in canonical center are 1 set more larger bond dimension to run correctly."
+            print("-" * 50)
+            print("Fail on lanczos: All bond dimensions in canonical center are 1.")
+            print(
+                "Set more larger bond dimension to run correctly on numerics.max_bond_dimensions."
             )
+            print("-" * 50)
+            exit()
         else:
             e_old = 0.0
             for j in range(1, dim_n):
@@ -792,9 +796,13 @@ class PhysicsEngine(TwoSiteUpdater):
                 else:
                     break
         if ind == 1:
-            # if the bond dimension is too small, we need to increase it
-            # stop program execution
-            raise ValueError("initial bond dimension is too small.")
+            print("-" * 50)
+            print("Fail on RG: bond dimension is too small.")
+            print(
+                "Set more larger bond dimension to run correctly on numerics.initial_bond_dimensions."
+            )
+            print("-" * 50)
+            exit()
         isometry = eigenvectors[:, :ind]
         isometry = eigenvectors[:, :ind].reshape(lower_edge_dims + (ind,))
         self.psi.tensors[tensor_id] = isometry

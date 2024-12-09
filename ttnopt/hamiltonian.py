@@ -13,7 +13,11 @@ def hamiltonian(config: DotMap):
     if isinstance(config.spin_size.S, DotMap) and isinstance(
         config.spin_size.file, DotMap
     ):
-        raise ValueError("Please input spin value in spin_size as S or Si_file")
+        print("=" * 50)
+        print("⚠️  Error: Please input spin value in spin_size as S or Si_file")
+        print("=" * 50)
+        exit()
+
     if not isinstance(config.spin_size.S, DotMap):
         spin_sizes = ["S=" + str(config.spin_size.S)] * config.N
     if not isinstance(config.spin_size.file, DotMap):  # Si_file is a string
@@ -33,9 +37,12 @@ def hamiltonian(config: DotMap):
     interaction_coefs = interaction_csv.iloc[:, 2:].values
 
     if interaction_indices.max() >= config.N:
-        raise ValueError(
-            f"XXY, XYZ interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
+        print("=" * 50)
+        print(
+            f"⚠️  Error: XXY, XYZ interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
         )
+        print("=" * 50)
+        exit()
 
     # magnetic_field_X
     magnetic_field_X_indices = None
@@ -112,9 +119,12 @@ def hamiltonian(config: DotMap):
         dzyaloshinskii_moriya_X_indices = dzyaloshinskii_moriya_X_csv.iloc[:, :2].values
         dzyaloshinskii_moriya_X = dzyaloshinskii_moriya_X_csv.iloc[:, 2:].values
         if dzyaloshinskii_moriya_X_indices.max() >= config.N:
-            raise ValueError(
-                f"DM_X interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
+            print("=" * 50)
+            print(
+                f"⚠️  Error: DM_X interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
             )
+            print("=" * 50)
+            exit()
 
     # dzyaloshinskii_moriya_Y
     dzyaloshinskii_moriya_Y_indices = None
@@ -126,9 +136,12 @@ def hamiltonian(config: DotMap):
         dzyaloshinskii_moriya_Y_indices = dzyaloshinskii_moriya_Y_csv.iloc[:, :2].values
         dzyaloshinskii_moriya_Y = dzyaloshinskii_moriya_Y_csv.iloc[:, 2:].values
         if dzyaloshinskii_moriya_Y_indices.max() >= config.N:
-            raise ValueError(
-                f"DM_Y interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
+            print("=" * 50)
+            print(
+                f"⚠️  Error: DM_Y interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
             )
+            print("=" * 50)
+            exit()
 
     # dzyaloshinskii_moriya_Y
     dzyaloshinskii_moriya_Z_indices = None
@@ -140,9 +153,12 @@ def hamiltonian(config: DotMap):
         dzyaloshinskii_moriya_Z_indices = dzyaloshinskii_moriya_Z_csv.iloc[:, :2].values
         dzyaloshinskii_moriya_Z = dzyaloshinskii_moriya_Z_csv.iloc[:, 2:].values
         if dzyaloshinskii_moriya_Z_indices.max() >= config.N:
-            raise ValueError(
-                f"DM_Z interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
+            print("=" * 50)
+            print(
+                f"⚠️  Error: DM_Z interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
             )
+            print("=" * 50)
+            exit()
 
     if config.model.type == "XXZ":
         if interaction_coefs.shape[1] == 2:
@@ -168,7 +184,10 @@ def hamiltonian(config: DotMap):
                 dzyaloshinskii_moriya_Z=dzyaloshinskii_moriya_Z,
             )
         else:
-            raise ValueError("Please input two columns in model.file for XXZ model")
+            print("=" * 50)
+            print("⚠️  Error: Please input two columns in model.file for XXZ model")
+            print("=" * 50)
+            exit()
     elif config.model.type == "XYZ":
         if interaction_coefs.shape[1] == 3:
             hamiltonian = Hamiltonian(
@@ -193,8 +212,14 @@ def hamiltonian(config: DotMap):
                 dzyaloshinskii_moriya_Z=dzyaloshinskii_moriya_Z,
             )
         else:
-            raise ValueError("Please input three columns in model.file for XYZ model")
+            print("=" * 50)
+            print("⚠️  Error: Please input three columns in model.file for XYZ model")
+            print("=" * 50)
+            exit()
     else:
-        raise ValueError("Please select XXZ or XYZ model within hamiltonian")
+        print("=" * 50)
+        print("⚠️  Error: Please input the correct model type (XXZ or XYZ)")
+        print("=" * 50)
+        exit()
 
     return hamiltonian

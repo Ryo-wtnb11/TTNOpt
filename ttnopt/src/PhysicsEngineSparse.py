@@ -362,10 +362,13 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
 
         d = 0
         if dim_n == 1:
-            eigen_vectors = psi
-            raise ValueError(
-                "All bond dimensions in canonical center are 1 set more larger bond dimension to run correctly."
+            print("-" * 50)
+            print("Fail on lanczos: All bond dimensions in canonical center are 1.")
+            print(
+                "Set more larger bond dimension to run correctly on numerics.max_bond_dimensions."
             )
+            print("-" * 50)
+            exit()
         else:
             e_old = 0.0
             for j in range(1, dim_n):
@@ -456,6 +459,17 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         c1 = self.psi.tensors[not_selected_tensor_id].flat_charges[2].charges.flatten()
         u = U1Charge.fuse(c0, c1)
         cc = np.count_nonzero(u == self.u1_num)
+        if cc == 0:
+            print("-" * 50)
+            print(f"Fail on RG: There is no sector with M={self.u1_num}.")
+            print(
+                "Set correct U1 charge to run correctly on numerics.U1_symmetry.magnitude."
+            )
+            print("Or they need more larger initial bond dimension.")
+            print("To rifer see U1 charges sectors on canonical center following:")
+            print(np.sort(u))
+            print("-" * 50)
+            exit()
         c0 = U1Charge(c0)
         c1 = U1Charge(c1)
         c = U1Charge([self.u1_num])
