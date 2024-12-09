@@ -1,4 +1,3 @@
-from typing import Dict, Optional
 import tensornetwork as tn
 import numpy as np
 import scipy
@@ -26,8 +25,6 @@ class PhysicsEngine(TwoSiteUpdater):
         init_bond_dim: int,
         max_bond_dim: int,
         truncation_error: float,
-        edge_spin_operators: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
-        block_hamiltonians: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
     ):
         """Initialize a PhysicsEngine object.
 
@@ -37,8 +34,6 @@ class PhysicsEngine(TwoSiteUpdater):
             init_bond_dim (int): Initial bond dimension.
             max_bond_dim (int): Maximum bond dimension.
             truncation_error (float): Maximum truncation error.
-            edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
-            block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
         """
 
         super().__init__(psi)
@@ -46,14 +41,8 @@ class PhysicsEngine(TwoSiteUpdater):
         self.init_bond_dim = init_bond_dim
         self.max_bond_dim = max_bond_dim
         self.truncation_error = truncation_error
-        if edge_spin_operators is None:
-            self.edge_spin_operators = self._init_spin_operator()
-        else:
-            self.edge_spin_operators = edge_spin_operators
-        if block_hamiltonians is None:
-            self.block_hamiltonians = self._init_block_hamiltonians()
-        else:
-            self.block_hamiltonians = block_hamiltonians
+        self.edge_spin_operators = self._init_spin_operator()
+        self.block_hamiltonians = self._init_block_hamiltonians()
 
         init_tensors_flag = False
         if (
@@ -217,8 +206,8 @@ class PhysicsEngine(TwoSiteUpdater):
         )
         gauge_tensor = tn.Node(self.psi.gauge_tensor)
 
-        left_spins = self._set_edge_spin(tensor_ids[0])
-        right_spins = self._set_edge_spin(tensor_ids[1])
+        left_spins = self._set_edge_spin(tensor_ids[0], save=False)
+        right_spins = self._set_edge_spin(tensor_ids[1], save=False)
 
         pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
         pairs = [pair for pair in pairs if pair not in keys]
@@ -274,20 +263,6 @@ class PhysicsEngine(TwoSiteUpdater):
     def lanczos(
         self, central_tensor_ids, lanczos_tol=1e-13, inverse_tol=1e-7, init_random=False
     ):
-        if (
-            self.psi.tensors[central_tensor_ids[0]].shape[2]
-            != self.psi.tensors[central_tensor_ids[1]].shape[2]
-        ):
-            psi_1_shape = self.psi.tensors[central_tensor_ids[0]].shape
-            psi_2_shape = self.psi.tensors[central_tensor_ids[1]].shape
-            if psi_2_shape[2] < psi_1_shape[2]:
-                self.psi.tensors[central_tensor_ids[0]] = self.psi.tensors[
-                    central_tensor_ids[0]
-                ][:, :, : psi_2_shape[2]]
-            elif psi_1_shape[2] < psi_2_shape[2]:
-                self.psi.tensors[central_tensor_ids[1]] = self.psi.tensors[
-                    central_tensor_ids[1]
-                ][:, :, : psi_1_shape[2]]
 
         psi_1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
         psi_2 = tn.Node(self.psi.tensors[central_tensor_ids[1]])
@@ -467,6 +442,20 @@ class PhysicsEngine(TwoSiteUpdater):
             self._set_block_hamiltonian(tensor_id, ham)
         # gauge_tensor
         central_tensor_ids = self.psi.central_tensor_ids()
+        if (
+            self.psi.tensors[central_tensor_ids[0]].shape[2]
+            != self.psi.tensors[central_tensor_ids[1]].shape[2]
+        ):
+            psi_1_shape = self.psi.tensors[central_tensor_ids[0]].shape
+            psi_2_shape = self.psi.tensors[central_tensor_ids[1]].shape
+            if psi_2_shape[2] < psi_1_shape[2]:
+                self.psi.tensors[central_tensor_ids[0]] = self.psi.tensors[
+                    central_tensor_ids[0]
+                ][:, :, : psi_2_shape[2]]
+            elif psi_1_shape[2] < psi_2_shape[2]:
+                self.psi.tensors[central_tensor_ids[1]] = self.psi.tensors[
+                    central_tensor_ids[1]
+                ][:, :, : psi_1_shape[2]]
         ground_state, _ = self.lanczos(central_tensor_ids)
         u, s, v, _, _, _ = self.decompose_two_tensors(
             ground_state, self.max_bond_dim, operate_degeneracy=True
@@ -815,7 +804,7 @@ class PhysicsEngine(TwoSiteUpdater):
             for i, d in enumerate(self.psi.tensors[tensor_id].shape):
                 self.psi.edge_dims[self.psi.edges[tensor_id][i]] = d
 
-    def _set_edge_spin(self, tensor_id):
+    def _set_edge_spin(self, tensor_id, save=True):
         new_spin_operators = {}
         # left edge
         edge_left = self.psi.edges[tensor_id][0]
@@ -854,8 +843,10 @@ class PhysicsEngine(TwoSiteUpdater):
                 )
                 renormalized_spin_operators[key] = spin.get_tensor()
             new_spin_operators[bare_edge] = renormalized_spin_operators
-        self.edge_spin_operators[self.psi.edges[tensor_id][2]] = new_spin_operators
-        return new_spin_operators
+        if save:
+            self.edge_spin_operators[self.psi.edges[tensor_id][2]] = new_spin_operators
+        else:
+            return new_spin_operators
 
     def _set_block_hamiltonian(self, tensor_id, ham=None):
         if ham is not None:

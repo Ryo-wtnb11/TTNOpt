@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 import tensornetwork as tn
@@ -20,8 +20,6 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
         init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
         max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
         truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
-        edge_spin_operators (Optional(Dict[int, Dict[str, tn.BlockSparseTensor]]): Spin operators at each edge. Defaults to None.
-        block_hamiltonians (Optional(Dict[int, Dict[str, tn.BlockSparseTensor]]): Block_hamiltonian at each edge. Defaults to None.
     """
 
     def __init__(
@@ -32,10 +30,6 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
         truncation_error: float = 1e-11,
-        edge_spin_operators: Optional[
-            Dict[int, Dict[str, tn.BlockSparseTensor]]
-        ] = None,
-        block_hamiltonians: Optional[Dict[int, Dict[str, tn.BlockSparseTensor]]] = None,
     ):
         """Initialize a DMRG object.
 
@@ -46,8 +40,6 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
             init_bond_dim : Initial bond dimension.
             max_bond_dim : Maximum bond dimension.
             truncation_error : Maximum truncation error.
-            edge_spin_operators : Spin operators at each edge.
-            block_hamiltonians : Block hamiltonian at each edge.
         """
         self.energy: Dict[int, float] = {}
         self.entanglement: Dict[int, float] = {}
@@ -63,8 +55,6 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
             init_bond_dim,
             max_bond_dim,
             truncation_error,
-            edge_spin_operators,
-            block_hamiltonians,
         )
 
     def run(
@@ -110,6 +100,7 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
             self.flag = self.initial_flag()
 
             print("Sweep count: " + str(sweep_num))
+
             while self.candidate_edge_ids() != []:
                 (
                     edge_id,
@@ -119,27 +110,20 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                 ) = self.local_two_tensor()
 
                 self.set_flag(not_selected_tensor_id)
-                # eval expval
-                if self.flag[self.psi.canonical_center_edge_id] == 1:
-                    if eval_onesite_expval:
-                        for i in self.psi.central_tensor_ids():
-                            onesite_expval_dict = self.expval_onesite(i)
-                            for key in onesite_expval_dict.keys():
-                                onesite_expval[key] = onesite_expval_dict[key]
-                    if eval_twosite_expval:
-                        for i in self.psi.central_tensor_ids():
-                            twosite_expval_dict = self.expval_twosite(i)
-                            for key in twosite_expval_dict.keys():
-                                twosite_expval[key] = twosite_expval_dict[key]
 
                 # absorb gauge tensor
                 iso = tn.Node(
                     self.psi.tensors[selected_tensor_id], backend=self.backend
                 )
                 gauge = tn.Node(self.psi.gauge_tensor, backend=self.backend)
-                iso[2] ^ gauge[0]
+                if selected_tensor_id == self.previous_id:
+                    out = gauge[1]
+                    iso[2] ^ gauge[0]
+                else:
+                    out = gauge[0]
+                    iso[2] ^ gauge[1]
                 iso = tn.contractors.auto(
-                    [iso, gauge], output_edge_order=[iso[0], iso[1], gauge[1], gauge[2]]
+                    [iso, gauge], output_edge_order=[iso[0], iso[1], out, gauge[2]]
                 )
 
                 self.psi.tensors[selected_tensor_id] = iso.tensor
@@ -184,6 +168,8 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                     psi_edges[edge_order[3]],
                 )
 
+                self.previous_id = selected_tensor_id
+
                 self.distance = self.initial_distance()
                 _energy_at_edge[self.psi.canonical_center_edge_id] = energy
                 print(energy)
@@ -196,21 +182,23 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                     _ee_at_edge[key] = ee_dict[key]
                 _error_at_edge[self.psi.canonical_center_edge_id] = error
 
-            if eval_onesite_expval:
-                for i in self.psi.central_tensor_ids():
-                    onesite_expval_dict = self.expval_onesite(i)
-                    for key in onesite_expval_dict.keys():
-                        onesite_expval[key] = onesite_expval_dict[key]
+                # eval expval
+                if eval_onesite_expval:
+                    for i in self.psi.central_tensor_ids():
+                        onesite_expval_dict = self.expval_onesite(i)
+                        for key in onesite_expval_dict.keys():
+                            onesite_expval[key] = onesite_expval_dict[key]
+
+                if eval_twosite_expval:
+                    for i in self.psi.central_tensor_ids():
+                        twosite_expval_dict = self.expval_twosite(i)
+                        for key in twosite_expval_dict.keys():
+                            twosite_expval[key] = twosite_expval_dict[key]
+
             if eval_twosite_expval:
-                for i in self.psi.central_tensor_ids():
-                    twosite_expval_dict = self.expval_twosite(i)
-                    for key in twosite_expval_dict.keys():
-                        twosite_expval[key] = twosite_expval_dict[key]
-                    twosite_expval_dict = self.expval_twosite_origin(
-                        twosite_expval.keys()
-                    )
-                    for key in twosite_expval_dict.keys():
-                        twosite_expval[key] = twosite_expval_dict[key]
+                twosite_expval_dict = self.expval_twosite_origin(twosite_expval.keys())
+                for key in twosite_expval_dict.keys():
+                    twosite_expval[key] = twosite_expval_dict[key]
 
             _edges = deepcopy(self.psi.edges)
 

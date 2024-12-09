@@ -40,8 +40,6 @@ def ground_state_search():
 
     numerics = config.numerics
     opt_structure = 1 if numerics.opt_structure else 0
-    edge_op_at_edge = None
-    block_ham_at_edge = None
 
     path = Path(config.output.dir)
 
@@ -60,31 +58,27 @@ def ground_state_search():
             "U1 symmetry is not supported for the XYZ model. Please set the U1 symmetry to False or change the model to XXZ."
         )
 
+    if u1_symmetry:
+        gss = GroundStateSearchSparse(
+            psi,
+            ham,
+            numerics.U1_symmetry.magnitude,
+            init_bond_dim=numerics.initial_bond_dimension,
+            max_bond_dim=numerics.max_bond_dimensions[0],
+            truncation_error=numerics.truncation_error,
+        )
+    else:
+        gss = GroundStateSearch(
+            psi,
+            ham,
+            init_bond_dim=numerics.initial_bond_dimension,
+            max_bond_dim=numerics.max_bond_dimensions[0],
+            truncation_error=numerics.truncation_error,
+        )
+
     for i, (max_bond_dim, max_num_sweep) in enumerate(
         zip(numerics.max_bond_dimensions, numerics.max_num_sweeps)
     ):
-        if u1_symmetry:
-            gss = GroundStateSearchSparse(
-                psi,
-                ham,
-                numerics.U1_symmetry.magnitude,
-                init_bond_dim=numerics.initial_bond_dimension,
-                max_bond_dim=max_bond_dim,
-                truncation_error=numerics.truncation_error,
-                edge_spin_operators=edge_op_at_edge,
-                block_hamiltonians=block_ham_at_edge,
-            )
-        else:
-            gss = GroundStateSearch(
-                psi,
-                ham,
-                init_bond_dim=numerics.initial_bond_dimension,
-                max_bond_dim=max_bond_dim,
-                truncation_error=numerics.truncation_error,
-                edge_spin_operators=edge_op_at_edge,
-                block_hamiltonians=block_ham_at_edge,
-            )
-
         if opt_structure:
             gss.run(
                 opt_structure=opt_structure,
@@ -118,10 +112,6 @@ def ground_state_search():
                 eval_onesite_expval=save_onesite_expval,
                 eval_twosite_expval=save_twosite_expval,
             )
-
-        # reset parameters for the next iteration
-        edge_op_at_edge = gss.edge_spin_operators
-        block_ham_at_edge = gss.block_hamiltonians
 
         nodes_list = {}
         for edge_id in gss.energy.keys():

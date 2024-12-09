@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 import tensornetwork as tn
@@ -17,8 +17,6 @@ class GroundStateSearch(PhysicsEngine):
         init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
         max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
         truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
-        edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
-        block_hamiltonians (Optional(Dict[int, Dict[str, np.ndarray]]): Block_hamiltonian at each edge. Defaults to None.
     """
 
     def __init__(
@@ -28,8 +26,6 @@ class GroundStateSearch(PhysicsEngine):
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
         truncation_error=1e-11,
-        edge_spin_operators: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
-        block_hamiltonians: Optional[Dict[int, Dict[str, np.ndarray]]] = None,
     ):
         """Initialize a DMRG object.
 
@@ -39,8 +35,6 @@ class GroundStateSearch(PhysicsEngine):
             init_bond_dim : Initial bond dimension.
             max_bond_dim : Maximum bond dimension.
             truncation_error : Maximum truncation error.
-            edge_spin_operators : Spin operators at each edge.
-            block_hamiltonians : Block hamiltonian at each edge.
         """
         self.energy: Dict[int, float] = {}
         self.entanglement: Dict[int, float] = {}
@@ -54,8 +48,6 @@ class GroundStateSearch(PhysicsEngine):
             init_bond_dim,
             max_bond_dim,
             truncation_error,
-            edge_spin_operators,
-            block_hamiltonians,
         )
 
     def run(
@@ -110,20 +102,6 @@ class GroundStateSearch(PhysicsEngine):
                 ) = self.local_two_tensor()
 
                 self.set_flag(not_selected_tensor_id)
-                # eval expval
-                if self.flag[self.psi.canonical_center_edge_id] == 1:
-                    if eval_onesite_expval:
-                        for i in self.psi.central_tensor_ids():
-                            onesite_expval_dict = self.expval_onesite(i)
-                            for key in onesite_expval_dict.keys():
-                                onesite_expval[key] = onesite_expval_dict[key]
-
-                    if eval_twosite_expval:
-                        for i in self.psi.central_tensor_ids():
-                            twosite_expval_dict = self.expval_twosite(i)
-                            for key in twosite_expval_dict.keys():
-                                twosite_expval[key] = twosite_expval_dict[key]
-
                 # absorb gauge tensor
                 iso = tn.Node(self.psi.tensors[selected_tensor_id])
                 gauge = tn.Node(self.psi.gauge_tensor)
@@ -185,17 +163,20 @@ class GroundStateSearch(PhysicsEngine):
                     _ee_at_edge[key] = ee_dict[key]
                 _error_at_edge[self.psi.canonical_center_edge_id] = error
 
-            if eval_onesite_expval:
-                for i in self.psi.central_tensor_ids():
-                    onesite_expval_dict = self.expval_onesite(i)
-                    for key in onesite_expval_dict.keys():
-                        onesite_expval[key] = onesite_expval_dict[key]
+                # eval expval
+                if eval_onesite_expval:
+                    for i in self.psi.central_tensor_ids():
+                        onesite_expval_dict = self.expval_onesite(i)
+                        for key in onesite_expval_dict.keys():
+                            onesite_expval[key] = onesite_expval_dict[key]
+
+                if eval_twosite_expval:
+                    for i in self.psi.central_tensor_ids():
+                        twosite_expval_dict = self.expval_twosite(i)
+                        for key in twosite_expval_dict.keys():
+                            twosite_expval[key] = twosite_expval_dict[key]
 
             if eval_twosite_expval:
-                for i in self.psi.central_tensor_ids():
-                    twosite_expval_dict = self.expval_twosite(i)
-                    for key in twosite_expval_dict.keys():
-                        twosite_expval[key] = twosite_expval_dict[key]
                 twosite_expval_dict = self.expval_twosite_origin(twosite_expval.keys())
                 for key in twosite_expval_dict.keys():
                     twosite_expval[key] = twosite_expval_dict[key]

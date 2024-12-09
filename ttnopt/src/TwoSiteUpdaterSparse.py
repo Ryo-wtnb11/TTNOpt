@@ -1,6 +1,7 @@
 import numpy as np
 import tensornetwork as tn
-from tensornetwork import U1Charge, BlockSparseTensor
+from tensornetwork import U1Charge, BlockSparseTensor, Index
+from copy import deepcopy
 
 from ttnopt.src.TwoSiteUpdater import TwoSiteUpdaterMixin
 
@@ -72,13 +73,15 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
         (u, s, v, terr) = tn.split_node_full_svd(
             psi_last, [e, a, b], [c, d], max_singular_values=ind
         )
-
         u = u.reorder_edges([u[1], u[2], u[3], u[0]])
         v = v.reorder_edges([v[1], v[2], v[0]])
+
         u_tensor = u.tensor
-        s_tensor = s.tensor
-        s_tensor = s_tensor / np.linalg.norm(s_tensor.data)
+        u_tensor.contiguous(inplace=True)
+        s_tensor = s.tensor / np.linalg.norm(s.tensor.data)
+        s_tensor.contiguous(inplace=True)
         v_tensor = v.tensor
+        v_tensor.contiguous(inplace=True)
         p_truncate = s.tensor.data
 
         s = tn.Node(s_tensor, backend=self.backend)
@@ -92,23 +95,30 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
             [u[2], u[3]],
         )
         u_tensor = a.tensor
-        s[0] ^ b[1]
-        s = tn.contractors.auto([s, b], output_edge_order=[b[0], s[1], b[2]])
-        s_tensor = s.tensor
-        err = 1.0 - np.real(np.sum(p_truncate**2))
         u_tensor.contiguous(inplace=True)
         u_tensor = BlockSparseTensor(
             data=u_tensor.data,
-            charges=u_tensor.flat_charges,
+            charges=[
+                U1Charge(u_tensor.flat_charges[0].charges.flatten()),
+                U1Charge(u_tensor.flat_charges[1].charges.flatten()),
+                U1Charge(-u_tensor.flat_charges[2].charges.flatten()),
+            ],
             flows=[True, True, False],
         )
+        s[0] ^ b[1]
+        s = tn.contractors.auto([s, b], output_edge_order=[b[0], s[1], b[2]])
+        s_tensor = s.tensor
         s_tensor.contiguous(inplace=True)
         s_tensor = BlockSparseTensor(
             data=s_tensor.data,
-            charges=s_tensor.flat_charges,
+            charges=[
+                U1Charge(-s_tensor.flat_charges[0].charges.flatten()),
+                U1Charge(s_tensor.flat_charges[1].charges.flatten()),
+                U1Charge(s_tensor.flat_charges[2].charges.flatten()),
+            ],
             flows=[True, True, False],
         )
-        v_tensor.contiguous(inplace=True)
+        err = 1.0 - np.real(np.sum(p_truncate**2))
         return (
             u_tensor,
             s_tensor,

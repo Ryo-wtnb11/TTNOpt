@@ -170,6 +170,7 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         u = u.get_tensor()[:, :, :ind]
         v = v.get_tensor()[:, :, :ind]
         s = s.get_tensor()[:ind, :ind]
+        print(np.diagonal(s))
 
         p_truncate = np.diagonal(s)
         err = 1.0 - np.real(np.sum(p_truncate**2))
