@@ -12,9 +12,11 @@ system:
 numerics:
     init_tree: 0
     opt_structure: 0
-    initial_bond_dimension: 4
-    max_bond_dimensions: [10, 40] # Maximum bond dimension for each repetition
-    max_num_sweeps: [10, 1]
+    U1_symmetry:
+        magnitude: 0
+    initial_bond_dimension: 64
+    max_bond_dimensions: [80, 90] # Maximum bond dimension for each repetition
+    max_num_sweeps: [1, 1]
     energy_convergence_threshold: 1e-8
     entanglement_convergence_threshold: 1e-8
     energy_degeneracy_threshold: 1e-13

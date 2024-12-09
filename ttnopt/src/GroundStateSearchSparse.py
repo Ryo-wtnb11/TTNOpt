@@ -1,13 +1,15 @@
-from typing import List, Dict, Optional
+from typing import Dict, Tuple
 
 import numpy as np
 import tensornetwork as tn
-from tensornetwork import U1Charge
-import copy
+from copy import deepcopy
 
 from ttnopt.src.PhysicsEngineSparse import PhysicsEngineSparse
 from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.Hamiltonian import Hamiltonian
+
+tn.block_sparse.enable_caching()
+
 
 class GroundStateSearchSparse(PhysicsEngineSparse):
     """A class for ground state search algorithm based on DMRG using Sparse Tensor.
@@ -18,9 +20,8 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
         init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
         max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
         truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
-        edge_spin_operators (Optional(Dict[int, Dict[str, tn.BlockSparseTensor]]): Spin operators at each edge. Defaults to None.
-        block_hamiltonians (Optional(Dict[int, Dict[str, tn.BlockSparseTensor]]): Block_hamiltonian at each edge. Defaults to None.
     """
+
     def __init__(
         self,
         psi: TreeTensorNetwork,
@@ -29,9 +30,22 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
         truncation_error: float = 1e-11,
-        edge_spin_operators: Optional[Dict[int, Dict[str, tn.BlockSparseTensor]]] = None,
-        block_hamiltonians: Optional[Dict[int, Dict[str, tn.BlockSparseTensor]]] = None,
     ):
+        """Initialize a DMRG object.
+
+        Args:
+            psi : The quantum state.
+            hamiltonians : The Hamiltonian.
+            u1_num : The number of preserving total spin in U(1) symmetry.
+            init_bond_dim : Initial bond dimension.
+            max_bond_dim : Maximum bond dimension.
+            truncation_error : Maximum truncation error.
+        """
+        self.energy: Dict[int, float] = {}
+        self.entanglement: Dict[int, float] = {}
+        self.error: Dict[int, float] = {}
+        self.one_site_expval: Dict[int, Dict[str, float]] = {}
+        self.two_site_expval: Dict[Tuple[int, int], Dict[str, float]] = {}
 
         # set backend only in this function
         super().__init__(
@@ -41,17 +55,17 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
             init_bond_dim,
             max_bond_dim,
             truncation_error,
-            edge_spin_operators,
-            block_hamiltonians,
         )
 
     def run(
         self,
-        opt_structure : bool = False,
-        energy_convergence_threshold : float = 1e-8,
-        entanglement_convergence_threshold : float = 1e-8,
-        max_num_sweep : int = 5,
-        converged_count : int = 2,
+        opt_structure: bool = False,
+        energy_convergence_threshold: float = 1e-8,
+        entanglement_convergence_threshold: float = 1e-8,
+        max_num_sweep: int = 5,
+        converged_count: int = 2,
+        eval_onesite_expval: bool = False,
+        eval_twosite_expval: bool = False,
     ):
         """Run Ground State Search algorithm using Sparse Tensor with total spin.
 
@@ -60,28 +74,33 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
             energy_convergence_threshold (float, optional): Energy threshold for convergence. Defaults to 1e-8.
             entanglement_convergence_threshold (float, optional): Entanglement entropy threshold for automatic optimization. Defaults to 1e-8.
             converged_count (int, optional): Converged count. Defaults to 1.
+            eval_onesite_expval (bool): If evaluate one-site expectation value or not.
+            eval_twosite_expval (bool): If evaluate two-site expectation value or not.
         """
-
         energy_at_edge: Dict[int, float] = {}
         _energy_at_edge: Dict[int, float] = {}
         ee_at_edge: Dict[int, float] = {}
         _ee_at_edge: Dict[int, float] = {}
+        _error_at_edge: Dict[int, float] = {}
+        onesite_expval: Dict[int, Dict[str, float]] = {}
+        twosite_expval: Dict[Tuple[int, int], Dict[str, float]] = {}
 
-        edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
+        edges, _edges = deepcopy(self.psi.edges), deepcopy(self.psi.edges)
 
         converged_num = 0
 
         sweep_num = 0
         while converged_num < converged_count and sweep_num < max_num_sweep:
             # energy
-            energy_at_edge = copy.deepcopy(_energy_at_edge)
-            ee_at_edge = copy.deepcopy(_ee_at_edge)
-            edges = copy.deepcopy(_edges)
+            energy_at_edge = deepcopy(_energy_at_edge)
+            ee_at_edge = deepcopy(_ee_at_edge)
+            edges = deepcopy(_edges)
 
             self.distance = self.initial_distance()
             self.flag = self.initial_flag()
 
             print("Sweep count: " + str(sweep_num))
+
             while self.candidate_edge_ids() != []:
                 (
                     edge_id,
@@ -90,10 +109,14 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                     not_selected_tensor_id,
                 ) = self.local_two_tensor()
 
+                self.set_flag(not_selected_tensor_id)
+
                 # absorb gauge tensor
-                iso = tn.Node(self.psi.tensors[selected_tensor_id], backend=self.backend)
+                iso = tn.Node(
+                    self.psi.tensors[selected_tensor_id], backend=self.backend
+                )
                 gauge = tn.Node(self.psi.gauge_tensor, backend=self.backend)
-                if iso.tensor.flat_flows[2]:
+                if selected_tensor_id == self.previous_id:
                     out = gauge[1]
                     iso[2] ^ gauge[0]
                 else:
@@ -103,27 +126,30 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                     [iso, gauge], output_edge_order=[iso[0], iso[1], out, gauge[2]]
                 )
 
-                self.psi.tensors[selected_tensor_id] = iso.get_tensor()
-
-                self.set_flag(not_selected_tensor_id)
+                self.psi.tensors[selected_tensor_id] = iso.tensor
 
                 self.set_ttn_properties_at_one_tensor(edge_id, selected_tensor_id)
 
                 self._set_edge_spin(not_selected_tensor_id)
+
                 self._set_block_hamiltonian(not_selected_tensor_id)
 
-                ground_state = self.lanczos([selected_tensor_id, connected_tensor_id])
+                ground_state, energy = self.lanczos(
+                    [selected_tensor_id, connected_tensor_id]
+                )
+
                 psi_edges = (
                     self.psi.edges[selected_tensor_id][:2]
                     + self.psi.edges[connected_tensor_id][:2]
                 )
 
-                u, s, v, probability, edge_order = self.decompose_two_tensors(
+                u, s, v, probability, error, edge_order = self.decompose_two_tensors(
                     ground_state,
                     self.max_bond_dim,
                     opt_structure=opt_structure,
-                    #TODO:
+                    epsilon=entanglement_convergence_threshold,
                 )
+
                 self.psi.tensors[selected_tensor_id] = u
                 self.psi.tensors[connected_tensor_id] = v
                 self.psi.gauge_tensor = s
@@ -142,16 +168,40 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                     psi_edges[edge_order[3]],
                 )
 
+                self.previous_id = selected_tensor_id
+
                 self.distance = self.initial_distance()
-
-                energy = self.energy()
-                ee = self.entanglement_entropy(probability)
                 _energy_at_edge[self.psi.canonical_center_edge_id] = energy
+                print(energy)
+                ee = self.entanglement_entropy(probability)
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
+                ee_dict = self.entanglement_entropy_at_physical_bond(
+                    ground_state, psi_edges
+                )
+                for key in ee_dict.keys():
+                    _ee_at_edge[key] = ee_dict[key]
+                _error_at_edge[self.psi.canonical_center_edge_id] = error
 
-            _edges = copy.deepcopy(self.psi.edges)
+                # eval expval
+                if eval_onesite_expval:
+                    for i in self.psi.central_tensor_ids():
+                        onesite_expval_dict = self.expval_onesite(i)
+                        for key in onesite_expval_dict.keys():
+                            onesite_expval[key] = onesite_expval_dict[key]
 
-            # 終了判定
+                if eval_twosite_expval:
+                    for i in self.psi.central_tensor_ids():
+                        twosite_expval_dict = self.expval_twosite(i)
+                        for key in twosite_expval_dict.keys():
+                            twosite_expval[key] = twosite_expval_dict[key]
+
+            if eval_twosite_expval:
+                twosite_expval_dict = self.expval_twosite_origin(twosite_expval.keys())
+                for key in twosite_expval_dict.keys():
+                    twosite_expval[key] = twosite_expval_dict[key]
+
+            _edges = deepcopy(self.psi.edges)
+
             sweep_num += 1
             if sweep_num > 2:
                 diff_energy = [
@@ -169,9 +219,20 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                     ]
                 ):
                     if all(
-                        [energy < energy_convergence_threshold for energy in diff_energy]
-                    ) and all([ee < entanglement_convergence_threshold for ee in diff_ee]):
+                        [
+                            energy < energy_convergence_threshold
+                            for energy in diff_energy
+                        ]
+                    ) and all(
+                        [ee < entanglement_convergence_threshold for ee in diff_ee]
+                    ):
                         converged_num += 1
         print("Converged")
 
-        return _energy_at_edge, _ee_at_edge
+        self.energy = _energy_at_edge
+        self.entanglement = _ee_at_edge
+        self.error = _error_at_edge
+        self.one_site_expval = onesite_expval
+        self.two_site_expval = twosite_expval
+
+        return 0

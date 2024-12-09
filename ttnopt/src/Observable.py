@@ -32,7 +32,10 @@ def spin_ind(spin_num):
         if spin_num.startswith("S="):
             spin_value_str = spin_num[2:]
         else:
-            raise ValueError("Invalid spin string format. Expected format 'S=...'.")
+            print("=" * 50)
+            print("⚠️  Error: Invalid spin string format. Expected format 'S=...'.")
+            print("=" * 50)
+            exit()
 
         if "/" in spin_value_str:
             numerator, denominator = spin_value_str.split("/")
@@ -42,7 +45,10 @@ def spin_ind(spin_num):
     elif isinstance(spin_num, (int, float)):
         spin_value = spin_num
     else:
-        raise TypeError("Invalid type for spin_num. Expected a string or a number.")
+        print("=" * 50)
+        print("⚠️  Error: Invalid type for spin_num. Expected a string or a number.")
+        print("=" * 50)
+        exit()
 
     return spin_value
 
@@ -51,9 +57,12 @@ def bare_spin_operator(spin, spin_num):
     spin_value = spin_ind(spin_num)  # Get both string form and numeric value
     # Check if spin_value is valid
     if not (spin_value == int(spin_value) or spin_value == int(spin_value) + 0.5):
-        raise ValueError(
-            "Invalid spin number. Spin number must be an integer or half-integer."
+        print("=" * 50)
+        print(
+            "⚠️  Error: Invalid spin number. Spin number must be an integer or half-integer."
         )
+        print("=" * 50)
+        exit()
     dim = int(2 * spin_value + 1)  # Dimension of the matrix based on the spin value
     if spin == "S+":
         # Construct the raising operator S+
@@ -80,6 +89,18 @@ def bare_spin_operator(spin, spin_num):
         for m in range(dim):
             Sz[m, m] = spin_value - m
         return Sz
+
+    elif spin == "Sx":
+        Sp = bare_spin_operator("S+", spin_num)
+        Sm = bare_spin_operator("S-", spin_num)
+        Sx = (Sp + Sm) / 2.0
+        return Sx
+
+    elif spin == "Sy":
+        Sp = bare_spin_operator("S+", spin_num)
+        Sm = bare_spin_operator("S-", spin_num)
+        Sy = (Sp - Sm) / 2.0j
+        return Sy
 
 
 def spin_dof(spin_num):

@@ -5,6 +5,7 @@ from ttnopt.src import GroundStateSearchSparse
 
 from ttnopt.hamiltonian import hamiltonian
 
+import numpy as np
 import pandas as pd
 import itertools
 import yaml
@@ -39,8 +40,6 @@ def ground_state_search():
 
     numerics = config.numerics
     opt_structure = 1 if numerics.opt_structure else 0
-    edge_op_at_edge = None
-    block_ham_at_edge = None
 
     path = Path(config.output.dir)
 
@@ -51,22 +50,37 @@ def ground_state_search():
     save_twosite_expval = (
         True if not isinstance(config.output.two_site.file, DotMap) else False
     )
+    u1_symmetry = (
+        True if not isinstance(numerics.U1_symmetry.magnitude, DotMap) else False
+    )
+    if u1_symmetry and config.model.type == "XYZ":
+        print("=" * 50)
+        print("⚠️  Error: U1 symmetry is not supported for the XYZ model.")
+        print("     Please set the U1 symmetry to False or change the model to XXZ.")
+        print("=" * 50)
+
+    if u1_symmetry:
+        gss = GroundStateSearchSparse(
+            psi,
+            ham,
+            numerics.U1_symmetry.magnitude,
+            init_bond_dim=numerics.initial_bond_dimension,
+            max_bond_dim=numerics.max_bond_dimensions[0],
+            truncation_error=numerics.truncation_error,
+        )
+    else:
+        gss = GroundStateSearch(
+            psi,
+            ham,
+            init_bond_dim=numerics.initial_bond_dimension,
+            max_bond_dim=numerics.max_bond_dimensions[0],
+            truncation_error=numerics.truncation_error,
+        )
 
     for i, (max_bond_dim, max_num_sweep) in enumerate(
         zip(numerics.max_bond_dimensions, numerics.max_num_sweeps)
     ):
-        if not isinstance(numerics.U1_symmetry.magnitude, DotMap):
-            gss = GroundStateSearchSparse(
-                psi,
-                ham,
-                numerics.U1_symmetry.magnetization,
-                init_bond_dim=numerics.initial_bond_dimension,
-                max_bond_dim=max_bond_dim,
-                truncation_error=numerics.truncation_error,
-                edge_spin_operators=edge_op_at_edge,
-                block_hamiltonians=block_ham_at_edge,
-            )
-
+        if opt_structure:
             gss.run(
                 opt_structure=opt_structure,
                 energy_convergence_threshold=float(
@@ -77,55 +91,28 @@ def ground_state_search():
                 ),
                 max_num_sweep=max_num_sweep,
             )
-
-        else:
-            gss = GroundStateSearch(
-                psi,
-                ham,
-                init_bond_dim=numerics.initial_bond_dimension,
-                max_bond_dim=max_bond_dim,
-                truncation_error=numerics.truncation_error,
-                edge_spin_operators=edge_op_at_edge,
-                block_hamiltonians=block_ham_at_edge,
+            print("Calculating the expectation values for the initial structure")
+            # re-run the first iteration to save the expectation values
+            gss.run(
+                opt_structure=False,
+                max_num_sweep=1,
+                eval_onesite_expval=save_onesite_expval,
+                eval_twosite_expval=save_twosite_expval,
             )
-
-            if opt_structure:
-                gss.run(
-                    opt_structure=opt_structure,
-                    energy_convergence_threshold=float(
-                        numerics.energy_convergence_threshold
-                    ),
-                    entanglement_convergence_threshold=float(
-                        numerics.entanglement_convergence_threshold
-                    ),
-                    max_num_sweep=max_num_sweep,
-                )
-                print("Calculating the expectation values for the initial structure")
-                # re-run the first iteration to save the expectation values
-                gss.run(
-                    opt_structure=False,
-                    max_num_sweep=1,
-                    eval_onesite_expval=save_onesite_expval,
-                    eval_twosite_expval=save_twosite_expval,
-                )
-                opt_structure = 0
-            else:
-                gss.run(
-                    opt_structure=False,
-                    energy_convergence_threshold=float(
-                        numerics.energy_convergence_threshold
-                    ),
-                    entanglement_convergence_threshold=float(
-                        numerics.entanglement_convergence_threshold
-                    ),
-                    max_num_sweep=max_num_sweep,
-                    eval_onesite_expval=save_onesite_expval,
-                    eval_twosite_expval=save_twosite_expval,
-                )
-
-        # reset parameters for the next iteration
-        edge_op_at_edge = gss.edge_spin_operators
-        block_ham_at_edge = gss.block_hamiltonians
+            opt_structure = 0
+        else:
+            gss.run(
+                opt_structure=False,
+                energy_convergence_threshold=float(
+                    numerics.energy_convergence_threshold
+                ),
+                entanglement_convergence_threshold=float(
+                    numerics.entanglement_convergence_threshold
+                ),
+                max_num_sweep=max_num_sweep,
+                eval_onesite_expval=save_onesite_expval,
+                eval_twosite_expval=save_twosite_expval,
+            )
 
         nodes_list = {}
         for edge_id in gss.energy.keys():
@@ -168,12 +155,23 @@ def ground_state_search():
 
         if save_onesite_expval is True:
             df = pd.DataFrame(psi.physical_edges, columns=["site"], index=None)
-            df["Sx"] = [
-                gss.one_site_expval[edge_id]["Sx"] for edge_id in psi.physical_edges
-            ]
-            df["Sy"] = [
-                gss.one_site_expval[edge_id]["Sy"] for edge_id in psi.physical_edges
-            ]
+            sp = np.zeros(len(psi.physical_edges))
+            sm = np.zeros(len(psi.physical_edges))
+            if not u1_symmetry:
+                sp = np.array(
+                    [
+                        gss.one_site_expval[edge_id]["S+"]
+                        for edge_id in psi.physical_edges
+                    ]
+                )
+                sm = np.array(
+                    [
+                        gss.one_site_expval[edge_id]["S-"]
+                        for edge_id in psi.physical_edges
+                    ]
+                )
+            df["Sx"] = (sp + sm) / 2.0
+            df["Sy"] = (sp - sm) / 2.0j
             df["Sz"] = [
                 gss.one_site_expval[edge_id]["Sz"] for edge_id in psi.physical_edges
             ]
@@ -185,15 +183,37 @@ def ground_state_search():
         if save_twosite_expval is True:
             pairs = [(i, j) for i, j in itertools.combinations(psi.physical_edges, 2)]
             df = pd.DataFrame(pairs, columns=["site1", "site2"], index=None)
-            df["SxSx"] = [gss.two_site_expval[pair]["SxSx"] for pair in pairs]
-            df["SySy"] = [gss.two_site_expval[pair]["SySy"] for pair in pairs]
-            df["SzSz"] = [gss.two_site_expval[pair]["SzSz"] for pair in pairs]
-            df["SxSy"] = [gss.two_site_expval[pair]["SxSy"] for pair in pairs]
-            df["SySx"] = [gss.two_site_expval[pair]["SySx"] for pair in pairs]
-            df["SySz"] = [gss.two_site_expval[pair]["SySz"] for pair in pairs]
-            df["SzSy"] = [gss.two_site_expval[pair]["SzSy"] for pair in pairs]
-            df["SzSx"] = [gss.two_site_expval[pair]["SzSx"] for pair in pairs]
-            df["SxSz"] = [gss.two_site_expval[pair]["SxSz"] for pair in pairs]
+            spp = np.zeros(len(pairs))
+            smm = np.zeros(len(pairs))
+            szp = np.zeros(len(pairs))
+            spz = np.zeros(len(pairs))
+            szm = np.zeros(len(pairs))
+            smz = np.zeros(len(pairs))
+            if not u1_symmetry:
+                spp = np.array([gss.two_site_expval[pair]["S+S+"] for pair in pairs])
+                smm = np.array([gss.two_site_expval[pair]["S-S-"] for pair in pairs])
+                szp = np.array([gss.two_site_expval[pair]["SzS+"] for pair in pairs])
+                spz = np.array([gss.two_site_expval[pair]["S+Sz"] for pair in pairs])
+                szm = np.array([gss.two_site_expval[pair]["SzS-"] for pair in pairs])
+                smz = np.array([gss.two_site_expval[pair]["S-Sz"] for pair in pairs])
+
+            szz = np.array([gss.two_site_expval[pair]["SzSz"] for pair in pairs])
+            spm = np.array([gss.two_site_expval[pair]["S+S-"] for pair in pairs])
+            smp = np.array([gss.two_site_expval[pair]["S-S+"] for pair in pairs])
+
+            df["SzSz"] = szz
+            df["SxSx"] = (spp + spm + smp + smm) / 4.0
+            df["SySy"] = -(spp - spm - smp + smm) / 4.0
+
+            df["SxSy"] = (spp - spm + smp - smm) / 4.0j
+            df["SySx"] = (spp + spm - smp - smm) / 4.0j
+
+            df["SzSx"] = (szp + szm) / 2.0
+            df["SxSz"] = (spz - smz) / 2.0
+
+            df["SzSy"] = (szp - szm) / 2.0j
+            df["SySz"] = (spz + smz) / 2.0j
+
             path_ = path / f"run{i + 1}"
             os.makedirs(path_, exist_ok=True)
             df.to_csv(path_ / config.output.two_site.file, header=True, index=None)
