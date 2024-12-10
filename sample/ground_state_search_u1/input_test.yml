@@ -1,5 +1,5 @@
 system:
-    N: 16 # Number of spins
+    N: 15 # Number of spins
     # Spin size configuration
     spin_size:
         S: 1/2 # Spin size (used only if uniform is 1)
@@ -13,7 +13,7 @@ numerics:
     init_tree: 0
     opt_structure: 0
     U1_symmetry:
-        magnitude: 0
+        magnetization: 1/2
     initial_bond_dimension: 64
     max_bond_dimensions: [80, 90] # Maximum bond dimension for each repetition
     max_num_sweeps: [1, 1]

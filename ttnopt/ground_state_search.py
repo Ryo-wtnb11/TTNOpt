@@ -51,7 +51,7 @@ def ground_state_search():
         True if not isinstance(config.output.two_site.file, DotMap) else False
     )
     u1_symmetry = (
-        True if not isinstance(numerics.U1_symmetry.magnitude, DotMap) else False
+        True if not isinstance(numerics.U1_symmetry.magnetization, DotMap) else False
     )
     if u1_symmetry and config.model.type == "XYZ":
         print("=" * 50)
@@ -63,7 +63,7 @@ def ground_state_search():
         gss = GroundStateSearchSparse(
             psi,
             ham,
-            numerics.U1_symmetry.magnitude,
+            numerics.U1_symmetry.magnetization,
             init_bond_dim=numerics.initial_bond_dimension,
             max_bond_dim=numerics.max_bond_dimensions[0],
             truncation_error=numerics.truncation_error,

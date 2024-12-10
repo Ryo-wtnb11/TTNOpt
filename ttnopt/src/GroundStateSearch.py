@@ -102,6 +102,23 @@ class GroundStateSearch(PhysicsEngine):
                 ) = self.local_two_tensor()
 
                 self.set_flag(not_selected_tensor_id)
+
+                # eval expval
+                if self.flag[not_selected_tensor_id]:
+                    if eval_onesite_expval:
+                        onesite_expval_dict = self.expval_onesite(
+                            not_selected_tensor_id
+                        )
+                        for key in onesite_expval_dict.keys():
+                            onesite_expval[key] = onesite_expval_dict[key]
+
+                    if eval_twosite_expval:
+                        twosite_expval_dict = self.expval_twosite(
+                            not_selected_tensor_id
+                        )
+                        for key in twosite_expval_dict.keys():
+                            twosite_expval[key] = twosite_expval_dict[key]
+
                 # absorb gauge tensor
                 iso = tn.Node(self.psi.tensors[selected_tensor_id])
                 gauge = tn.Node(self.psi.gauge_tensor)
@@ -163,19 +180,11 @@ class GroundStateSearch(PhysicsEngine):
                     _ee_at_edge[key] = ee_dict[key]
                 _error_at_edge[self.psi.canonical_center_edge_id] = error
 
-                # eval expval
-                if eval_onesite_expval:
-                    for i in self.psi.central_tensor_ids():
-                        onesite_expval_dict = self.expval_onesite(i)
-                        for key in onesite_expval_dict.keys():
-                            onesite_expval[key] = onesite_expval_dict[key]
-
-                if eval_twosite_expval:
-                    for i in self.psi.central_tensor_ids():
-                        twosite_expval_dict = self.expval_twosite(i)
-                        for key in twosite_expval_dict.keys():
-                            twosite_expval[key] = twosite_expval_dict[key]
-
+            if eval_onesite_expval:
+                for i in self.psi.central_tensor_ids():
+                    onesite_expval_dict = self.expval_onesite(i)
+                    for key in onesite_expval_dict.keys():
+                        onesite_expval[key] = onesite_expval_dict[key]
             if eval_twosite_expval:
                 twosite_expval_dict = self.expval_twosite_origin(twosite_expval.keys())
                 for key in twosite_expval_dict.keys():

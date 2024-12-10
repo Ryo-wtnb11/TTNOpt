@@ -1,7 +1,6 @@
 import numpy as np
 import tensornetwork as tn
-from tensornetwork import U1Charge, BlockSparseTensor, Index
-from copy import deepcopy
+from tensornetwork import U1Charge, BlockSparseTensor
 
 from ttnopt.src.TwoSiteUpdater import TwoSiteUpdaterMixin
 

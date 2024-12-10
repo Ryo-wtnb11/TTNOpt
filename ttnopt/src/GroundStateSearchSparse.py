@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 
 import numpy as np
 import tensornetwork as tn
@@ -16,7 +16,7 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
     Args:
         psi (TreeTensorNetwork): The quantum state.
         hamiltonians (Hamiltonian): Hamiltonian which is list of Observable.
-        u1_num (int): The number of preserving total spin in U(1) symmetry.
+        u1_num (str): The number of preserving total spin in U(1) symmetry.
         init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
         max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
         truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
@@ -26,7 +26,7 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
         self,
         psi: TreeTensorNetwork,
         hamiltonian: Hamiltonian,
-        u1_num: int,
+        u1_num: Union[int, str],
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
         truncation_error: float = 1e-11,
@@ -111,6 +111,22 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
 
                 self.set_flag(not_selected_tensor_id)
 
+                # eval expval
+                if self.flag[not_selected_tensor_id]:
+                    if eval_onesite_expval:
+                        onesite_expval_dict = self.expval_onesite(
+                            not_selected_tensor_id
+                        )
+                        for key in onesite_expval_dict.keys():
+                            onesite_expval[key] = onesite_expval_dict[key]
+
+                    if eval_twosite_expval:
+                        twosite_expval_dict = self.expval_twosite(
+                            not_selected_tensor_id
+                        )
+                        for key in twosite_expval_dict.keys():
+                            twosite_expval[key] = twosite_expval_dict[key]
+
                 # absorb gauge tensor
                 iso = tn.Node(
                     self.psi.tensors[selected_tensor_id], backend=self.backend
@@ -182,19 +198,12 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                     _ee_at_edge[key] = ee_dict[key]
                 _error_at_edge[self.psi.canonical_center_edge_id] = error
 
-                # eval expval
-                if eval_onesite_expval:
-                    for i in self.psi.central_tensor_ids():
-                        onesite_expval_dict = self.expval_onesite(i)
-                        for key in onesite_expval_dict.keys():
-                            onesite_expval[key] = onesite_expval_dict[key]
-
-                if eval_twosite_expval:
-                    for i in self.psi.central_tensor_ids():
-                        twosite_expval_dict = self.expval_twosite(i)
-                        for key in twosite_expval_dict.keys():
-                            twosite_expval[key] = twosite_expval_dict[key]
-
+            # eval expval
+            if eval_onesite_expval:
+                for i in self.psi.central_tensor_ids():
+                    onesite_expval_dict = self.expval_onesite(i)
+                    for key in onesite_expval_dict.keys():
+                        onesite_expval[key] = onesite_expval_dict[key]
             if eval_twosite_expval:
                 twosite_expval_dict = self.expval_twosite_origin(twosite_expval.keys())
                 for key in twosite_expval_dict.keys():
