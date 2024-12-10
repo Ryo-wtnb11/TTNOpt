@@ -1,3 +1,4 @@
+from typing import Union
 import numpy as np
 import tensornetwork as tn
 from tensornetwork import U1Charge, Index, BlockSparseTensor
@@ -23,7 +24,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         self,
         psi: TreeTensorNetwork,
         hamiltonian: Hamiltonian,
-        u1_num: int,
+        u1_num: Union[int, str],
         init_bond_dim: int,
         max_bond_dim: int,
         truncation_error: float,
@@ -33,7 +34,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         Args:
             psi (TreeTensorNetwork): The quantum state.
             hamiltonians (Hamiltonian): Hamiltonian which has a list of Observables.
-            u1_num (int): The number of U1 charges.
+            u1_num (int or str): The number of U1 charges.
             init_bond_dim (int): Initial bond dimension.
             max_bond_dim (int): Maximum bond dimension.
             truncation_error (float): Maximum truncation error.
@@ -42,7 +43,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
 
         super().__init__(psi)
         self.hamiltonian = hamiltonian
-        self.u1_num = u1_num
+        self.u1_num = int(2 * spin_ind("S=" + str(u1_num)))
         self.init_bond_dim = init_bond_dim
         self.max_bond_dim = max_bond_dim
         self.truncation_err = truncation_error
@@ -467,7 +468,9 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
             )
             print("Or they need more larger initial bond dimension.")
             print("To rifer see U1 charges sectors on canonical center following:")
-            print(np.sort(u))
+            unique_values, counts = np.unique(u, return_counts=True)
+            for val, count in zip(unique_values, counts):
+                print(f"S: {val}/2, Count: {count}")
             print("-" * 50)
             exit()
         c0 = U1Charge(c0)
