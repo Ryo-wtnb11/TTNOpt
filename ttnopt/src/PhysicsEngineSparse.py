@@ -818,7 +818,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
                             out_order=["-b0", "-b1", "-k0", "-k1"],
                             backend=self.backend,
                         )
-                        block_ham *= ham.coef_list[n]
+                        block_ham *= complex(ham.coef_list[n])
                         block_ham = fuse_ham(block_ham, u1_charges)
                         block_hams.append(block_ham)
 
@@ -859,9 +859,13 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         k_l = b_l.copy().flip_flow()
         k_r = b_r.copy().flip_flow()
 
-        eye_l = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][0]])
+        eye_l = np.eye(
+            self.psi.edge_dims[self.psi.edges[tensor_id][0]], dtype=np.complex128
+        )
         eye_l = BlockSparseTensor.fromdense([b_l, k_l], eye_l)
-        eye_r = np.eye(self.psi.edge_dims[self.psi.edges[tensor_id][1]])
+        eye_r = np.eye(
+            self.psi.edge_dims[self.psi.edges[tensor_id][1]], dtype=np.complex128
+        )
         eye_r = BlockSparseTensor.fromdense([b_r, k_r], eye_r)
 
         # left block ham

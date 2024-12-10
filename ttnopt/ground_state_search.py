@@ -58,6 +58,35 @@ def ground_state_search():
         print("⚠️  Error: U1 symmetry is not supported for the XYZ model.")
         print("     Please set the U1 symmetry to False or change the model to XXZ.")
         print("=" * 50)
+        exit()
+    if (u1_symmetry and not (isinstance(config.system.MF_X.h, DotMap))) or (
+        u1_symmetry and not (isinstance(config.system.MF_X.file, DotMap))
+    ):
+        print("=" * 50)
+        print("⚠️  Error: U1 symmetry is not allowed for the X magnetic field.")
+        print("=" * 50)
+        exit()
+    if (u1_symmetry and not (isinstance(config.system.MF_Y.h, DotMap))) or (
+        u1_symmetry and not (isinstance(config.system.MF_Y.file, DotMap))
+    ):
+        print("=" * 50)
+        print("⚠️  Error: U1 symmetry is not allowed for the Y magnetic field.")
+        print("=" * 50)
+        exit()
+    if u1_symmetry and not isinstance(config.system.DM_X.file, DotMap):
+        print("=" * 50)
+        print(
+            "⚠️  Error: U1 symmetry is not allowed for the X term of Dzyaloshinskii-Moriya interaction."
+        )
+        print("=" * 50)
+        exit()
+    if u1_symmetry and not isinstance(config.system.DM_Y.file, DotMap):
+        print("=" * 50)
+        print(
+            "⚠️  Error: U1 symmetry is not allowed for the Y term of Dzyaloshinskii-Moriya interaction."
+        )
+        print("=" * 50)
+        exit()
 
     if u1_symmetry:
         gss = GroundStateSearchSparse(

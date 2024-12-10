@@ -142,5 +142,8 @@ class Hamiltonian:
         ):
             for i, c in zip(dzyaloshinskii_moriya_Z_indices, dzyaloshinskii_moriya_Z):
                 if not math.isclose(c, 0.0):
-                    ob = Observable(i, [["Sx", "Sy"], ["Sy", "Sx"]], [c, -c])
+                    coef = c / 2.0j
+                    ob = Observable(
+                        i, [["S+", "S-"], ["S-", "S+"]], [coef.item(), -coef.item()]
+                    )
                     self.observables.append(ob)
