@@ -9,6 +9,9 @@ system:
         type: XXZ # Choose XXZ or XYZ
         file: coupling_feature.dat # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
 
+    DM_Z:
+        file: DMz.dat
+
 numerics:
     init_tree: 0
     opt_structure: 0

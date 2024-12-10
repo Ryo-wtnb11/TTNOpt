@@ -1,6 +1,7 @@
 import math
-from typing import Optional, List
+import numpy as np
 
+from typing import Optional, List
 from ttnopt.src.Observable import Observable
 
 
@@ -142,5 +143,10 @@ class Hamiltonian:
         ):
             for i, c in zip(dzyaloshinskii_moriya_Z_indices, dzyaloshinskii_moriya_Z):
                 if not math.isclose(c, 0.0):
-                    ob = Observable(i, [["Sx", "Sy"], ["Sy", "Sx"]], [c, -c])
+                    cc = np.array([c / 2.0j])
+                    ob = Observable(
+                        i,
+                        [["S+", "S-"], ["S-", "S+"]],
+                        [cc.item(), -cc.item()],
+                    )
                     self.observables.append(ob)

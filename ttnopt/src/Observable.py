@@ -1,5 +1,4 @@
-from typing import List
-
+from typing import List, Union
 import numpy as np
 
 
@@ -10,7 +9,7 @@ class Observable:
         self,
         indices: List[int],
         operators_list: List[List[str]],
-        coef_list: List[float],
+        coef_list: Union[List[float], List[complex]],
     ):
         """Initialize an Observable object.
 
