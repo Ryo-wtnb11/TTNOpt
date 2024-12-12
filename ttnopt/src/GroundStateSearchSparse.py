@@ -29,7 +29,6 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
         u1_num: Union[int, str],
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
-        truncation_error: float = 1e-11,
     ):
         """Initialize a DMRG object.
 
@@ -54,7 +53,6 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
             u1_num,
             init_bond_dim,
             max_bond_dim,
-            truncation_error,
         )
 
     def run(

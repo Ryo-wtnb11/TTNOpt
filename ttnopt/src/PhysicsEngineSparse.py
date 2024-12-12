@@ -27,7 +27,6 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         u1_num: Union[int, str],
         init_bond_dim: int,
         max_bond_dim: int,
-        truncation_error: float,
     ):
         """Initialize a PhysicsEngineSparse object.
 
@@ -37,7 +36,6 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
             u1_num (int or str): The number of U1 charges.
             init_bond_dim (int): Initial bond dimension.
             max_bond_dim (int): Maximum bond dimension.
-            truncation_error (float): Maximum truncation error.
             edge_spin_operators (Optional(Dict[int, Dict[str, np.ndarray]]): Spin operators at each edge. Defaults to None.
         """
 
@@ -46,7 +44,6 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         self.u1_num = int(2 * spin_ind("S=" + str(u1_num)))
         self.init_bond_dim = init_bond_dim
         self.max_bond_dim = max_bond_dim
-        self.truncation_err = truncation_error
         self.edge_u1_charges = self._init_edge_u1_charge()
         self.edge_spin_operators = self._init_spin_operator()
         self.block_hamiltonians = self._init_block_hamiltonians()
@@ -397,7 +394,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
                     energy = e[0]
                     if np.abs(e - e_old) < np.max([1.0, np.abs(e)[0]]) * lanczos_tol:
                         d += 1
-                    if d > 5:
+                    if j > dim_n or d > 5:
                         break
                     e_old = energy
 
@@ -425,8 +422,10 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         # check convergence
         v = tn.Node(v, backend=self.backend)
         v_ = self._apply_ham_psi(v, central_tensor_ids)
-        v_ = v_ / np.sqrt(inner_product_sparse(v_, v_))
-        delta_v = v_.tensor - np.sign(e)[0] * v.tensor
+        e = np.real(inner_product_sparse(v, v_)) / np.real(inner_product_sparse(v, v))
+        delta_v = v_.tensor - e * v.tensor
+        v_tensor = v_.tensor + e * 100.0 * v.tensor
+        v = tn.Node(v_tensor, backend=self.backend)
         while (
             np.sqrt(
                 inner_product_sparse(
@@ -436,10 +435,13 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
             )
             > inverse_tol
         ):
-            v = self._apply_ham_psi(v, central_tensor_ids)
-            v = v / np.sqrt(inner_product_sparse(v, v))
-            delta_v = v.tensor - np.sign(e)[0] * v_.tensor
-            v_ = v
+            v_ = self._apply_ham_psi(v, central_tensor_ids)
+            e = np.real(inner_product_sparse(v, v_)) / np.real(
+                inner_product_sparse(v, v)
+            )
+            delta_v = v_.tensor - e * v.tensor
+            v_tensor = v_.tensor + e * 100.0 * v.tensor
+            v = tn.Node(v_tensor, backend=self.backend)
 
         eigen_vectors = v
         return eigen_vectors, energy
@@ -767,10 +769,13 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         def fuse_ham(block_ham, u1_charges):
             dims = block_ham.shape[: len(block_ham.shape) // 2]
             dim = np.prod(dims)
-            b = Index(U1Charge(U1Charge.fuse(u1_charges[0], u1_charges[1])), flow=False)
-            k = b.copy().flip_flow()
-            block_ham = BlockSparseTensor.fromdense(
-                [b, k], block_ham.reshape([dim] * 2).todense()
+            u = U1Charge(U1Charge.fuse(u1_charges[0], u1_charges[1]))
+            block_ham.reshape([dim] * 2)
+            block_ham.contiguous(inplace=True)
+            block_ham = BlockSparseTensor(
+                data=block_ham.data,
+                charges=[u, u],
+                flows=[False, True],
             )
             return block_ham
 
@@ -862,6 +867,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         eye_l = np.eye(
             self.psi.edge_dims[self.psi.edges[tensor_id][0]], dtype=np.complex128
         )
+
         eye_l = BlockSparseTensor.fromdense([b_l, k_l], eye_l)
         eye_r = np.eye(
             self.psi.edge_dims[self.psi.edges[tensor_id][1]], dtype=np.complex128

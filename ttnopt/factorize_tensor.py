@@ -11,10 +11,12 @@ from pathlib import Path
 
 def factorize_tensor():
     parser = argparse.ArgumentParser(description="Factorize tensor")
-    parser.add_argument("config_file", type=str, help="Path to the YAML configuration file")
+    parser.add_argument(
+        "config_file", type=str, help="Path to the YAML configuration file"
+    )
     args = parser.parse_args()
 
-    with open(args.config_file, 'r') as file:
+    with open(args.config_file, "r") as file:
         config = yaml.safe_load(file)
     config = DotMap(config)
 
@@ -23,41 +25,29 @@ def factorize_tensor():
 
     numerics = config.numerics
 
-    if numerics.opt_structure.active == 0 and numerics.opt_fidelity.active == 0:
-        print("Please check the configuration file. At least one of opt_structure and opt_fidelity should be active.")
+    psi = TreeTensorNetwork.mps(
+        N,
+        target=quantum_state,
+        max_bond_dimension=numerics.initial_bond_dimension,
+    )
 
-    if numerics.opt_structure.active == 1:
-        psi = TreeTensorNetwork.mps(N, quantum_state, max_bond_dimension=numerics.opt_structure.initial_bond_dimension)
-        ft = FactorizeTensor(
-            psi,
-            quantum_state,
-            max_bond_dim=max_bond_dim,
-            truncation_error=numerics.truncation_error,
-        )
-        fidelity, entanglement = ft.run(opt_fidelity = False, opt_structure=True, max_num_sweep=numerics.opt_structure.max_num_sweeps)
+    ft = FactorizeTensor(
+        psi,
+        quantum_state,
+        max_bond_dim=numerics.initial_bond_dimension,
+    )
 
-    if numerics.opt_fidelity.active == 1:
-        opt_structure = numerics.opt_fidelity.opt_structure.active
-        if numerics.opt_fidelity.init_structure.tree == 1:
-            print("Reset TN randomly as Binary TTN")
-            psi = TreeTensorNetwork.tree(N)
-        if numerics.opt_fidelity.init_structure.tree == 0 and numerics.opt_fidelity.init_random == 1:
-            print("Reset TN randomly as MPS")
-            psi = TreeTensorNetwork.mps(N)
-        if numerics.opt_fidelity.init_structure.tree == 0 and numerics.opt_fidelity.init_random == 0:
-            psi = TreeTensorNetwork.mps(N, quantum_state, max_bond_dimension=numerics.opt_structure.initial_bond_dimension)
+    fidelity, entanglement = ft.run(
+        opt_fidelity=False,
+        opt_structure=True,
+        max_num_sweep=numerics.opt_structure.max_num_sweeps,
+    )
 
-        for i, (max_bond_dim, max_num_sweep) in enumerate(zip(numerics.opt_fidelity.max_bond_dimensions, numerics.opt_fidelity.max_num_sweeps)):
-            ft = FactorizeTensor(
-                psi,
-                quantum_state,
-                init_bond_dim=numerics.opt_fidelity.initial_bond_dimension,
-                max_bond_dim=max_bond_dim,
-                truncation_error=numerics.opt_fidelity.truncation_error,
-            )
-            fidelity, entanglement = ft.run(opt_fidelity=True, opt_structure=opt_structure, max_num_sweep=max_num_sweep)
-            opt_structure = 0
-
+    path = (
+        Path(config.output.dir)
+        if not isinstance(config.output.dir, DotMap)
+        else Path("./")
+    )
 
     nodes_list = []
     for edge_id in fidelity.keys():
@@ -75,18 +65,58 @@ def factorize_tensor():
             node_id += N
             if edge_id in edges:
                 tmp.append(node_id)
-        nodes_list.append(tmp)
+        nodes_list[edge_id] = tmp
         fidelity[edge_id] = 0.0
         entanglement[edge_id] = 0.0
 
-    if config.output.basic_file is not DotMap():
-        df = pd.DataFrame(nodes_list, columns=['node1', 'node2'], index=None)
-        if config.output.fidelity.active:
-            df['energy'] = fidelity.values()
-        if config.output.entanglement.active:
-            df['entanglement'] = entanglement.values()
+    all_keys = set(nodes_list.keys())
+    df = pd.DataFrame(
+        [nodes_list[k] for k in all_keys], columns=["node1", "node2"], index=None
+    )
+    df["entanglement"] = [ft.entanglement[k] for k in all_keys]
 
-        path = Path(config.output.dir)
-        df.to_csv(path / config.output.basic_file, header=True, index=None)
+    path = Path(config.output.dir)
+    df.to_csv(path / "basic.csv", header=True, index=None)
+
+    opt_fidelity = (
+        True if not isinstance(numerics.fidelity.opt_structure, DotMap) else False
+    )
+
+    if opt_fidelity:
+        opt_structure = numerics.fidelity.opt_structure
+        for i, (max_bond_dim, max_num_sweep) in enumerate(
+            zip(
+                numerics.opt_fidelity.max_bond_dimensions,
+                numerics.opt_fidelity.max_num_sweeps,
+            )
+        ):
+            ft.max_bond_dim = max_bond_dim
+            ft.run(
+                opt_fidelity=True,
+                opt_structure=opt_structure,
+                max_num_sweep=max_num_sweep,
+            )
+            opt_structure = 0
+
+        for edge_id in psi.physical_edges:
+            tmp = []
+            tmp.append(edge_id)
+            for node_id, edges in enumerate(psi.edges):
+                node_id += N
+                if edge_id in edges:
+                    tmp.append(node_id)
+            nodes_list[edge_id] = tmp
+            fidelity[edge_id] = 0.0
+            entanglement[edge_id] = 0.0
+
+        all_keys = set(nodes_list.keys())
+        df = pd.DataFrame(
+            [nodes_list[k] for k in all_keys], columns=["node1", "node2"], index=None
+        )
+        df["fidelity"] = [ft.fidelity[k] for k in all_keys]
+        df["entanglement"] = [ft.entanglement[k] for k in all_keys]
+
+        path_ = path / f"run{i + 1}"
+        df.to_csv(path_ / "basic.csv", header=True, index=None)
 
     return 0

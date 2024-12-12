@@ -5,9 +5,14 @@ import copy
 
 from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.TwoSiteUpdater import TwoSiteUpdater
-from ttnopt.src.functionTTN import get_renormalization_sequence, get_bare_edges, inner_product
+from ttnopt.src.functionTTN import (
+    get_renormalization_sequence,
+    get_bare_edges,
+    inner_product,
+)
 
 tn.set_default_backend("numpy")
+
 
 class DataEngine(TwoSiteUpdater):
     def __init__(
@@ -37,9 +42,7 @@ class DataEngine(TwoSiteUpdater):
         self.environment_edges = None
 
         init_tensor_flag = False
-        if (
-            self.psi.tensors is None
-        ):
+        if self.psi.tensors is None:
             print("No initial tensors in TTN object.")
             self.psi.tensors = []
             for _ in self.psi.edges:
@@ -59,9 +62,11 @@ class DataEngine(TwoSiteUpdater):
             self.init_tensors()
 
     def fidelity(self):
-        sequence = get_renormalization_sequence(self.psi.edges, self.psi.canonical_center_edge_id)
+        sequence = get_renormalization_sequence(
+            self.psi.edges, self.psi.canonical_center_edge_id
+        )
         target = tn.Node(self.target)
-        dangling_edges_dict = {i : target[i] for i in self.psi.physical_edges}
+        dangling_edges_dict = {i: target[i] for i in self.psi.physical_edges}
         for tensor_id in sequence:
             iso = tn.Node(self.psi.tensors[tensor_id])
             for i, edge_id in enumerate(self.psi.edges[tensor_id][:2]):
@@ -69,28 +74,36 @@ class DataEngine(TwoSiteUpdater):
                 # remove dangling edge
                 dangling_edges_dict.pop(edge_id)
             out_edge_orders = list(dangling_edges_dict.values()) + [iso[2]]
-            target = tn.contractors.auto([target, iso], output_edge_order=out_edge_orders)
+            target = tn.contractors.auto(
+                [target, iso], output_edge_order=out_edge_orders
+            )
             dangling_edges_dict[self.psi.edges[tensor_id][2]] = target[-1]
         gauge = tn.Node(self.psi.gauge_tensor)
         target[0] ^ gauge[0]
         target[1] ^ gauge[1]
         inner_prod = tn.contractors.auto([target, gauge])
-        return np.abs(inner_prod.tensor)**2
-
+        return np.abs(inner_prod.tensor) ** 2
 
     def update_tensor(self, central_tensor_ids):
         environment, out_edge_orders = self.environment(central_tensor_ids)
-        output_order = self.psi.edges[central_tensor_ids[0]][:2] + self.psi.edges[central_tensor_ids[1]][:2]
-        environment.reorder_edges([out_edge_orders[edge_id] for edge_id in output_order])
+        output_order = (
+            self.psi.edges[central_tensor_ids[0]][:2]
+            + self.psi.edges[central_tensor_ids[1]][:2]
+        )
+        environment.reorder_edges(
+            [out_edge_orders[edge_id] for edge_id in output_order]
+        )
         # environment = environment.copy(conjugate=True)
         # self.environment_tensor = environments
         return environment
 
     def environment(self, tensor_ids):
-        sequence = get_renormalization_sequence(self.psi.edges, self.psi.canonical_center_edge_id)
+        sequence = get_renormalization_sequence(
+            self.psi.edges, self.psi.canonical_center_edge_id
+        )
         if self.environment_tensor is None:
             environment = tn.Node(self.target)
-            dangling_edges_dict = {i : environment[i] for i in self.psi.physical_edges}
+            dangling_edges_dict = {i: environment[i] for i in self.psi.physical_edges}
             for tensor_id in sequence:
                 if tensor_id not in tensor_ids:
                     iso = tn.Node(self.psi.tensors[tensor_id])
@@ -99,12 +112,16 @@ class DataEngine(TwoSiteUpdater):
                         # remove dangling edge
                         dangling_edges_dict.pop(edge_id)
                     out_edge_orders = list(dangling_edges_dict.values()) + [iso[2]]
-                    environment = tn.contractors.auto([environment, iso], output_edge_order=out_edge_orders)
+                    environment = tn.contractors.auto(
+                        [environment, iso], output_edge_order=out_edge_orders
+                    )
                     dangling_edges_dict[self.psi.edges[tensor_id][2]] = environment[-1]
             return environment, dangling_edges_dict
         else:
             environment = tn.Node(self.environment_tensor)
-            dangling_edges_dict = {edge : environment[i] for i, edge in enumerate(self.environment_edges)}
+            dangling_edges_dict = {
+                edge: environment[i] for i, edge in enumerate(self.environment_edges)
+            }
             for tensor_id in sequence:
                 if set(self.psi.edges[tensor_id][:2]).issubset(self.environment_edges):
                     iso = tn.Node(self.psi.tensors[tensor_id])
@@ -113,27 +130,51 @@ class DataEngine(TwoSiteUpdater):
                         # remove dangling edge
                         dangling_edges_dict.pop(edge_id)
                     out_edge_orders = list(dangling_edges_dict.values()) + [iso[2]]
-                    environment = tn.contractors.auto([environment, iso], output_edge_order=out_edge_orders)
+                    environment = tn.contractors.auto(
+                        [environment, iso], output_edge_order=out_edge_orders
+                    )
                     dangling_edges_dict[self.psi.edges[tensor_id][2]] = environment[-1]
-                if self.psi.edges[tensor_id][2] == self.psi.canonical_center_edge_id and any(elem not in dangling_edges_dict.keys() for elem in self.psi.edges[tensor_id][:2]):
+                if self.psi.edges[tensor_id][
+                    2
+                ] == self.psi.canonical_center_edge_id and any(
+                    elem not in dangling_edges_dict.keys()
+                    for elem in self.psi.edges[tensor_id][:2]
+                ):
                     iso = tn.Node(self.psi.tensors[tensor_id])
                     iso = iso.copy(conjugate=True)
                     dangling_edges_dict[self.psi.edges[tensor_id][2]] ^ iso[2]
                     dangling_edges_dict.pop(self.psi.edges[tensor_id][2])
-                    out_edge_orders = list(dangling_edges_dict.values()) + [iso[0], iso[1]]
-                    environment = tn.contractors.auto([environment, iso], output_edge_order=out_edge_orders)
+                    out_edge_orders = list(dangling_edges_dict.values()) + [
+                        iso[0],
+                        iso[1],
+                    ]
+                    environment = tn.contractors.auto(
+                        [environment, iso], output_edge_order=out_edge_orders
+                    )
                     dangling_edges_dict[self.psi.edges[tensor_id][0]] = environment[-2]
                     dangling_edges_dict[self.psi.edges[tensor_id][1]] = environment[-1]
             return environment, dangling_edges_dict
 
     def init_tensors(self):
-        sequence = get_renormalization_sequence(self.psi.edges, self.psi.canonical_center_edge_id)
+        sequence = get_renormalization_sequence(
+            self.psi.edges, self.psi.canonical_center_edge_id
+        )
         for tensor_id in sequence:
-            m = (self.psi.edge_dims[self.psi.edges[tensor_id][0]] * self.psi.edge_dims[self.psi.edges[tensor_id][1]])
+            m = (
+                self.psi.edge_dims[self.psi.edges[tensor_id][0]]
+                * self.psi.edge_dims[self.psi.edges[tensor_id][1]]
+            )
             n = np.min([m, self.init_bond_dim])
             random_matrix = np.random.normal(0, 1, (m, n))
             Q, _ = np.linalg.qr(random_matrix)
-            self.psi.tensors[tensor_id] = np.reshape(Q, (self.psi.edge_dims[self.psi.edges[tensor_id][0]], self.psi.edge_dims[self.psi.edges[tensor_id][1]], n))
+            self.psi.tensors[tensor_id] = np.reshape(
+                Q,
+                (
+                    self.psi.edge_dims[self.psi.edges[tensor_id][0]],
+                    self.psi.edge_dims[self.psi.edges[tensor_id][1]],
+                    n,
+                ),
+            )
             self.psi.edge_dims[self.psi.edges[tensor_id][2]] = n
         self.psi.gauge_tensor = np.eye(n)
 
@@ -165,7 +206,10 @@ class DataEngine(TwoSiteUpdater):
             [psi1, psi2], output_edge_order=[psi1[0], psi1[1], psi2[0], psi2[1]]
         )
         u, s, v, edge_order = self.decompose_two_tensors(
-            psi, self.max_bond_dim, opt_structure=opt_structure, operate_degeneracy=False
+            psi,
+            self.max_bond_dim,
+            opt_structure=opt_structure,
+            operate_degeneracy=False,
         )
         psi_edges = (
             self.psi.edges[selected_tensor_id][:2]
