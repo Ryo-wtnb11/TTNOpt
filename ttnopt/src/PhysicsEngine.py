@@ -24,7 +24,6 @@ class PhysicsEngine(TwoSiteUpdater):
         hamiltonian: Hamiltonian,
         init_bond_dim: int,
         max_bond_dim: int,
-        truncation_error: float,
     ):
         """Initialize a PhysicsEngine object.
 
@@ -33,14 +32,12 @@ class PhysicsEngine(TwoSiteUpdater):
             hamiltonians (Hamiltonian): Hamiltonian which has a list of Observables.
             init_bond_dim (int): Initial bond dimension.
             max_bond_dim (int): Maximum bond dimension.
-            truncation_error (float): Maximum truncation error.
         """
 
         super().__init__(psi)
         self.hamiltonian = hamiltonian
         self.init_bond_dim = init_bond_dim
         self.max_bond_dim = max_bond_dim
-        self.truncation_error = truncation_error
         self.edge_spin_operators = self._init_spin_operator()
         self.block_hamiltonians = self._init_block_hamiltonians()
 
@@ -261,7 +258,11 @@ class PhysicsEngine(TwoSiteUpdater):
         return two_site_expvals
 
     def lanczos(
-        self, central_tensor_ids, lanczos_tol=1e-13, inverse_tol=1e-7, init_random=False
+        self,
+        central_tensor_ids,
+        lanczos_tol=1e-13,
+        inverse_tol=1e-6,
+        init_random=False,
     ):
 
         psi_1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
@@ -309,8 +310,6 @@ class PhysicsEngine(TwoSiteUpdater):
                 omega = psi_w.tensor - alpha[j] * psi.tensor - beta[j] * psi_.tensor
                 psi_ = psi
                 if j >= 1:
-                    if j > dim_n:
-                        break
                     e, v_tilda = eigh_tridiagonal(
                         np.real(alpha[: j + 1]),
                         np.real(beta[1 : j + 1]),
@@ -318,9 +317,9 @@ class PhysicsEngine(TwoSiteUpdater):
                         select_range=(0, 0),
                     )
                     energy = e[0]
-                    if np.abs(e - e_old) < np.max([1.0, np.abs(e)[0]]) * lanczos_tol:
+                    if np.abs(e[0] - e_old) < np.max([1.0, np.abs(e)[0]]) * lanczos_tol:
                         d += 1
-                    if d > 5:
+                    if j > dim_n or d > 3:
                         break
                     e_old = energy
 
@@ -343,15 +342,19 @@ class PhysicsEngine(TwoSiteUpdater):
         # check convergence
         v = tn.Node(v)
         v_ = self._apply_ham_psi(v, central_tensor_ids)
-        v_ = v_ / np.linalg.norm(v_.tensor)
-        delta_v = v_.tensor - np.sign(e)[0] * v.tensor
+        e = np.real(inner_product(v_, v)) / np.real(inner_product(v, v))
+        delta_v = v_.tensor - e * v.tensor
+        v = tn.Node(v_.tensor + e * 100.0 * v.tensor)
+        v = v / np.linalg.norm(v.tensor)
         while np.linalg.norm(delta_v) > inverse_tol:
-            v = self._apply_ham_psi(v, central_tensor_ids)
+            v_ = self._apply_ham_psi(v, central_tensor_ids)
+            e = np.real(inner_product(v_, v)) / np.real(inner_product(v, v))
+            delta_v = v_.tensor - e * v.tensor
+            v = tn.Node(v_.tensor + e * 100.0 * v.tensor)
             v = v / np.linalg.norm(v.tensor)
-            delta_v = v.tensor - np.sign(e)[0] * v_.tensor
-            v_ = v
 
         eigen_vectors = v
+        energy = e
         return eigen_vectors, energy
 
     def lanczos_exp_multiply(self, central_tensor_ids, dt, tol=1e-10):

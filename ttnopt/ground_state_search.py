@@ -41,15 +41,23 @@ def ground_state_search():
     numerics = config.numerics
     opt_structure = 1 if numerics.opt_structure else 0
 
-    path = Path(config.output.dir)
+    path = (
+        Path(config.output.dir)
+        if not isinstance(config.output.dir, DotMap)
+        else Path("./")
+    )
 
-    save_basic = True if not isinstance(config.output.basic.file, DotMap) else False
     save_onesite_expval = (
-        True if not isinstance(config.output.single_site.file, DotMap) else False
+        config.output.single_site
+        if not isinstance(config.output.single_site, DotMap)
+        else False
     )
     save_twosite_expval = (
-        True if not isinstance(config.output.two_site.file, DotMap) else False
+        config.output.two_site
+        if not isinstance(config.output.two_site, DotMap)
+        else False
     )
+
     u1_symmetry = (
         True if not isinstance(numerics.U1_symmetry.magnetization, DotMap) else False
     )
@@ -95,7 +103,6 @@ def ground_state_search():
             numerics.U1_symmetry.magnetization,
             init_bond_dim=numerics.initial_bond_dimension,
             max_bond_dim=numerics.max_bond_dimensions[0],
-            truncation_error=numerics.truncation_error,
         )
     else:
         gss = GroundStateSearch(
@@ -103,12 +110,12 @@ def ground_state_search():
             ham,
             init_bond_dim=numerics.initial_bond_dimension,
             max_bond_dim=numerics.max_bond_dimensions[0],
-            truncation_error=numerics.truncation_error,
         )
 
     for i, (max_bond_dim, max_num_sweep) in enumerate(
         zip(numerics.max_bond_dimensions, numerics.max_num_sweeps)
     ):
+        gss.max_bond_dim = max_bond_dim
         if opt_structure:
             gss.run(
                 opt_structure=opt_structure,
@@ -163,26 +170,21 @@ def ground_state_search():
             gss.energy[edge_id] = 0.0
             gss.error[edge_id] = 0.0
 
-        if save_basic is True:
-            all_keys = set(nodes_list.keys())
-            df = pd.DataFrame(
-                [nodes_list[k] for k in all_keys],
-                columns=["node1", "node2"],
-                index=None,
-            )
-            df["energy"] = [gss.energy[k] for k in all_keys]
-            df["entanglement"] = [gss.entanglement[k] for k in all_keys]
-            df["error"] = [gss.error[k] for k in all_keys]
+        all_keys = set(nodes_list.keys())
+        df = pd.DataFrame(
+            [nodes_list[k] for k in all_keys],
+            columns=["node1", "node2"],
+            index=None,
+        )
+        df["energy"] = [gss.energy[k] for k in all_keys]
+        df["entanglement"] = [gss.entanglement[k] for k in all_keys]
+        df["error"] = [gss.error[k] for k in all_keys]
 
-            path_ = path / f"run{i + 1}"
-            os.makedirs(path_, exist_ok=True)
+        path_ = path / f"run{i + 1}"
+        os.makedirs(path_, exist_ok=True)
+        df.to_csv(path_ / "basic.csv", header=True, index=None)
 
-            if not isinstance(config.output.basic.file, DotMap):
-                df.to_csv(path_ / config.output.basic.file, header=True, index=None)
-            else:
-                df.to_csv(path_ / "basic", header=True, index=None)
-
-        if save_onesite_expval is True:
+        if save_onesite_expval:
             df = pd.DataFrame(psi.physical_edges, columns=["site"], index=None)
             sp = np.zeros(len(psi.physical_edges))
             sm = np.zeros(len(psi.physical_edges))
@@ -207,9 +209,9 @@ def ground_state_search():
 
             path_ = path / f"run{i + 1}"
             os.makedirs(path_, exist_ok=True)
-            df.to_csv(path_ / config.output.single_site.file, header=True, index=None)
+            df.to_csv(path_ / "single_site.csv", header=True, index=None)
 
-        if save_twosite_expval is True:
+        if save_twosite_expval:
             pairs = [(i, j) for i, j in itertools.combinations(psi.physical_edges, 2)]
             df = pd.DataFrame(pairs, columns=["site1", "site2"], index=None)
             spp = np.zeros(len(pairs))
@@ -245,6 +247,6 @@ def ground_state_search():
 
             path_ = path / f"run{i + 1}"
             os.makedirs(path_, exist_ok=True)
-            df.to_csv(path_ / config.output.two_site.file, header=True, index=None)
+            df.to_csv(path_ / "two_site.csv", header=True, index=None)
 
     return 0

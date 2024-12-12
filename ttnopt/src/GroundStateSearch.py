@@ -16,7 +16,6 @@ class GroundStateSearch(PhysicsEngine):
         hamiltonians (Hamiltonian): Hamiltonian which is list of Observable.
         init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
         max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
-        truncation_error (float, optional): Maximum truncation error. Defaults to 1e-11.
     """
 
     def __init__(
@@ -25,7 +24,6 @@ class GroundStateSearch(PhysicsEngine):
         hamiltonian: Hamiltonian,
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
-        truncation_error=1e-11,
     ):
         """Initialize a DMRG object.
 
@@ -47,7 +45,6 @@ class GroundStateSearch(PhysicsEngine):
             hamiltonian,
             init_bond_dim,
             max_bond_dim,
-            truncation_error,
         )
 
     def run(
