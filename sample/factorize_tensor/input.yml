@@ -1,5 +1,4 @@
 target: input_data/quantum_state_standard.npy
-
 numerics:
     initial_bond_dimension: 5
     opt_structure: 0
