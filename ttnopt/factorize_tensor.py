@@ -76,7 +76,7 @@ def factorize_tensor():
         df["error"] = [ft.error[k] for k in all_keys]
         df.to_csv(path / "basic.csv", header=True, index=None)
 
-    file_psi = path / "mps"
+    file_psi = path / "tensors"
     os.makedirs(file_psi, exist_ok=True)
     for i, iso in enumerate(ft.psi.tensors):
         np.save(file_psi / f"isometry{i}.npy", iso)
@@ -87,6 +87,7 @@ def factorize_tensor():
 
     if opt_fidelity:
         opt_structure = numerics.fidelity.opt_structure
+        print(opt_structure)
         for i, (max_bond_dim, max_num_sweep) in enumerate(
             zip(
                 numerics.fidelity.max_bond_dimensions,
@@ -135,9 +136,9 @@ def factorize_tensor():
             os.makedirs(path_, exist_ok=True)
             df.to_csv(path_ / "basic.csv", header=True, index=None)
 
-        file_psi = Path(path) / "ttn"
-        os.makedirs(file_psi, exist_ok=True)
-        for i, iso in enumerate(ft.psi.tensors):
-            np.save(file_psi / f"isometry{i}.npy", iso)
+            file_psi = Path(path_) / "tensors"
+            os.makedirs(file_psi, exist_ok=True)
+            for i, iso in enumerate(ft.psi.tensors):
+                np.save(file_psi / f"isometry{i}.npy", iso)
 
     return 0

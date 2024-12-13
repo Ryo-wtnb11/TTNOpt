@@ -58,9 +58,6 @@ class TreeTensorNetwork:
             size : The size of system.
         """
 
-        norm = np.linalg.norm(target)
-        target = target / norm
-
         edges = []
         upper_edge_id = size
         edges.append([0, 1, upper_edge_id])
@@ -82,11 +79,14 @@ class TreeTensorNetwork:
         edges += reversed(tmp_edges)
 
         if target is not None and max_bond_dimension is not None:
+            norm = np.linalg.norm(target)
+            normed_target = target / norm
+
             if len(target.shape) != size:
                 raise ValueError(
                     f"The shape of the tensor is not correct. tensor.shape={target.shape}, size={size}"
                 )
-            target_node = tn.Node(target)
+            target_node = tn.Node(normed_target)
             U, S, V, _ = tn.split_node_full_svd(
                 target_node,
                 target_node[:2],
@@ -118,8 +118,7 @@ class TreeTensorNetwork:
             )
             tmp_tensors.append(V.reorder_edges([V[1], V[2], V[0]]).tensor)
             tensors += reversed(tmp_tensors)
-
-            return cls(edges, center_edge_id, tensors, S.tensor, norm)
+            return cls(edges, center_edge_id, tensors, S.tensor, norm.item())
 
         return cls(edges, center_edge_id)
 
