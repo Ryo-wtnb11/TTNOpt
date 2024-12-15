@@ -29,6 +29,8 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
         u1_num: Union[int, str],
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
+        energy_degeneracy_threshold: float = 1e-13,
+        entanglement_degeneracy_threshold: float = 0.1,
     ):
         """Initialize a DMRG object.
 
@@ -53,6 +55,8 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
             u1_num,
             init_bond_dim,
             max_bond_dim,
+            energy_degeneracy_threshold,
+            entanglement_degeneracy_threshold,
         )
 
     def run(
@@ -162,6 +166,7 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                     self.max_bond_dim,
                     opt_structure=opt_structure,
                     epsilon=entanglement_convergence_threshold,
+                    delta=self.entanglement_degeneracy_threshold,
                 )
 
                 self.psi.tensors[selected_tensor_id] = u

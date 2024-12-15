@@ -125,8 +125,9 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         opt_structure=False,
         operate_degeneracy=False,
         epsilon=1e-8,
+        delta=0.1,
     ):
-        if opt_structure is False:
+        if not opt_structure:
             a = psi[0]
             b = psi[1]
             c = psi[2]
@@ -162,7 +163,7 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         if operate_degeneracy:
             if ind < len(p):
                 while ind > 1:
-                    if (np.abs(p[ind] - p[ind - 1]) / p[ind]) * 100 < 0.1:
+                    if (np.abs(p[ind] - p[ind - 1]) / (p[ind - 1] + 1e-10)) < delta:
                         ind -= 1
                     else:
                         break

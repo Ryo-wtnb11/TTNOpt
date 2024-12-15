@@ -39,7 +39,7 @@ def ground_state_search():
     ham = hamiltonian(config.system)
 
     numerics = config.numerics
-    opt_structure = 1 if numerics.opt_structure else 0
+    opt_structure = True if numerics.opt_structure else False
 
     path = (
         Path(config.output.dir)
@@ -103,6 +103,8 @@ def ground_state_search():
             numerics.U1_symmetry.magnetization,
             init_bond_dim=numerics.initial_bond_dimension,
             max_bond_dim=numerics.max_bond_dimensions[0],
+            energy_degeneracy_threshold=float(numerics.energy_degeneracy_threshold),
+            entanglement_degeneracy_threshold=numerics.entanglement_degeneracy_threshold,
         )
     else:
         gss = GroundStateSearch(
@@ -110,6 +112,8 @@ def ground_state_search():
             ham,
             init_bond_dim=numerics.initial_bond_dimension,
             max_bond_dim=numerics.max_bond_dimensions[0],
+            energy_degeneracy_threshold=float(numerics.energy_degeneracy_threshold),
+            entanglement_degeneracy_threshold=numerics.entanglement_degeneracy_threshold,
         )
 
     for i, (max_bond_dim, max_num_sweep) in enumerate(
@@ -135,7 +139,7 @@ def ground_state_search():
                 eval_onesite_expval=save_onesite_expval,
                 eval_twosite_expval=save_twosite_expval,
             )
-            opt_structure = 0
+            opt_structure = False
         else:
             gss.run(
                 opt_structure=False,

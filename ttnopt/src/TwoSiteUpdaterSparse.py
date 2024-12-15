@@ -18,6 +18,7 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
         max_bond_dim,
         opt_structure=False,
         epsilon=1e-8,
+        delta=0.1,
     ):
         psi_last = psi.copy()
         if opt_structure is False:
@@ -60,7 +61,7 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
         ind = np.min([max_bond_dim, len(p)])
         if ind < len(p):
             while ind > 1:
-                if (np.abs(p[ind] - p[ind - 1]) / p[ind]) * 100 < 0.1:
+                if (np.abs(p[ind] - p[ind - 1]) / p[ind]) < delta:
                     ind -= 1
                 else:
                     break

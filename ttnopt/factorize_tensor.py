@@ -86,8 +86,7 @@ def factorize_tensor():
     )
 
     if opt_fidelity:
-        opt_structure = numerics.fidelity.opt_structure
-        print(opt_structure)
+        opt_structure = True if numerics.fidelity.opt_structure == 1 else False
         for i, (max_bond_dim, max_num_sweep) in enumerate(
             zip(
                 numerics.fidelity.max_bond_dimensions,
