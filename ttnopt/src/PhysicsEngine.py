@@ -24,6 +24,8 @@ class PhysicsEngine(TwoSiteUpdater):
         hamiltonian: Hamiltonian,
         init_bond_dim: int,
         max_bond_dim: int,
+        energy_degeneracy_threshold: float = 1e-13,
+        entanglement_degeneracy_threshold: float = 0.1,
     ):
         """Initialize a PhysicsEngine object.
 
@@ -38,6 +40,8 @@ class PhysicsEngine(TwoSiteUpdater):
         self.hamiltonian = hamiltonian
         self.init_bond_dim = init_bond_dim
         self.max_bond_dim = max_bond_dim
+        self.energy_degeneracy_threshold = energy_degeneracy_threshold
+        self.entanglement_degeneracy_threshold = entanglement_degeneracy_threshold
         self.edge_spin_operators = self._init_spin_operator()
         self.block_hamiltonians = self._init_block_hamiltonians()
 
@@ -70,31 +74,27 @@ class PhysicsEngine(TwoSiteUpdater):
             The expectation values of the one-site operators of dict.
         """
         one_site_expvals = {}
-        indices = [(tensor_id, i) for i in self.psi.edges[tensor_id][:2]]
-
+        indices = [i for i in self.psi.edges[tensor_id][:2]]
+        bra = tn.Node(self.psi.tensors[tensor_id])
+        gauge = tn.Node(self.psi.gauge_tensor)
+        bra[2] ^ gauge[0]
+        bra_tensor = tn.contractors.auto(
+            [bra, gauge], output_edge_order=[bra[0], bra[1], gauge[1]]
+        )
+        ket_tensor = bra_tensor.copy(conjugate=True)
         for index in indices:
-            tensor_id, edge_id = index
-            if edge_id in self.psi.physical_edges:
-                bra = tn.Node(self.psi.tensors[tensor_id])
-                gauge = tn.Node(self.psi.gauge_tensor)
-                bra[2] ^ gauge[0]
-                bra_tensor = tn.contractors.auto(
-                    [bra, gauge], output_edge_order=[bra[0], bra[1], gauge[1]]
-                )
-                ket_tensor = bra.copy(conjugate=True)
-                expvals = {}
+            expvals = {}
+            if index in self.psi.physical_edges:
                 for operator in ["S+", "S-", "Sz"]:
                     bra = bra_tensor.copy()
                     ket = ket_tensor.copy()
-                    spin = tn.Node(
-                        self._spin_operator_at_edge(edge_id, edge_id, operator)
-                    )
-                    if edge_id == self.psi.edges[tensor_id][0]:
+                    spin = tn.Node(self._spin_operator_at_edge(index, index, operator))
+                    if index == self.psi.edges[tensor_id][0]:
                         bra[0] ^ spin[0]
                         bra = tn.contractors.auto(
                             [bra, spin], output_edge_order=[spin[1], bra[1], bra[2]]
                         )
-                    if edge_id == self.psi.edges[tensor_id][1]:
+                    elif index == self.psi.edges[tensor_id][1]:
                         bra[1] ^ spin[0]
                         bra = tn.contractors.auto(
                             [bra, spin], output_edge_order=[bra[0], spin[1], bra[2]]
@@ -103,7 +103,7 @@ class PhysicsEngine(TwoSiteUpdater):
                     bra[1] ^ ket[1]
                     bra[2] ^ ket[2]
                     expvals[operator] = np.real(tn.contractors.auto([bra, ket]).tensor)
-                one_site_expvals[edge_id] = expvals
+                one_site_expvals[index] = expvals
         return one_site_expvals
 
     def expval_twosite(self, tensor_id):
@@ -126,10 +126,9 @@ class PhysicsEngine(TwoSiteUpdater):
             output_edge_order=[psi[0], psi[1], gauge[1]],
         )
         ket_tensor = bra_tensor.copy(conjugate=True)
-
         pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
-        expvals = {}
         for pair in pairs:
+            expvals = {}
             for operators in [
                 ["S+", "S+"],
                 ["S-", "S-"],
@@ -208,8 +207,8 @@ class PhysicsEngine(TwoSiteUpdater):
 
         pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
         pairs = [pair for pair in pairs if pair not in keys]
-        expvals = {}
         for pair in pairs:
+            expvals = {}
             for operators in [
                 ["S+", "S+"],
                 ["S-", "S-"],
@@ -320,6 +319,12 @@ class PhysicsEngine(TwoSiteUpdater):
                     if np.abs(e[0] - e_old) < np.max([1.0, np.abs(e)[0]]) * lanczos_tol:
                         d += 1
                     if j > dim_n or d > 3:
+                        max_e, _ = eigh_tridiagonal(
+                            np.real(alpha[: j + 1]),
+                            np.real(beta[1 : j + 1]),
+                            select="a",
+                        )
+                        max_e = max_e[-1]
                         break
                     e_old = energy
 
@@ -344,13 +349,13 @@ class PhysicsEngine(TwoSiteUpdater):
         v_ = self._apply_ham_psi(v, central_tensor_ids)
         e = np.real(inner_product(v_, v)) / np.real(inner_product(v, v))
         delta_v = v_.tensor - e * v.tensor
-        v = tn.Node(v_.tensor + e * 100.0 * v.tensor)
+        v = tn.Node(v_.tensor - max_e * v.tensor)
         v = v / np.linalg.norm(v.tensor)
         while np.linalg.norm(delta_v) > inverse_tol:
             v_ = self._apply_ham_psi(v, central_tensor_ids)
             e = np.real(inner_product(v_, v)) / np.real(inner_product(v, v))
             delta_v = v_.tensor - e * v.tensor
-            v = tn.Node(v_.tensor + e * 100.0 * v.tensor)
+            v = tn.Node(v_.tensor - max_e * v.tensor)
             v = v / np.linalg.norm(v.tensor)
 
         eigen_vectors = v
@@ -465,7 +470,10 @@ class PhysicsEngine(TwoSiteUpdater):
                 ][:, :, : psi_1_shape[2]]
         ground_state, _ = self.lanczos(central_tensor_ids)
         u, s, v, _, _, _ = self.decompose_two_tensors(
-            ground_state, self.max_bond_dim, operate_degeneracy=True
+            ground_state,
+            self.max_bond_dim,
+            operate_degeneracy=True,
+            delta=self.entanglement_degeneracy_threshold,
         )
         self.psi.tensors[central_tensor_ids[0]] = u
         self.psi.tensors[central_tensor_ids[1]] = v
@@ -786,7 +794,7 @@ class PhysicsEngine(TwoSiteUpdater):
         block_hams = np.sum(block_hams, axis=0)
         return block_hams
 
-    def _set_psi_tensor_with_ham(self, tensor_id, ham, delta=1e-11):
+    def _set_psi_tensor_with_ham(self, tensor_id, ham):
         lower_edge_dims = ham.shape[: len(ham.shape) // 2]
         bond_dim = np.prod(lower_edge_dims)
         ind = np.min([self.init_bond_dim, bond_dim])
@@ -794,7 +802,10 @@ class PhysicsEngine(TwoSiteUpdater):
         eigenvalues, eigenvectors = scipy.linalg.eigh(ham)
         if ind < len(eigenvalues):
             while ind > 1:
-                if np.abs(eigenvalues[ind] - eigenvalues[ind - 1]) < delta:
+                if (
+                    np.abs(eigenvalues[ind] - eigenvalues[ind - 1])
+                    < self.energy_degeneracy_threshold
+                ):
                     ind -= 1
                 else:
                     break

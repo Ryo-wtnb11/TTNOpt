@@ -10,16 +10,11 @@ from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.Hamiltonian import Hamiltonian
 from ttnopt.src.Observable import bare_spin_operator, spin_dof, spin_ind
 from ttnopt.src.TwoSiteUpdaterSparse import TwoSiteUpdaterSparse
-from ttnopt.src.functionTTN import (
-    get_renormalization_sequence,
-    get_bare_edges,
-    inner_product_sparse,
-)
-
-np.set_printoptions(precision=2, suppress=True)
+from ttnopt.src.functionTTN import get_renormalization_sequence, get_bare_edges
 
 
 class PhysicsEngineSparse(TwoSiteUpdaterSparse):
+
     def __init__(
         self,
         psi: TreeTensorNetwork,
@@ -27,6 +22,8 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         u1_num: Union[int, str],
         init_bond_dim: int,
         max_bond_dim: int,
+        energy_degeneracy_threshold: float = 1e-13,
+        entanglement_degeneracy_threshold: float = 0.1,
     ):
         """Initialize a PhysicsEngineSparse object.
 
@@ -48,6 +45,8 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         self.edge_spin_operators = self._init_spin_operator()
         self.block_hamiltonians = self._init_block_hamiltonians()
         self.previous_id = 0
+        self.energy_degeneracy_threshold = energy_degeneracy_threshold
+        self.entanglement_degeneracy_threshold = entanglement_degeneracy_threshold
 
         init_tensors_flag = False
         if (
@@ -80,21 +79,22 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         one_site_expvals = {}
         indices = [(tensor_id, i) for i in self.psi.edges[tensor_id][:2]]
 
+        bra = tn.Node(self.psi.tensors[tensor_id], backend=self.backend)
+        gauge = tn.Node(self.psi.gauge_tensor, backend=self.backend)
+        if self.previous_id == tensor_id:
+            out = gauge[1]
+            bra[2] ^ gauge[0]
+        else:
+            out = gauge[0]
+            bra[2] ^ gauge[1]
+        bra_tensor = tn.contractors.auto(
+            [bra, gauge], output_edge_order=[bra[0], bra[1], out, gauge[2]]
+        )
+        ket_tensor = bra_tensor.copy(conjugate=True)
+
         for index in indices:
             tensor_id, edge_id = index
             if edge_id in self.psi.physical_edges:
-                bra = tn.Node(self.psi.tensors[tensor_id], backend=self.backend)
-                gauge = tn.Node(self.psi.gauge_tensor, backend=self.backend)
-                if self.previous_id == tensor_id:
-                    out = gauge[1]
-                    bra[2] ^ gauge[0]
-                else:
-                    out = gauge[0]
-                    bra[2] ^ gauge[1]
-                bra_tensor = tn.contractors.auto(
-                    [bra, gauge], output_edge_order=[bra[0], bra[1], out, gauge[2]]
-                )
-                ket_tensor = bra_tensor.copy(conjugate=True)
                 expvals = {}
                 for operator in ["Sz"]:
                     bra = bra_tensor.copy()
@@ -152,8 +152,8 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         ket_tensor = bra_tensor.copy(conjugate=True)
 
         pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
-        expvals = {}
         for pair in pairs:
+            expvals = {}
             for operators in [
                 ["Sz", "Sz"],
                 ["S+", "S-"],
@@ -242,8 +242,8 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
 
         pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
         pairs = [pair for pair in pairs if pair not in keys]
-        expvals = {}
         for pair in pairs:
+            expvals = {}
             for operators in [
                 ["Sz", "Sz"],
                 ["S+", "S-"],
@@ -346,7 +346,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
             output_edge_order=[psi_1[0], psi_1[1], psi_2[0], psi_2[1], psi_1[3]],
         )
         # normalization
-        psi = psi / np.sqrt(inner_product_sparse(psi, psi))
+        psi = psi / np.linalg.norm(psi.tensor.data)
         psi_ = psi.copy()
         psi_0 = psi.copy()
         dim_n = np.prod(psi.shape)
@@ -355,7 +355,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
 
         psi_w = self._apply_ham_psi(psi, central_tensor_ids)
 
-        alpha[0] = np.real(inner_product_sparse(psi_w, psi))
+        alpha[0] = np.real(np.dot(psi_w.tensor.data, psi.tensor.data))
         omega = psi_w.tensor - alpha[0] * psi.tensor
 
         d = 0
@@ -370,15 +370,10 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         else:
             e_old = 0.0
             for j in range(1, dim_n):
-                beta[j] = np.sqrt(
-                    inner_product_sparse(
-                        tn.Node(omega, backend=self.backend),
-                        tn.Node(omega, backend=self.backend),
-                    )
-                )
+                beta[j] = np.linalg.norm(omega.data)
                 psi = tn.Node(omega / beta[j], backend=self.backend)
                 psi_w = self._apply_ham_psi(psi, central_tensor_ids)
-                alpha[j] = np.real(inner_product_sparse(psi_w, psi))
+                alpha[j] = np.real(np.dot(psi_w.tensor.data, psi.tensor.data))
                 omega = psi_w.tensor - alpha[j] * psi.tensor - beta[j] * psi_.tensor
                 psi_ = psi
 
@@ -395,6 +390,12 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
                     if np.abs(e - e_old) < np.max([1.0, np.abs(e)[0]]) * lanczos_tol:
                         d += 1
                     if j > dim_n or d > 5:
+                        max_e, _ = eigh_tridiagonal(
+                            np.real(alpha[: j + 1]),
+                            np.real(beta[1 : j + 1]),
+                            select="a",
+                        )
+                        max_e = max_e[-1]
                         break
                     e_old = energy
 
@@ -403,47 +404,38 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         psi = psi_0
         psi_ = psi_0
         psi_w = self._apply_ham_psi(psi, central_tensor_ids)
-        a = np.real(inner_product_sparse(psi_w, psi))
+        a = np.real(np.dot(psi_w.tensor.data, psi.tensor.data))
         omega = psi_w.tensor - a * psi.tensor
         for k in range(1, len(v_tilda)):
-            b = np.sqrt(
-                inner_product_sparse(
-                    tn.Node(omega, backend=self.backend),
-                    tn.Node(omega, backend=self.backend),
-                )
-            )
+            b = np.linalg.norm(omega.data)
             psi = tn.Node(omega / b, backend=self.backend)
             v += v_tilda[k] * psi.tensor
             psi_w = self._apply_ham_psi(psi, central_tensor_ids)
-            a = np.real(inner_product_sparse(psi_w, psi))
+            a = np.real(np.dot(psi_w.tensor.data, psi.tensor.data))
             omega = psi_w.tensor - a * psi.tensor - b * psi_.tensor
             psi_ = psi
 
         # check convergence
         v = tn.Node(v, backend=self.backend)
         v_ = self._apply_ham_psi(v, central_tensor_ids)
-        e = np.real(inner_product_sparse(v, v_)) / np.real(inner_product_sparse(v, v))
-        delta_v = v_.tensor - e * v.tensor
-        v_tensor = v_.tensor + e * 100.0 * v.tensor
+        e = np.real(np.dot(v_.tensor.data, v.tensor.data)) / np.real(
+            np.linalg.norm(v.tensor.data) ** 2
+        )
+        delta_v = v_.tensor - max_e * v.tensor
+        v_tensor = v_.tensor / np.linalg.norm(v_.tensor.data)
         v = tn.Node(v_tensor, backend=self.backend)
-        while (
-            np.sqrt(
-                inner_product_sparse(
-                    tn.Node(delta_v, backend=self.backend),
-                    tn.Node(delta_v, backend=self.backend),
-                )
-            )
-            > inverse_tol
-        ):
+        while np.linalg.norm(delta_v.data) > inverse_tol:
             v_ = self._apply_ham_psi(v, central_tensor_ids)
-            e = np.real(inner_product_sparse(v, v_)) / np.real(
-                inner_product_sparse(v, v)
+            e = np.real(np.dot(v_.tensor.data, v.tensor.data)) / np.real(
+                np.linalg.norm(v.tensor.data) ** 2
             )
             delta_v = v_.tensor - e * v.tensor
-            v_tensor = v_.tensor + e * 100.0 * v.tensor
+            v_tensor = v_.tensor - max_e * v.tensor
+            v_tensor = v_tensor / np.linalg.norm(v_tensor.data)
             v = tn.Node(v_tensor, backend=self.backend)
 
         eigen_vectors = v
+        energy = e
         return eigen_vectors, energy
 
     def init_tensors_by_block_hamiltonian(self):
@@ -498,6 +490,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         u, s, v, _, _, _ = self.decompose_two_tensors(
             ground_state,
             self.max_bond_dim,
+            delta=self.entanglement_degeneracy_threshold,
         )
         self.psi.tensors[selected_tensor_id] = u
         self.psi.tensors[not_selected_tensor_id] = v
@@ -906,7 +899,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         block_hams = np.sum(block_hams, axis=0)
         return block_hams
 
-    def _set_psi_tensor_with_ham(self, tensor_id, ham, delta=1e-11):
+    def _set_psi_tensor_with_ham(self, tensor_id, ham):
         if self.psi.tensors[tensor_id] is None:
             lower_edge_dims = [
                 len(self.edge_u1_charges[i]) for i in self.psi.edges[tensor_id][:2]
@@ -924,7 +917,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
             while ind > 1:
                 if (
                     np.abs(eigenvalues[indices[ind]] - eigenvalues[indices[ind - 1]])
-                    < delta
+                    < self.energy_degeneracy_threshold
                 ):
                     ind -= 1
                 else:

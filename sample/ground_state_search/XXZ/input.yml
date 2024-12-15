@@ -10,11 +10,11 @@ system:
         file: XXZ.dat # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
 
 numerics:
-    init_tree: 0
+    init_tree: 1
     opt_structure: 1
     initial_bond_dimension: 4
-    max_bond_dimensions: [20, 40, 80] # Maximum bond dimension for each repetition
-    max_num_sweeps: [20, 10, 5]
+    max_bond_dimensions: [60, 80] # Maximum bond dimension for each repetition
+    max_num_sweeps: [20, 10]
     energy_convergence_threshold: 1e-11
     entanglement_convergence_threshold: 1e-10
     energy_degeneracy_threshold: 1e-13

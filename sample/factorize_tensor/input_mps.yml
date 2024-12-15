@@ -1,0 +1,15 @@
+target: input_data/quantum_state_standard.npy
+numerics:
+    initial_bond_dimension: 5
+    opt_structure: 0
+    fidelity:
+        opt_structure: 0
+        init_random: 0
+        max_bond_dimensions: [10, 20] # Maximum bond dimension for each repetition
+        max_num_sweeps: [20, 10]
+        truncation_error: 1e-10
+        fidelity_convergence_threshold: 1e-8
+        entanglement_convergence_threshold: 1e-8
+
+output:
+    dir: MPS

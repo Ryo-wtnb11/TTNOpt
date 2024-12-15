@@ -1,14 +1,10 @@
-from typing import Dict, Optional
 import tensornetwork as tn
 import numpy as np
-import copy
 
 from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.TwoSiteUpdater import TwoSiteUpdater
 from ttnopt.src.functionTTN import (
     get_renormalization_sequence,
-    get_bare_edges,
-    inner_product,
 )
 
 tn.set_default_backend("numpy")
@@ -33,8 +29,7 @@ class DataEngine(TwoSiteUpdater):
             truncation_error (float): Maximum truncation error.
         """
         super().__init__(psi)
-        self.target_norm = np.linalg.norm(target)
-        self.target = target / self.target_norm
+        self.target = target / self.psi.norm
         self.init_bond_dim = init_bond_dim
         self.max_bond_dim = max_bond_dim
         self.truncation_error = truncation_error
@@ -61,7 +56,7 @@ class DataEngine(TwoSiteUpdater):
                 self.psi.edge_dims[i] = dim
             self.init_tensors()
 
-    def fidelity(self):
+    def get_fidelity(self):
         sequence = get_renormalization_sequence(
             self.psi.edges, self.psi.canonical_center_edge_id
         )
@@ -93,8 +88,6 @@ class DataEngine(TwoSiteUpdater):
         environment.reorder_edges(
             [out_edge_orders[edge_id] for edge_id in output_order]
         )
-        # environment = environment.copy(conjugate=True)
-        # self.environment_tensor = environments
         return environment
 
     def environment(self, tensor_ids):
