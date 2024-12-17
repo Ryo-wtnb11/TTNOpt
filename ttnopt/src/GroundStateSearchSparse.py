@@ -2,13 +2,14 @@ from typing import Dict, Tuple, Union
 
 import numpy as np
 import tensornetwork as tn
+from tensornetwork import Index, U1Charge, BlockSparseTensor
 from copy import deepcopy
 
 from ttnopt.src.PhysicsEngineSparse import PhysicsEngineSparse
 from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.Hamiltonian import Hamiltonian
 
-tn.block_sparse.enable_caching()
+# tn.block_sparse.enable_caching()
 
 
 class GroundStateSearchSparse(PhysicsEngineSparse):
@@ -68,6 +69,7 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
         converged_count: int = 2,
         eval_onesite_expval: bool = False,
         eval_twosite_expval: bool = False,
+        sz_sign: int = 0,
     ):
         """Run Ground State Search algorithm using Sparse Tensor with total spin.
 
@@ -200,6 +202,71 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                 for key in ee_dict.keys():
                     _ee_at_edge[key] = ee_dict[key]
                 _error_at_edge[self.psi.canonical_center_edge_id] = error
+
+                if sz_sign != 0 and self.candidate_edge_ids() == []:
+                    # absorb gauge tensor
+                    iso = tn.Node(
+                        self.psi.tensors[selected_tensor_id], backend=self.backend
+                    )
+                    c0 = (
+                        self.psi.tensors[selected_tensor_id]
+                        .flat_charges[2]
+                        .charges.flatten()
+                    )
+                    c1 = (
+                        self.psi.tensors[connected_tensor_id]
+                        .flat_charges[2]
+                        .charges.flatten()
+                    )
+                    gauge_tensor = BlockSparseTensor.random(
+                        [
+                            Index(U1Charge(c0), flow=True),
+                            Index(U1Charge(c1), flow=True),
+                            Index(
+                                U1Charge([self.init_u1_num + int(sz_sign * 2)]),
+                                flow=False,
+                            ),
+                        ]
+                    )
+                    gauge_tensor /= np.linalg.norm(gauge_tensor.data)
+                    gauge = tn.Node(gauge_tensor, backend=self.backend)
+                    self.init_u1_num += int(sz_sign * 2)
+                    out = gauge[1]
+                    iso[2] ^ gauge[0]
+                    iso = tn.contractors.auto(
+                        [iso, gauge], output_edge_order=[iso[0], iso[1], out, gauge[2]]
+                    )
+                    self.psi.tensors[selected_tensor_id] = iso.tensor
+                    ground_state, energy = self.lanczos(
+                        [selected_tensor_id, connected_tensor_id]
+                    )
+                    self.psi.tensors[selected_tensor_id] = iso.tensor
+                    u, s, v, probability, error, edge_order = (
+                        self.decompose_two_tensors(
+                            ground_state,
+                            self.max_bond_dim,
+                            opt_structure=False,
+                            epsilon=entanglement_convergence_threshold,
+                            delta=self.entanglement_degeneracy_threshold,
+                        )
+                    )
+                    self.psi.tensors[selected_tensor_id] = u
+                    self.psi.tensors[connected_tensor_id] = v
+                    self.psi.gauge_tensor = s
+                    (
+                        self.psi.edges[selected_tensor_id][0],
+                        self.psi.edges[selected_tensor_id][1],
+                    ) = (
+                        psi_edges[edge_order[0]],
+                        psi_edges[edge_order[1]],
+                    )
+                    (
+                        self.psi.edges[connected_tensor_id][0],
+                        self.psi.edges[connected_tensor_id][1],
+                    ) = (
+                        psi_edges[edge_order[2]],
+                        psi_edges[edge_order[3]],
+                    )
 
             # eval expval
             if eval_onesite_expval:

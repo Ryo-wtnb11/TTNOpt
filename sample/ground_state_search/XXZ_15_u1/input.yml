@@ -12,9 +12,9 @@ system:
 numerics:
     init_tree: 0
     U1_symmetry:
-        magnetization: 1/2
+        magnetization: 7/2
     opt_structure: 1
-    initial_bond_dimension: 8
+    initial_bond_dimension: 4
     max_bond_dimensions: [60, 80] # Maximum bond dimension for each repetition
     max_num_sweeps: [20, 10]
     energy_convergence_threshold: 1e-11

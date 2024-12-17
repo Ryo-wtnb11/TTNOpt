@@ -1,0 +1,10 @@
+target:
+    dir: ./MPS_input/run1/tensors
+    tensors_name: isometry
+    graph_file: edges.dat
+numerics:
+    opt_structure: 1
+    max_num_sweep: 20
+    truncation_error: 1e-13
+output:
+    dir: ReducedTTN

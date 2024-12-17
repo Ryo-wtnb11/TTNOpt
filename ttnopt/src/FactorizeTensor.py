@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Union
 
 import numpy as np
 import tensornetwork as tn
@@ -12,17 +12,16 @@ class FactorizeTensor(DataEngine):
     """A class for ground state search algorithm based on DMRG.
     Args:
         psi: The instance of TTN Class
-        target (np.array): The target tensor
+        target (np.array, optional): The target tensor
         init_bond_dim (int, optional): The bond dimension which are used to initialize tensors
         max_bond_dim (int, optional): The maximum bond dimension during updating tensors
-        max_truncation_err (float, optional): The maximum truncation error during updating tensors
+        truncation_err (float, optional): The maximum truncation error during updating tensors
     """
 
     def __init__(
         self,
         psi: TreeTensorNetwork,
-        target: np.ndarray,
-        init_bond_dim: int = 4,
+        target: Union[np.ndarray, None] = None,
         max_bond_dim: int = 16,
         truncation_error=1e-11,
     ):
@@ -38,10 +37,12 @@ class FactorizeTensor(DataEngine):
         self.entanglement: Dict[int, float] = {}
         self.fidelity: Dict[int, float] = {}
         self.error: Dict[int, float] = {}
-        super().__init__(psi, target, init_bond_dim, max_bond_dim, truncation_error)
+        self.bond_dim: Dict[int, int] = {}
+        super().__init__(psi, max_bond_dim, truncation_error)
 
     def run(
         self,
+        target: np.ndarray,
         opt_fidelity=False,
         opt_structure=False,
         fidelity_convergence_threshold=1e-8,
@@ -52,10 +53,13 @@ class FactorizeTensor(DataEngine):
         """Run FactorizingTensor algorithm.
 
         Args:
-            energy_threshold (float, optional): Energy threshold for convergence. Defaults to 1e-8.
-            ee_threshold (float, optional): Entanglement entropy threshold for automatic optimization. Defaults to 1e-8.
-            converged_count (int, optional): Converged count. Defaults to 1.
+            target (np.ndarray): Target tensor.
+            opt_fidelity (bool, optional): If optimize the fidelity or not. Defaults to False.
             opt_structure (bool, optional): If optimize the tree structure or not. Defaults to False.
+            fidelity_convergence_threshold (float, optional): Fidelity threshold for convergence. Defaults to 1e-8.
+            entanglement_convergence_threshold (float, optional): Entanglement entropy threshold for automatic optimization. Defaults to 1e-8.
+            max_num_sweep (int, optional): Maximum number of sweeps. Defaults to 5.
+            converged_count (int, optional): Converged count. Defaults to 2.
         """
 
         _ee_at_edge: Dict[int, float] = {}
@@ -63,6 +67,7 @@ class FactorizeTensor(DataEngine):
         _fidelity_at_edge: Dict[int, float] = {}
         fidelity_at_edge: Dict[int, float] = {}
         _error_at_edge: Dict[int, float] = {}
+        bond_dim: Dict[int, int] = {}
 
         edges, _edges = copy.deepcopy(self.psi.edges), copy.deepcopy(self.psi.edges)
 
@@ -92,7 +97,7 @@ class FactorizeTensor(DataEngine):
                 if opt_fidelity:
                     self.set_ttn_properties_at_one_tensor(edge_id, selected_tensor_id)
                     new_tensor = self.update_tensor(
-                        [selected_tensor_id, connected_tensor_id]
+                        target, [selected_tensor_id, connected_tensor_id]
                     )
                 else:
                     iso1 = tn.Node(self.psi.tensors[selected_tensor_id])
@@ -101,8 +106,9 @@ class FactorizeTensor(DataEngine):
                     iso1 = tn.contractors.auto(
                         [iso1, gauge], output_edge_order=[iso1[0], iso1[1], gauge[1]]
                     )
-                    self.psi.tensors[selected_tensor_id] = iso1.get_tensor()
+                    self.psi.tensors[selected_tensor_id] = iso1.tensor
                     self.set_ttn_properties_at_one_tensor(edge_id, selected_tensor_id)
+
                     iso1 = tn.Node(self.psi.tensors[selected_tensor_id])
                     iso2 = tn.Node(self.psi.tensors[connected_tensor_id])
                     iso1[2] ^ iso2[2]
@@ -120,6 +126,7 @@ class FactorizeTensor(DataEngine):
                     self.max_bond_dim,
                     opt_structure=opt_structure,
                     operate_degeneracy=False,
+                    truncation_error=self.truncation_error,
                 )
 
                 self.psi.tensors[selected_tensor_id] = u
@@ -141,9 +148,11 @@ class FactorizeTensor(DataEngine):
                 )
 
                 self.distance = self.initial_distance()
-                fidelity = self.get_fidelity()
-                _fidelity_at_edge[self.psi.canonical_center_edge_id] = fidelity
+                fidelity = self.get_fidelity(
+                    target,
+                )
                 print(fidelity)
+                _fidelity_at_edge[self.psi.canonical_center_edge_id] = fidelity
                 ee = self.entanglement_entropy(probability)
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
                 ee_dict = self.entanglement_entropy_at_physical_bond(
@@ -152,6 +161,10 @@ class FactorizeTensor(DataEngine):
                 for key in ee_dict.keys():
                     _ee_at_edge[key] = ee_dict[key]
                 _error_at_edge[self.psi.canonical_center_edge_id] = error
+
+                bond_dim[self.psi.canonical_center_edge_id] = (
+                    self.psi.gauge_tensor.shape[0]
+                )
 
             _edges = copy.deepcopy(self.psi.edges)
 
@@ -186,5 +199,6 @@ class FactorizeTensor(DataEngine):
         self.entanglement = _ee_at_edge
         self.fidelity = _fidelity_at_edge
         self.error = _error_at_edge
+        self.bond_dim = bond_dim
 
         return 0

@@ -106,12 +106,23 @@ def ground_state_search():
             energy_degeneracy_threshold=float(numerics.energy_degeneracy_threshold),
             entanglement_degeneracy_threshold=numerics.entanglement_degeneracy_threshold,
         )
+        if gss.init_u1_num != gss.u1_num:
+            sz_sign = np.sign(gss.u1_num - gss.init_u1_num)
+            sz_diff = abs(gss.u1_num - gss.init_u1_num) // 2
+            gss.run(
+                opt_structure=False,
+                max_num_sweep=sz_diff,
+                energy_convergence_threshold=0.0,
+                entanglement_convergence_threshold=0.0,
+                sz_sign=sz_sign,
+            )
+            print(f"Complete the warmup sweeps for M={gss.u1_num}/2.")
     else:
         gss = GroundStateSearch(
             psi,
             ham,
             init_bond_dim=numerics.initial_bond_dimension,
-            max_bond_dim=numerics.max_bond_dimensions[0],
+            max_bond_dim=numerics.initial_bond_dimension,
             energy_degeneracy_threshold=float(numerics.energy_degeneracy_threshold),
             entanglement_degeneracy_threshold=numerics.entanglement_degeneracy_threshold,
         )
@@ -205,11 +216,11 @@ def ground_state_search():
                         for edge_id in psi.physical_edges
                     ]
                 )
-            df["Sx"] = (sp + sm) / 2.0
-            df["Sy"] = (sp - sm) / 2.0j
-            df["Sz"] = [
-                gss.one_site_expval[edge_id]["Sz"] for edge_id in psi.physical_edges
-            ]
+            df["Sx"] = np.real((sp + sm) / 2.0)
+            df["Sy"] = np.real((sp - sm) / 2.0j)
+            df["Sz"] = np.real(
+                [gss.one_site_expval[edge_id]["Sz"] for edge_id in psi.physical_edges]
+            )
 
             path_ = path / f"run{i + 1}"
             os.makedirs(path_, exist_ok=True)
@@ -236,18 +247,18 @@ def ground_state_search():
             spm = np.array([gss.two_site_expval[pair]["S+S-"] for pair in pairs])
             smp = np.array([gss.two_site_expval[pair]["S-S+"] for pair in pairs])
 
-            df["SzSz"] = szz
-            df["SxSx"] = (spp + spm + smp + smm) / 4.0
-            df["SySy"] = -(spp - spm - smp + smm) / 4.0
+            df["SxSx"] = np.real((spp + spm + smp + smm) / 4.0)
+            df["SySy"] = np.real(-(spp - spm - smp + smm) / 4.0)
+            df["SzSz"] = np.real(szz)
 
-            df["SxSy"] = (spp - spm + smp - smm) / 4.0j
-            df["SySx"] = (spp + spm - smp - smm) / 4.0j
+            df["SySz"] = np.real((spz - smz) / 2.0j)
+            df["SzSy"] = np.real((szp - szm) / 2.0j)
 
-            df["SzSx"] = (szp + szm) / 2.0
-            df["SxSz"] = (spz - smz) / 2.0
+            df["SzSx"] = np.real((szp + szm) / 2.0)
+            df["SxSz"] = np.real((spz + smz) / 2.0)
 
-            df["SzSy"] = (szp - szm) / 2.0j
-            df["SySz"] = (spz + smz) / 2.0j
+            df["SxSy"] = np.real((spp - spm + smp - smm) / 4.0j)
+            df["SySx"] = np.real((spp + spm - smp - smm) / 4.0j)
 
             path_ = path / f"run{i + 1}"
             os.makedirs(path_, exist_ok=True)

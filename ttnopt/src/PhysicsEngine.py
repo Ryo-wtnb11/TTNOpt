@@ -83,8 +83,8 @@ class PhysicsEngine(TwoSiteUpdater):
         )
         ket_tensor = bra_tensor.copy(conjugate=True)
         for index in indices:
-            expvals = {}
             if index in self.psi.physical_edges:
+                expvals = {}
                 for operator in ["S+", "S-", "Sz"]:
                     bra = bra_tensor.copy()
                     ket = ket_tensor.copy()
@@ -102,7 +102,7 @@ class PhysicsEngine(TwoSiteUpdater):
                     bra[0] ^ ket[0]
                     bra[1] ^ ket[1]
                     bra[2] ^ ket[2]
-                    expvals[operator] = np.real(tn.contractors.auto([bra, ket]).tensor)
+                    expvals[operator] = tn.contractors.auto([bra, ket]).tensor.item()
                 one_site_expvals[index] = expvals
         return one_site_expvals
 
@@ -154,10 +154,12 @@ class PhysicsEngine(TwoSiteUpdater):
                         self.psi.edges[tensor_id][1], pair[1], operators[1]
                     )
                 )
+
                 bra[0] ^ spin1[0]
                 bra = tn.contractors.auto(
                     [bra, spin1], output_edge_order=[spin1[1], bra[1], bra[2]]
                 )
+
                 bra[1] ^ spin2[0]
                 bra = tn.contractors.auto(
                     [bra, spin2], output_edge_order=[bra[0], spin2[1], bra[2]]
@@ -165,13 +167,14 @@ class PhysicsEngine(TwoSiteUpdater):
                 bra[0] ^ ket[0]
                 bra[1] ^ ket[1]
                 bra[2] ^ ket[2]
-                exp_val = np.real(tn.contractors.auto([bra, ket]).tensor)
+                exp_val = tn.contractors.auto([bra, ket]).tensor.item()
                 op_key = (
                     operators[0] + operators[1]
-                    if pair[0] > pair[1]
+                    if pair[0] < pair[1]
                     else operators[1] + operators[0]
                 )
                 expvals[op_key] = exp_val
+
             key = (pair[0], pair[1]) if pair[0] < pair[1] else (pair[1], pair[0])
             two_site_expvals[key] = expvals
         return two_site_expvals
@@ -245,10 +248,10 @@ class PhysicsEngine(TwoSiteUpdater):
                 )
                 gauge[0] ^ ket_gauge[0]
                 gauge[1] ^ ket_gauge[1]
-                exp_val = np.real(tn.contractors.auto([gauge, ket_gauge]).tensor)
+                exp_val = tn.contractors.auto([gauge, ket_gauge]).tensor.item()
                 op_key = (
                     operators[0] + operators[1]
-                    if pair[0] > pair[1]
+                    if pair[0] < pair[1]
                     else operators[1] + operators[0]
                 )
                 expvals[op_key] = exp_val
