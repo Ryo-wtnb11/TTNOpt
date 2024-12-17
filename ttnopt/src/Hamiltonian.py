@@ -146,7 +146,7 @@ class Hamiltonian:
                     cc = np.array([c / 2.0j])
                     ob = Observable(
                         i,
-                        [["S+", "S-"], ["S-", "S+"]],
+                        [["S-", "S+"], ["S+", "S-"]],
                         [cc.item(), -cc.item()],
                     )
                     self.observables.append(ob)

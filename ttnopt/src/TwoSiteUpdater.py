@@ -51,6 +51,7 @@ class TwoSiteUpdaterMixin:
             self.psi.edges[child_tensor_ids[0]][:2]
             + self.psi.edges[child_tensor_ids[1]][:2]
         )
+
         candidate_edge_ids = [e for e in candidate_edge_ids if self.flag[e] == 0]
         return candidate_edge_ids
 
@@ -126,6 +127,7 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         operate_degeneracy=False,
         epsilon=1e-8,
         delta=0.1,
+        truncation_error=0.0,
     ):
         if not opt_structure:
             a = psi[0]
@@ -160,6 +162,12 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
                     p = p_
         # Degeneracy
         ind = np.min([max_bond_dim, len(p)])
+        if truncation_error > 0.0:
+            p_max = p[0]
+            for i in range(1, ind):
+                if p[i] / p_max < truncation_error:
+                    ind = i
+                    break
         if operate_degeneracy:
             if ind < len(p):
                 while ind > 1:

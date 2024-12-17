@@ -21,7 +21,7 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
         delta=0.1,
     ):
         psi_last = psi.copy()
-        if opt_structure is False:
+        if not opt_structure:
             a = psi[0]
             b = psi[1]
             c = psi[2]

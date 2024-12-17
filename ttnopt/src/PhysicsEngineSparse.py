@@ -39,6 +39,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         super().__init__(psi)
         self.hamiltonian = hamiltonian
         self.u1_num = int(2 * spin_ind("S=" + str(u1_num)))
+        self.init_u1_num = int(2 * spin_ind("S=" + str(u1_num)))
         self.init_bond_dim = init_bond_dim
         self.max_bond_dim = max_bond_dim
         self.edge_u1_charges = self._init_edge_u1_charge()
@@ -119,9 +120,9 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
                     bra[1] ^ ket[1]
                     bra[2] ^ ket[2]
                     bra[3] ^ ket[3]
-                    expvals[operator] = np.real(
-                        tn.contractors.auto([bra, ket]).tensor.data
-                    )[0]
+                    expvals[operator] = tn.contractors.auto(
+                        [bra, ket]
+                    ).tensor.data.item()
                 one_site_expvals[edge_id] = expvals
         return one_site_expvals
 
@@ -201,7 +202,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
                 bra[1] ^ ket[1]
                 bra[2] ^ ket[2]
                 bra[3] ^ ket[3]
-                exp_val = np.real(tn.contractors.auto([bra, ket]).tensor.data)[0]
+                exp_val = tn.contractors.auto([bra, ket]).tensor.data.item()
                 op_key = (
                     operators[0] + operators[1]
                     if pair[0] > pair[1]
@@ -322,9 +323,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
                 gauge[0] ^ ket_gauge[0]
                 gauge[1] ^ ket_gauge[1]
                 gauge[2] ^ ket_gauge[2]
-                exp_val = np.real(tn.contractors.auto([gauge, ket_gauge]).tensor.data)[
-                    0
-                ]
+                exp_val = tn.contractors.auto([gauge, ket_gauge]).tensor.data.item()
                 op_key = (
                     operators[0] + operators[1]
                     if pair[0] > pair[1]
@@ -335,9 +334,12 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
             two_site_expvals[key] = expvals
         return two_site_expvals
 
-    def lanczos(self, central_tensor_ids, lanczos_tol=1e-13, inverse_tol=1e-7):
-        # todo: deal with different bond dimensions
-
+    def lanczos(
+        self,
+        central_tensor_ids,
+        lanczos_tol=1e-13,
+        inverse_tol=1e-7,
+    ):
         psi_1 = tn.Node(self.psi.tensors[central_tensor_ids[0]], backend=self.backend)
         psi_2 = tn.Node(self.psi.tensors[central_tensor_ids[1]], backend=self.backend)
         psi_1[2] ^ psi_2[2]
@@ -453,23 +455,36 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         c0 = self.psi.tensors[selected_tensor_id].flat_charges[2].charges.flatten()
         c1 = self.psi.tensors[not_selected_tensor_id].flat_charges[2].charges.flatten()
         u = U1Charge.fuse(c0, c1)
-        cc = np.count_nonzero(u == self.u1_num)
+        cc = np.count_nonzero(u == self.init_u1_num)
         if cc == 0:
-            print("-" * 50)
-            print(f"Fail on RG: There is no sector with M={self.u1_num}.")
-            print(
-                "Set correct U1 charge to run correctly on numerics.U1_symmetry.magnitude."
-            )
-            print("Or they need more larger initial bond dimension.")
-            print("To rifer see U1 charges sectors on canonical center following:")
-            unique_values, counts = np.unique(u, return_counts=True)
-            for val, count in zip(unique_values, counts):
-                print(f"S: {val}/2, Count: {count}")
-            print("-" * 50)
-            exit()
+            if not (np.all(u % 2 == 0) and self.u1_num % 2 == 0) and not (
+                np.all(u % 2 != 0) and self.u1_num % 2 != 0
+            ):
+                print("-" * 50)
+                print(f"Fail on RG: There is no sector with M={self.u1_num}/2.")
+                print("Because of the U1 charge conservation.")
+                print("To rifer see U1 charges sectors on canonical center following:")
+                unique_values, counts = np.unique(u, return_counts=True)
+                for val, count in zip(unique_values, counts):
+                    print(f"S: {val}/2, Count: {count}")
+                print("-" * 50)
+                exit()
+            else:
+                print("-" * 50)
+                print(f"Note on RG: There is no sector with M={self.u1_num}/2.")
+                closest_sector = min(u, key=lambda x: abs(x - self.u1_num))
+                print(
+                    f"We will start warmup sweeps from the closest sector M={closest_sector}/2."
+                )
+                print(
+                    f"it requires {abs(closest_sector - self.u1_num) // 2}-time warmup sweep."
+                )
+                print("-" * 50)
+                self.init_u1_num = closest_sector
+                cc = np.count_nonzero(u == self.init_u1_num)
         c0 = U1Charge(c0)
         c1 = U1Charge(c1)
-        c = U1Charge([self.u1_num])
+        c = U1Charge([self.init_u1_num])
         self.psi.gauge_tensor = BlockSparseTensor(
             data=np.ones(cc) / np.sum(np.ones(cc)),
             charges=[c0, c1, c],

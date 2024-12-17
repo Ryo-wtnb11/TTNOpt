@@ -4,6 +4,10 @@ import numpy as np
 import tensornetwork as tn
 import networkx as nx
 import matplotlib.pyplot as plt
+from ttnopt.src.functionTTN import (
+    get_renormalization_sequence,
+)
+from copy import copy
 
 
 class TreeTensorNetwork:
@@ -12,8 +16,8 @@ class TreeTensorNetwork:
     def __init__(
         self,
         edges: List[List[int]],
-        top_edge_id: int,
         tensors: Optional[List[np.ndarray]] = None,
+        top_edge_id: Optional[int] = None,
         gauge_tensor: Optional[np.ndarray] = None,
         norm: Optional[float] = None,
     ):
@@ -29,15 +33,24 @@ class TreeTensorNetwork:
         self.edges = edges
 
         self.tensor_num = len(edges)
-        self.top_edge_id = top_edge_id
-        self.canonical_center_edge_id = top_edge_id
         self.physical_edges = self._physical_edges()
         self.size = len(self.physical_edges)
 
+        self.top_edge_id = None
+        self.canonical_center_edge_id = None
         self.tensors = None
         self.gauge_tensor = None
         self.norm = 1.0
         self.edge_dims = {}
+        if top_edge_id is not None:
+            self.top_edge_id = top_edge_id
+            self.canonical_center_edge_id = top_edge_id
+        else:
+            dict_edge = {edge[2]: 0 for edge in edges}
+            for e in edges:
+                dict_edge[e[2]] += 1
+            self.top_edge_id = [k for k, v in dict_edge.items() if v == 2][0]
+            self.canonical_center_edge_id = copy(self.top_edge_id)
         if tensors is not None:
             self.tensors = tensors
             self.edge_dims = self._edge_dims()
@@ -118,9 +131,9 @@ class TreeTensorNetwork:
             )
             tmp_tensors.append(V.reorder_edges([V[1], V[2], V[0]]).tensor)
             tensors += reversed(tmp_tensors)
-            return cls(edges, center_edge_id, tensors, S.tensor, norm.item())
+            return cls(edges, tensors, center_edge_id, S.tensor, norm.item())
 
-        return cls(edges, center_edge_id)
+        return cls(edges, top_edge_id=center_edge_id)
 
     @classmethod
     def tree(cls, size: int):
@@ -157,7 +170,30 @@ class TreeTensorNetwork:
 
         center_edge_id = layer_index
 
-        return cls(edges, center_edge_id)
+        return cls(edges, top_edge_id=center_edge_id)
+
+    def init_random(self, init_bond_dimension: int = 4):
+        sequence = get_renormalization_sequence(
+            self.edges, self.canonical_center_edge_id
+        )
+        for tensor_id in sequence:
+            m = (
+                self.edge_dims[self.edges[tensor_id][0]]
+                * self.edge_dims[self.edges[tensor_id][1]]
+            )
+            n = np.min([m, init_bond_dimension])
+            random_matrix = np.random.normal(0, 1, (m, n))
+            Q, _ = np.linalg.qr(random_matrix)
+            self.psi.tensors[tensor_id] = np.reshape(
+                Q,
+                (
+                    self.edge_dims[self.edges[tensor_id][0]],
+                    self.edge_dims[self.edges[tensor_id][1]],
+                    n,
+                ),
+            )
+            self.psi.edge_dims[self.edges[tensor_id][2]] = n
+        self.psi.gauge_tensor = np.eye(n)
 
     def visualize(self):
         """Visualize the TreeTensorNetwork."""
