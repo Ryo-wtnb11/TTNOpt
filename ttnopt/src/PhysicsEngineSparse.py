@@ -472,7 +472,13 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
             else:
                 print("-" * 50)
                 print(f"Note on RG: There is no sector with M={self.u1_num}/2.")
-                closest_sector = min(u, key=lambda x: abs(x - self.u1_num))
+                u_even = u[u % 2 == 0]
+                u_odd = u[u % 2 != 0]
+                closest_sector = self.u1_num
+                if self.u1_num % 2 == 0:
+                    closest_sector = min(u_even, key=lambda x: abs(x - self.u1_num))
+                if self.u1_num % 2 != 0:
+                    closest_sector = min(u_odd, key=lambda x: abs(x - self.u1_num))
                 print(
                     f"We will start warmup sweeps from the closest sector M={closest_sector}/2."
                 )
