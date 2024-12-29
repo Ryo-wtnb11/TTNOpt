@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 import numpy as np
 import tensornetwork as tn
@@ -53,13 +53,14 @@ class GroundStateSearch(PhysicsEngine):
 
     def run(
         self,
-        opt_structure: bool = False,
-        energy_convergence_threshold: float = 1e-8,
-        entanglement_convergence_threshold: float = 1e-8,
-        max_num_sweep: int = 5,
+        opt_structure: int = 0,
+        energy_convergence_threshold: float = 1e-10,
+        entanglement_convergence_threshold: float = 1e-10,
+        max_num_sweep: int = 10,
         converged_count: int = 2,
         eval_onesite_expval: bool = False,
         eval_twosite_expval: bool = False,
+        beta: List[float] = [0.0, 0.0],
     ):
         """Run DMRG algorithm.
 
@@ -83,9 +84,12 @@ class GroundStateSearch(PhysicsEngine):
 
         converged_num = 0
 
-        sweep_num = 0
-        while converged_num < converged_count and sweep_num < max_num_sweep:
-            # energy
+        beta_values = np.linspace(beta[0], beta[1], max_num_sweep)
+
+        for sweep_num in range(max_num_sweep):
+            if converged_num > converged_count:
+                break
+
             energy_at_edge = deepcopy(_energy_at_edge)
             ee_at_edge = deepcopy(_ee_at_edge)
             edges = deepcopy(_edges)
@@ -93,33 +97,19 @@ class GroundStateSearch(PhysicsEngine):
             self.distance = self.initial_distance()
             self.flag = self.initial_flag()
 
-            print("Sweep count: " + str(sweep_num))
-            while self.candidate_edge_ids() != []:
-                (
-                    edge_id,
-                    selected_tensor_id,
-                    connected_tensor_id,
-                    not_selected_tensor_id,
-                ) = self.local_two_tensor()
+            (
+                _edge_id,
+                _selected_tensor_id,
+                _connected_tensor_id,
+                _not_selected_tensor_id,
+            ) = self.local_two_tensor()
 
-                self.set_flag(not_selected_tensor_id)
-
-                # eval expval
-                if self.flag[not_selected_tensor_id]:
-                    if eval_onesite_expval:
-                        onesite_expval_dict = self.expval_onesite(
-                            not_selected_tensor_id
-                        )
-                        for key in onesite_expval_dict.keys():
-                            onesite_expval[key] = onesite_expval_dict[key]
-
-                    if eval_twosite_expval:
-                        twosite_expval_dict = self.expval_twosite(
-                            not_selected_tensor_id
-                        )
-                        for key in twosite_expval_dict.keys():
-                            twosite_expval[key] = twosite_expval_dict[key]
-
+            print("Sweep count: " + str(sweep_num + 1))
+            while True:
+                edge_id = _edge_id
+                selected_tensor_id = _selected_tensor_id
+                connected_tensor_id = _connected_tensor_id
+                not_selected_tensor_id = _not_selected_tensor_id
                 # absorb gauge tensor
                 iso = tn.Node(self.psi.tensors[selected_tensor_id])
                 gauge = tn.Node(self.psi.gauge_tensor)
@@ -135,9 +125,8 @@ class GroundStateSearch(PhysicsEngine):
 
                 self._set_block_hamiltonian(not_selected_tensor_id)
 
-                ground_state, energy = self.lanczos(
-                    [selected_tensor_id, connected_tensor_id]
-                )
+                ground_state_order = [selected_tensor_id, connected_tensor_id]
+                ground_state, energy = self.lanczos(ground_state_order)
                 psi_edges = (
                     self.psi.edges[selected_tensor_id][:2]
                     + self.psi.edges[connected_tensor_id][:2]
@@ -147,6 +136,7 @@ class GroundStateSearch(PhysicsEngine):
                     ground_state,
                     self.max_bond_dim,
                     opt_structure=opt_structure,
+                    beta=beta_values[sweep_num],
                     operate_degeneracy=True,
                     epsilon=entanglement_convergence_threshold,
                     delta=self.entanglement_degeneracy_threshold,
@@ -182,13 +172,52 @@ class GroundStateSearch(PhysicsEngine):
                     _ee_at_edge[key] = ee_dict[key]
                 _error_at_edge[self.psi.canonical_center_edge_id] = error
 
+                if self.candidate_edge_ids() == []:
+                    break
+
+                (
+                    _edge_id,
+                    _selected_tensor_id,
+                    _connected_tensor_id,
+                    _not_selected_tensor_id,
+                ) = self.local_two_tensor()
+                self.set_flag(_not_selected_tensor_id)
+                # eval expval
+                if self.flag[_not_selected_tensor_id]:
+                    if eval_onesite_expval:
+                        onesite_expval_dict = self.expval_onesite(
+                            _not_selected_tensor_id,
+                            ground_state,
+                            ground_state_order,
+                        )
+                        for key in onesite_expval_dict.keys():
+                            onesite_expval[key] = onesite_expval_dict[key]
+                    if eval_twosite_expval:
+                        twosite_expval_dict = self.expval_twosite(
+                            _not_selected_tensor_id,
+                            ground_state,
+                            ground_state_order,
+                        )
+                        for key in twosite_expval_dict.keys():
+                            twosite_expval[key] = twosite_expval_dict[key]
+
             if eval_onesite_expval:
                 for i in self.psi.central_tensor_ids():
-                    onesite_expval_dict = self.expval_onesite(i)
+                    onesite_expval_dict = self.expval_onesite(
+                        i, ground_state, ground_state_order
+                    )
                     for key in onesite_expval_dict.keys():
                         onesite_expval[key] = onesite_expval_dict[key]
             if eval_twosite_expval:
-                twosite_expval_dict = self.expval_twosite_origin(twosite_expval.keys())
+                for i in self.psi.central_tensor_ids():
+                    twosite_expval_dict = self.expval_twosite(
+                        i, ground_state, ground_state_order
+                    )
+                    for key in twosite_expval_dict.keys():
+                        twosite_expval[key] = twosite_expval_dict[key]
+                twosite_expval_dict = self.expval_twosite_origin(
+                    twosite_expval.keys(), ground_state, ground_state_order
+                )
                 for key in twosite_expval_dict.keys():
                     twosite_expval[key] = twosite_expval_dict[key]
 

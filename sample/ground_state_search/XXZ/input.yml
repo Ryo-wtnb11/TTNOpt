@@ -1,8 +1,6 @@
 system:
     N: 16 # Number of spins
-    # Spin size configuration
-    spin_size:
-        S: 1/2 # Spin size (used only if uniform is 1)
+    spin_size: 1/2 # Spin size (used only if uniform is 1)
 
     # Exchange coupling for the XXZ or XYZ model
     model:
@@ -10,17 +8,19 @@ system:
         file: XXZ.dat # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
 
 numerics:
-    init_tree: 1
-    opt_structure: 1
+    init_tree: 0
     initial_bond_dimension: 4
-    max_bond_dimensions: [60, 80] # Maximum bond dimension for each repetition
+    max_bond_dimensions: [40, 80] # Maximum bond dimension for each repetition
     max_num_sweeps: [20, 10]
     energy_convergence_threshold: 1e-11
     entanglement_convergence_threshold: 1e-10
     energy_degeneracy_threshold: 1e-13
-    entanglement_degeneracy_threshold: 0.1
+    entanglement_degeneracy_threshold: 0.01
+    opt_structure:
+        type: 2
+        # beta: [0.01, 0.02] # if type is 1, beta is set by this values and structure is chosen stochastically. that is always 0 by default (select always minimum EE)..
 
 output:
-    dir: data
+    dir: data_nonopt
     single_site: 1
     two_site: 1

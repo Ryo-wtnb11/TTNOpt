@@ -5,6 +5,6 @@ target:
 numerics:
     opt_structure: 1
     max_num_sweep: 20
-    truncation_error: 1e-13
+    truncation_error: 1e-8
 output:
-    dir: ReducedTTN
+    dir: ReducedTTN_8

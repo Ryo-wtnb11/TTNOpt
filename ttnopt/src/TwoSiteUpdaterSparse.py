@@ -16,10 +16,12 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
         self,
         psi,
         max_bond_dim,
-        opt_structure=False,
+        opt_structure=0,
         epsilon=1e-8,
         delta=0.1,
+        beta=0.0,
     ):
+        edge_order = [0, 1, 2, 3]
         psi_last = psi.copy()
         if not opt_structure:
             a = psi[0]
@@ -27,16 +29,14 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
             c = psi[2]
             d = psi[3]
             e = psi[4]
-            (u, s, v, terr) = tn.split_node_full_svd(psi, [e, a, b], [c, d])
+            (u, s, v, _) = tn.split_node_full_svd(psi, [e, a, b], [c, d])
             p = s.tensor.data
             p = np.sort(p)[::-1]
             p = p[p > 0.0]
-            ee = self.entanglement_entropy(p)
-
-            edge_order = [0, 1, 2, 3]
         else:
             candidates = [[0, 1, 2, 3], [0, 2, 1, 3], [1, 2, 3, 0]]
-            ee = 1e13
+            candidate_index = 0
+            ps = []
             for edges in candidates:
                 psi_ = psi.copy()
                 a = psi_[edges[0]]
@@ -49,14 +49,25 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
                 p_ = s_.tensor.data
                 p_ = np.sort(p_)[::-1]
                 p_ = p_[p_ > 0.0]
-                ee_tmp = self.entanglement_entropy(p_)
-                if not np.isclose(ee_tmp, ee, atol=epsilon) and ee_tmp < ee:
-                    u = u_
-                    s = s_
-                    v = v_
-                    ee = ee_tmp
-                    edge_order = edges
-                    p = p_
+                ps.append(p_)
+
+            ees = [self.entanglement_entropy(probability=p) for p in ps]
+            p_truncates = [p[:max_bond_dim] for p in ps]
+            errors = [1.0 - np.real(np.sum(p_t**2)) for p_t in p_truncates]
+            if opt_structure == 1:
+                if beta == 0.0:
+                    candidate_index = np.argmin(ees)
+                else:
+                    weights = np.array(ees) * beta
+                    weights = np.array(weights) / np.sum(weights)
+                    candidate_index = np.random.choice(len(ees), p=weights)
+            elif opt_structure == 2:
+                candidate_index = np.argmin(errors)
+
+            if np.isclose(ees[candidate_index], ees[0], atol=epsilon):
+                candidate_index = 0
+            edge_order = candidates[candidate_index]
+            p = ps[candidate_index]
         # diagonal
         ind = np.min([max_bond_dim, len(p)])
         if ind < len(p):

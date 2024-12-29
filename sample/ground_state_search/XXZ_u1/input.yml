@@ -15,12 +15,12 @@ numerics:
     init_tree: 0
     opt_structure: 1
     initial_bond_dimension: 4
-    max_bond_dimensions: [20, 32] # Maximum bond dimension for each repetition
+    max_bond_dimensions: [20, 32, 64] # Maximum bond dimension for each repetition
     max_num_sweeps: [20, 10]
     energy_convergence_threshold: 1e-11
     entanglement_convergence_threshold: 1e-10
     energy_degeneracy_threshold: 1e-13
-    entanglement_degeneracy_threshold: 0.1
+    entanglement_degeneracy_threshold: 0.01
 
 output:
     dir: data

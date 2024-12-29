@@ -15,7 +15,6 @@ class DataEngine(TwoSiteUpdater):
         self,
         psi: TreeTensorNetwork,
         max_bond_dim: int,
-        truncation_error: float,
     ):
         """Initialize a PhysicsEngine object.
 
@@ -23,11 +22,9 @@ class DataEngine(TwoSiteUpdater):
             psi (TreeTensorNetwork): The quantum state.
             target (np.ndarray): Tensor of target_data.
             max_bond_dim (int): Maximum bond dimension.
-            truncation_error (float): Maximum truncation error.
         """
         super().__init__(psi)
         self.max_bond_dim = max_bond_dim
-        self.truncation_error = truncation_error
         self.environment_tensor = None
         self.environment_edges = None
 

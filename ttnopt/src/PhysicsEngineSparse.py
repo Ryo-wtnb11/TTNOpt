@@ -72,61 +72,86 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
                 self.psi.edge_dims[k] = spin_dof(self.hamiltonian.spin_size[k])
             self.init_tensors_by_block_hamiltonian()
 
-    def expval_onesite(self, tensor_id):
+    def expval_onesite(self, tensor_id, ground_state, tensor_ids):
         """Calculate the expectation values of the one-site operators.
         Returns:
             The expectation values of the one-site operators of dict.
         """
         one_site_expvals = {}
-        indices = [(tensor_id, i) for i in self.psi.edges[tensor_id][:2]]
-
-        bra = tn.Node(self.psi.tensors[tensor_id], backend=self.backend)
-        gauge = tn.Node(self.psi.gauge_tensor, backend=self.backend)
-        if self.previous_id == tensor_id:
-            out = gauge[1]
-            bra[2] ^ gauge[0]
-        else:
-            out = gauge[0]
-            bra[2] ^ gauge[1]
-        bra_tensor = tn.contractors.auto(
-            [bra, gauge], output_edge_order=[bra[0], bra[1], out, gauge[2]]
-        )
+        indices = [i for i in self.psi.edges[tensor_id][:2]]
+        bra_tensor = ground_state.copy()
+        start_index = 0 if tensor_id == tensor_ids[0] else 2
         ket_tensor = bra_tensor.copy(conjugate=True)
-
         for index in indices:
-            tensor_id, edge_id = index
-            if edge_id in self.psi.physical_edges:
+            if index in self.psi.physical_edges:
                 expvals = {}
                 for operator in ["Sz"]:
                     bra = bra_tensor.copy()
                     ket = ket_tensor.copy()
                     spin = tn.Node(
-                        self._spin_operator_at_edge(edge_id, edge_id, operator),
+                        self._spin_operator_at_edge(index, index, operator),
                         backend=self.backend,
                     )
-                    if edge_id == self.psi.edges[tensor_id][0]:
-                        bra[0] ^ spin[0]
-                        bra = tn.contractors.auto(
-                            [bra, spin],
-                            output_edge_order=[spin[1], bra[1], bra[2], bra[3]],
-                        )
-                    if edge_id == self.psi.edges[tensor_id][1]:
-                        bra[1] ^ spin[0]
-                        bra = tn.contractors.auto(
-                            [bra, spin],
-                            output_edge_order=[bra[0], spin[1], bra[2], bra[3]],
-                        )
+                    if index == self.psi.edges[tensor_id][0]:
+                        bra[start_index + 0] ^ spin[0]
+                        if start_index == 0:
+                            bra = tn.contractors.auto(
+                                [bra, spin],
+                                output_edge_order=[
+                                    spin[1],
+                                    bra[1],
+                                    bra[2],
+                                    bra[3],
+                                    bra[4],
+                                ],
+                            )
+                        else:
+                            bra = tn.contractors.auto(
+                                [bra, spin],
+                                output_edge_order=[
+                                    bra[0],
+                                    bra[1],
+                                    spin[1],
+                                    bra[3],
+                                    bra[4],
+                                ],
+                            )
+                    if index == self.psi.edges[tensor_id][1]:
+                        bra[start_index + 1] ^ spin[0]
+                        if start_index == 0:
+                            bra = tn.contractors.auto(
+                                [bra, spin],
+                                output_edge_order=[
+                                    bra[0],
+                                    spin[1],
+                                    bra[2],
+                                    bra[3],
+                                    bra[4],
+                                ],
+                            )
+                        else:
+                            bra = tn.contractors.auto(
+                                [bra, spin],
+                                output_edge_order=[
+                                    bra[0],
+                                    bra[1],
+                                    bra[2],
+                                    spin[1],
+                                    bra[4],
+                                ],
+                            )
                     bra[0] ^ ket[0]
                     bra[1] ^ ket[1]
                     bra[2] ^ ket[2]
                     bra[3] ^ ket[3]
+                    bra[4] ^ ket[4]
                     expvals[operator] = tn.contractors.auto(
                         [bra, ket]
                     ).tensor.data.item()
-                one_site_expvals[edge_id] = expvals
+                one_site_expvals[index] = expvals
         return one_site_expvals
 
-    def expval_twosite(self, tensor_id):
+    def expval_twosite(self, tensor_id, ground_state, tensor_ids):
         two_site_expvals = {}
         l_bare_edges = get_bare_edges(
             self.psi.edges[tensor_id][0],
@@ -138,20 +163,9 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
             self.psi.edges,
             self.psi.physical_edges,
         )
-        psi = tn.Node(self.psi.tensors[tensor_id], backend=self.backend)
-        gauge = tn.Node(self.psi.gauge_tensor, backend=self.backend)
-        if self.previous_id == tensor_id:
-            out = gauge[1]
-            psi[2] ^ gauge[0]
-        else:
-            out = gauge[0]
-            psi[2] ^ gauge[1]
-        bra_tensor = tn.contractors.auto(
-            [psi, gauge],
-            output_edge_order=[psi[0], psi[1], out, gauge[2]],
-        )
+        start_index = 0 if tensor_id == tensor_ids[0] else 2
+        bra_tensor = ground_state.copy()
         ket_tensor = bra_tensor.copy(conjugate=True)
-
         pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
         for pair in pairs:
             expvals = {}
@@ -180,8 +194,12 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
                         bra_.flat_charges[i].charges.flatten()
                         for i in range(len(bra.shape))
                     ]
-                    charges[0] = spin1.tensor.flat_charges[0].charges.flatten()
-                    charges[1] = spin2.tensor.flat_charges[0].charges.flatten()
+                    charges[0 + start_index] = spin1.tensor.flat_charges[
+                        0
+                    ].charges.flatten()
+                    charges[1 + start_index] = spin2.tensor.flat_charges[
+                        0
+                    ].charges.flatten()
                     bra_.contiguous(inplace=True)
                     bra_ = BlockSparseTensor(
                         data=bra_.data,
@@ -190,18 +208,33 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
                     )
                     bra = tn.Node(bra_, backend=self.backend)
 
-                bra[0] ^ spin1[0]
-                bra = tn.contractors.auto(
-                    [bra, spin1], output_edge_order=[spin1[1], bra[1], bra[2], bra[3]]
-                )
-                bra[1] ^ spin2[0]
-                bra = tn.contractors.auto(
-                    [bra, spin2], output_edge_order=[bra[0], spin2[1], bra[2], bra[3]]
-                )
+                bra[start_index + 0] ^ spin1[0]
+                if start_index == 0:
+                    bra = tn.contractors.auto(
+                        [bra, spin1],
+                        output_edge_order=[spin1[1], bra[1], bra[2], bra[3], bra[4]],
+                    )
+                else:
+                    bra = tn.contractors.auto(
+                        [bra, spin1],
+                        output_edge_order=[bra[0], bra[1], spin1[1], bra[3], bra[4]],
+                    )
+                bra[start_index + 1] ^ spin2[0]
+                if start_index == 0:
+                    bra = tn.contractors.auto(
+                        [bra, spin2],
+                        output_edge_order=[bra[0], spin2[1], bra[2], bra[3], bra[4]],
+                    )
+                else:
+                    bra = tn.contractors.auto(
+                        [bra, spin2],
+                        output_edge_order=[bra[0], bra[1], bra[2], spin2[1], bra[4]],
+                    )
                 bra[0] ^ ket[0]
                 bra[1] ^ ket[1]
                 bra[2] ^ ket[2]
                 bra[3] ^ ket[3]
+                bra[4] ^ ket[4]
                 exp_val = tn.contractors.auto([bra, ket]).tensor.data.item()
                 op_key = (
                     operators[0] + operators[1]
@@ -213,36 +246,46 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
             two_site_expvals[key] = expvals
         return two_site_expvals
 
-    def expval_twosite_origin(self, keys):
-        tensor_ids = self.psi.central_tensor_ids()
+    def expval_twosite_origin(self, keys, ground_state, tensor_ids):
         two_site_expvals = {}
+        out_edge_dict = {}
         l_bare_edges = get_bare_edges(
             self.psi.edges[tensor_ids[0]][0],
             self.psi.edges,
             self.psi.physical_edges,
         )
-        l_bare_edges += get_bare_edges(
+        for ll in l_bare_edges:
+            out_edge_dict[ll] = 0
+        l_bare_edges_ = get_bare_edges(
             self.psi.edges[tensor_ids[0]][1],
             self.psi.edges,
             self.psi.physical_edges,
         )
+        l_bare_edges += l_bare_edges_
+        for ll in l_bare_edges_:
+            out_edge_dict[ll] = 1
+
         r_bare_edges = get_bare_edges(
             self.psi.edges[tensor_ids[1]][0],
             self.psi.edges,
             self.psi.physical_edges,
         )
-        r_bare_edges += get_bare_edges(
+        for r in r_bare_edges:
+            out_edge_dict[r] = 0
+        r_bare_edges_ = get_bare_edges(
             self.psi.edges[tensor_ids[1]][1],
             self.psi.edges,
             self.psi.physical_edges,
         )
-        gauge_tensor = tn.Node(self.psi.gauge_tensor, backend=self.backend)
+        r_bare_edges += r_bare_edges_
+        for r in r_bare_edges_:
+            out_edge_dict[r] = 1
 
-        left_spins = self._set_edge_spin(tensor_ids[0], save=False)
-        right_spins = self._set_edge_spin(tensor_ids[1], save=False)
+        bra_tensor = ground_state.copy()
+        ket_tensor = bra_tensor.copy(conjugate=True)
 
         pairs = [(i, j) for i in l_bare_edges for j in r_bare_edges]
-        pairs = [pair for pair in pairs if pair not in keys]
+        pairs = [pair for pair in pairs if tuple(sorted(pair)) not in keys]
         for pair in pairs:
             expvals = {}
             for operators in [
@@ -250,83 +293,62 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
                 ["S+", "S-"],
                 ["S-", "S+"],
             ]:
-                gauge = gauge_tensor.copy()
-                ket_gauge = gauge_tensor.copy(conjugate=True)
-                if operators[0] == "S-":
-                    left_spin = left_spins[pair[0]]["S+"]
-                    left_spin = left_spin.H
-                    left_spin.contiguous(inplace=True)
-                    left_spin = BlockSparseTensor(
-                        data=left_spin.data,
-                        charges=[
-                            U1Charge(c.charges.flatten() - 2)
-                            for c in left_spin.flat_charges
-                        ],
-                        flows=np.logical_not(left_spin.flat_flows),
-                    )
-                else:
-                    left_spin = left_spins[pair[0]][operators[0]]
-                if operators[1] == "S-":
-                    right_spin = right_spins[pair[1]]["S+"]
-                    right_spin = right_spin.H
-                    right_spin.contiguous(inplace=True)
-                    right_spin = BlockSparseTensor(
-                        data=right_spin.data,
-                        charges=[
-                            U1Charge(c.charges.flatten() - 2)
-                            for c in right_spin.flat_charges
-                        ],
-                        flows=np.logical_not(right_spin.flat_flows),
-                    )
-                else:
-                    right_spin = right_spins[pair[1]][operators[1]]
+                bra = bra_tensor.copy()
+                ket = ket_tensor.copy()
+                spin1 = tn.Node(
+                    self._spin_operator_at_edge(
+                        self.psi.edges[tensor_ids[0]][out_edge_dict[pair[0]]],
+                        pair[0],
+                        operators[0],
+                    ),
+                    backend=self.backend,
+                )
+                spin2 = tn.Node(
+                    self._spin_operator_at_edge(
+                        self.psi.edges[tensor_ids[1]][out_edge_dict[pair[1]]],
+                        pair[1],
+                        operators[1],
+                    ),
+                    backend=self.backend,
+                )
                 if operators != ["Sz", "Sz"]:
-                    gauge_ = gauge.tensor
+                    bra_ = bra.tensor
                     charges = [
-                        gauge_.flat_charges[i].charges.flatten()
-                        for i in range(len(gauge.shape))
+                        bra_.flat_charges[i].charges.flatten()
+                        for i in range(len(bra.shape))
                     ]
-                    if tensor_ids[0] == self.previous_id:
-                        charges[0] = left_spin.flat_charges[0].charges.flatten()
-                        charges[1] = right_spin.flat_charges[0].charges.flatten()
-                    else:
-                        charges[1] = left_spin.flat_charges[0].charges.flatten()
-                        charges[0] = right_spin.flat_charges[0].charges.flatten()
-
-                    gauge_.contiguous(inplace=True)
-                    gauge_ = BlockSparseTensor(
-                        data=gauge_.data,
+                    charges[out_edge_dict[pair[0]]] = spin1.tensor.flat_charges[
+                        0
+                    ].charges.flatten()
+                    charges[out_edge_dict[pair[1]] + 2] = spin2.tensor.flat_charges[
+                        0
+                    ].charges.flatten()
+                    bra_.contiguous(inplace=True)
+                    bra_ = BlockSparseTensor(
+                        data=bra_.data,
                         charges=[U1Charge(c) for c in charges],
-                        flows=gauge_.flat_flows,
+                        flows=bra_.flat_flows,
                     )
-                    gauge = tn.Node(gauge_, backend=self.backend)
-                spin1 = tn.Node(left_spin, backend=self.backend)
-                spin2 = tn.Node(right_spin, backend=self.backend)
-                if tensor_ids[0] == self.previous_id:
-                    gauge[0] ^ spin1[0]
-                    gauge = tn.contractors.auto(
-                        [gauge, spin1], output_edge_order=[spin1[1], gauge[1], gauge[2]]
-                    )
-                    gauge[1] ^ spin2[0]
-                    gauge = tn.contractors.auto(
-                        [gauge, spin2], output_edge_order=[gauge[0], spin2[1], gauge[2]]
-                    )
-                else:
-                    gauge[1] ^ spin1[0]
-                    gauge = tn.contractors.auto(
-                        [gauge, spin1], output_edge_order=[gauge[0], spin1[1], gauge[2]]
-                    )
-                    gauge[0] ^ spin2[0]
-                    gauge = tn.contractors.auto(
-                        [gauge, spin2], output_edge_order=[spin2[1], gauge[1], gauge[2]]
-                    )
-                gauge[0] ^ ket_gauge[0]
-                gauge[1] ^ ket_gauge[1]
-                gauge[2] ^ ket_gauge[2]
-                exp_val = tn.contractors.auto([gauge, ket_gauge]).tensor.data.item()
+                    bra = tn.Node(bra_, backend=self.backend)
+
+                out = [bra[0], bra[1], bra[2], bra[3], bra[4]]
+                bra[out_edge_dict[pair[0]]] ^ spin1[0]
+                out[out_edge_dict[pair[0]]] = spin1[1]
+                bra = tn.contractors.auto([bra, spin1], output_edge_order=out)
+                bra[out_edge_dict[pair[1]] + 2] ^ spin2[0]
+                out[out_edge_dict[pair[1]] + 2] = spin2[1]
+                bra = tn.contractors.auto([bra, spin2], output_edge_order=out)
+
+                bra[0] ^ ket[0]
+                bra[1] ^ ket[1]
+                bra[2] ^ ket[2]
+                bra[3] ^ ket[3]
+                bra[4] ^ ket[4]
+
+                exp_val = tn.contractors.auto([bra, ket]).tensor.data.item()
                 op_key = (
                     operators[0] + operators[1]
-                    if pair[0] > pair[1]
+                    if pair[0] < pair[1]
                     else operators[1] + operators[0]
                 )
                 expvals[op_key] = exp_val
