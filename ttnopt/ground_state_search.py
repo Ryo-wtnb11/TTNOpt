@@ -1,3 +1,5 @@
+from typing import List
+
 # ground_state_search.py
 from ttnopt.src import TreeTensorNetwork
 from ttnopt.src import GroundStateSearch
@@ -39,7 +41,6 @@ def ground_state_search():
     ham = hamiltonian(config.system)
 
     numerics = config.numerics
-    opt_structure = True if numerics.opt_structure else False
 
     path = (
         Path(config.output.dir)
@@ -58,37 +59,32 @@ def ground_state_search():
         else False
     )
 
-    u1_symmetry = (
-        True if not isinstance(numerics.U1_symmetry.magnetization, DotMap) else False
-    )
+    u1_symmetry = True if not isinstance(numerics.U1_symmetry, DotMap) else False
+
     if u1_symmetry and config.model.type == "XYZ":
         print("=" * 50)
         print("⚠️  Error: U1 symmetry is not supported for the XYZ model.")
         print("     Please set the U1 symmetry to False or change the model to XXZ.")
         print("=" * 50)
         exit()
-    if (u1_symmetry and not (isinstance(config.system.MF_X.h, DotMap))) or (
-        u1_symmetry and not (isinstance(config.system.MF_X.file, DotMap))
-    ):
+    if u1_symmetry and not (isinstance(config.system.MF_X, DotMap)):
         print("=" * 50)
         print("⚠️  Error: U1 symmetry is not allowed for the X magnetic field.")
         print("=" * 50)
         exit()
-    if (u1_symmetry and not (isinstance(config.system.MF_Y.h, DotMap))) or (
-        u1_symmetry and not (isinstance(config.system.MF_Y.file, DotMap))
-    ):
+    if u1_symmetry and not (isinstance(config.system.MF_Y, DotMap)):
         print("=" * 50)
         print("⚠️  Error: U1 symmetry is not allowed for the Y magnetic field.")
         print("=" * 50)
         exit()
-    if u1_symmetry and not isinstance(config.system.DM_X.file, DotMap):
+    if u1_symmetry and not isinstance(config.system.DM_X, DotMap):
         print("=" * 50)
         print(
             "⚠️  Error: U1 symmetry is not allowed for the X term of Dzyaloshinskii-Moriya interaction."
         )
         print("=" * 50)
         exit()
-    if u1_symmetry and not isinstance(config.system.DM_Y.file, DotMap):
+    if u1_symmetry and not isinstance(config.system.DM_Y, DotMap):
         print("=" * 50)
         print(
             "⚠️  Error: U1 symmetry is not allowed for the Y term of Dzyaloshinskii-Moriya interaction."
@@ -96,11 +92,24 @@ def ground_state_search():
         print("=" * 50)
         exit()
 
+    opt_structure = numerics.opt_structure.type
+    beta = (
+        numerics.opt_structure.beta
+        if isinstance(numerics.opt_structure.beta, List)
+        else [0.0, 0.0]
+    )
+    seed = (
+        numerics.opt_structure.seed
+        if isinstance(numerics.opt_structure.beta, int)
+        else 0
+    )
+    np.random.seed(seed)
+
     if u1_symmetry:
         gss = GroundStateSearchSparse(
             psi,
             ham,
-            numerics.U1_symmetry.magnetization,
+            numerics.U1_symmetry,
             init_bond_dim=numerics.initial_bond_dimension,
             max_bond_dim=numerics.max_bond_dimensions[0],
             energy_degeneracy_threshold=float(numerics.energy_degeneracy_threshold),
@@ -110,7 +119,7 @@ def ground_state_search():
             sz_sign = np.sign(gss.u1_num - gss.init_u1_num)
             sz_diff = abs(gss.u1_num - gss.init_u1_num) // 2
             gss.run(
-                opt_structure=False,
+                opt_structure=0,
                 max_num_sweep=sz_diff,
                 energy_convergence_threshold=0.0,
                 entanglement_convergence_threshold=0.0,
@@ -141,19 +150,19 @@ def ground_state_search():
                     numerics.entanglement_convergence_threshold
                 ),
                 max_num_sweep=max_num_sweep,
+                beta=beta,
             )
             print("Calculating the expectation values for the initial structure")
             # re-run the first iteration to save the expectation values
             gss.run(
-                opt_structure=False,
+                opt_structure=0,
                 max_num_sweep=1,
                 eval_onesite_expval=save_onesite_expval,
                 eval_twosite_expval=save_twosite_expval,
             )
-            opt_structure = False
         else:
             gss.run(
-                opt_structure=False,
+                opt_structure=0,
                 energy_convergence_threshold=float(
                     numerics.energy_convergence_threshold
                 ),
@@ -248,7 +257,7 @@ def ground_state_search():
             smp = np.array([gss.two_site_expval[pair]["S-S+"] for pair in pairs])
 
             df["SxSx"] = np.real((spp + spm + smp + smm) / 4.0)
-            df["SySy"] = np.real(-(spp - spm - smp + smm) / 4.0)
+            df["SySy"] = np.real((-spp + spm + smp - smm) / 4.0)
             df["SzSz"] = np.real(szz)
 
             df["SySz"] = np.real((spz - smz) / 2.0j)

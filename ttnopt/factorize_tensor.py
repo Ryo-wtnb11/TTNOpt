@@ -1,3 +1,4 @@
+from typing import List
 from ttnopt.src import TreeTensorNetwork
 from ttnopt.src import FactorizeTensor
 
@@ -43,33 +44,46 @@ def factorize_tensor():
             if not isinstance(numerics.initial_bond_dimension, DotMap):
                 init_bond_dim = int(numerics.initial_bond_dimension)
 
-            truncation_error = 1e-11
-            if not isinstance(numerics.truncation_error, DotMap):
-                truncation_error = float(numerics.truncation_error)
+            truncated_singularvalues = 0.0
+            if not isinstance(numerics.truncated_singularvalues, DotMap):
+                truncated_singularvalues = float(numerics.truncated_singularvalues)
 
             ft = FactorizeTensor(
                 psi,
                 max_bond_dim=init_bond_dim,
-                truncation_error=truncation_error,
             )
 
-            if not isinstance(numerics.opt_structure, DotMap):
-                if numerics.opt_structure:
+            if not isinstance(numerics.opt_structure.type, DotMap):
+                beta = (
+                    numerics.opt_structure.beta
+                    if isinstance(numerics.opt_structure.beta, List)
+                    else [0.0, 0.0]
+                )
+                seed = (
+                    numerics.opt_structure.seed
+                    if isinstance(numerics.opt_structure.beta, int)
+                    else 0
+                )
+                np.random.seed(seed)
+                if numerics.opt_structure.type:
                     max_num_sweep = 1
                     if not isinstance(numerics.max_num_sweep, DotMap):
                         max_num_sweep = numerics.max_num_sweep
                     ft.run(
-                        quantum_state,
+                        target=quantum_state,
                         opt_fidelity=False,
-                        opt_structure=True,
+                        opt_structure=numerics.opt_structure.type,
+                        beta=beta,
                         max_num_sweep=max_num_sweep,
+                        truncated_singularvalues=truncated_singularvalues,
                     )
                 else:
                     ft.run(
-                        quantum_state,
+                        target=quantum_state,
                         opt_fidelity=False,
-                        opt_structure=False,
+                        opt_structure=0,
                         max_num_sweep=1,
+                        truncated_singularvalues=truncated_singularvalues,
                     )
                 nodes_list = {}
                 for edge_id in ft.fidelity.keys():
@@ -112,12 +126,23 @@ def factorize_tensor():
 
             opt_fidelity = (
                 True
-                if not isinstance(numerics.fidelity.opt_structure, DotMap)
+                if not isinstance(numerics.fidelity.opt_structure.type, DotMap)
                 else False
             )
 
             if opt_fidelity:
-                opt_structure = True if numerics.fidelity.opt_structure == 1 else False
+                opt_structure = numerics.fidelity.opt_structure.type
+                beta = (
+                    numerics.fidelity.opt_structure.beta
+                    if isinstance(numerics.fidelity.opt_structure.beta, List)
+                    else [0.0, 0.0]
+                )
+                seed = (
+                    numerics.opt_structure.seed
+                    if isinstance(numerics.fidelity.opt_structure.beta, int)
+                    else 0
+                )
+                np.random.seed(seed)
                 for i, (max_bond_dim, max_num_sweep) in enumerate(
                     zip(
                         numerics.fidelity.max_bond_dimensions,
@@ -126,12 +151,14 @@ def factorize_tensor():
                 ):
                     ft.max_bond_dim = max_bond_dim
                     ft.run(
-                        quantum_state,
+                        target=quantum_state,
                         opt_fidelity=True,
                         opt_structure=opt_structure,
+                        beta=beta,
                         max_num_sweep=max_num_sweep,
+                        truncated_singularvalues=truncated_singularvalues,
                     )
-                    opt_structure = False
+                    opt_structure = 0
 
                     nodes_list = {}
                     for edge_id in ft.fidelity.keys():
@@ -216,23 +243,20 @@ def factorize_tensor():
         if not isinstance(numerics.initial_bond_dimension, DotMap):
             init_bond_dim = int(numerics.initial_bond_dimension)
 
-        truncation_error = 1e-11
-        if not isinstance(numerics.truncation_error, DotMap):
-            truncation_error = float(numerics.truncation_error)
+        truncated_singularvalues = 0.0
+        if not isinstance(numerics.truncated_singularvalues, DotMap):
+            truncated_singularvalues = float(numerics.truncated_singularvalues)
 
         ft = FactorizeTensor(
             psi,
             max_bond_dim=max_bond_dim,
-            truncation_error=truncation_error,
         )
 
-        quantum_state = np.load("./input_data/quantum_state_standard.npy")
-        quantum_state = quantum_state / np.linalg.norm(quantum_state)
         ft.run(
-            quantum_state,
             opt_fidelity=False,
-            opt_structure=True,
+            opt_structure=1,
             max_num_sweep=numerics.max_num_sweep,
+            truncated_singularvalues=truncated_singularvalues,
         )
         nodes_list = {}
         for edge_id in ft.error.keys():
@@ -252,7 +276,11 @@ def factorize_tensor():
                     tmp.append(node_id)
             nodes_list[edge_id] = tmp
             ft.error[edge_id] = 0.0
-            ft.bond_dim[edge_id] = quantum_state.shape[edge_id]
+            for t, edges in enumerate(ft.psi.edges):
+                if edge_id == edges[0]:
+                    ft.bond_dim[edge_id] = ft.psi.tensors[t].shape[0]
+                if edge_id == edges[1]:
+                    ft.bond_dim[edge_id] = ft.psi.tensors[t].shape[1]
 
         all_keys = set(nodes_list.keys())
         df = pd.DataFrame(
