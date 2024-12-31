@@ -59,7 +59,7 @@ def hamiltonian(config: DotMap):
     magnetic_field_X_indices = None
     magnetic_field_X = None
     if not isinstance(config.MF_X, DotMap):
-        if Path(config.MF_X).suffix == ".dat":
+        if Path(str(config.MF_X)).suffix == ".dat":
             magnetic_field_X_csv = pd.read_csv(config.MF_X, delimiter=",", header=None)
             magnetic_field_X_indices = magnetic_field_X_csv.iloc[:, 0].values
             magnetic_field_X = magnetic_field_X_csv.iloc[:, 1].values
@@ -67,12 +67,17 @@ def hamiltonian(config: DotMap):
             if isinstance(float(config.MF_X), float):
                 magnetic_field_X_indices = [i for i in range(config.N)]
                 magnetic_field_X = [config.MF_X] * config.N
+            else:
+                print("=" * 50)
+                print("⚠️  Error: MF_X should be .dat file or float.")
+                print("=" * 50)
+                exit()
 
     # magnetic_field_Y
     magnetic_field_Y_indices = None
     magnetic_field_Y = None
     if not isinstance(config.MF_Y, DotMap):
-        if Path(config.MF_Y).suffix == ".dat":
+        if Path(str(config.MF_Y)).suffix == ".dat":
             magnetic_field_Y_csv = pd.read_csv(config.MF_Y, delimiter=",", header=None)
             magnetic_field_Y_indices = magnetic_field_Y_csv.iloc[:, 0].values
             magnetic_field_Y = magnetic_field_Y_csv.iloc[:, 1].values
@@ -80,12 +85,17 @@ def hamiltonian(config: DotMap):
             if isinstance(float(config.MF_Y), float):
                 magnetic_field_Y_indices = [i for i in range(config.N)]
                 magnetic_field_Y = [config.MF_Y] * config.N
+            else:
+                print("=" * 50)
+                print("⚠️  Error: MF_Y should be .dat file or float.")
+                print("=" * 50)
+                exit()
 
     # magnetic_field_Z
     magnetic_field_Z_indices = None
     magnetic_field_Z = None
     if not isinstance(config.MF_Z, DotMap):
-        if Path(config.MF_Z).suffix == ".dat":
+        if Path(str(config.MF_Z)).suffix == ".dat":
             magnetic_field_Z_csv = pd.read_csv(config.MF_Z, delimiter=",", header=None)
             magnetic_field_Z_indices = magnetic_field_Z_csv.iloc[:, 0].values
             magnetic_field_Z = magnetic_field_Z_csv.iloc[:, 1].values
@@ -93,11 +103,16 @@ def hamiltonian(config: DotMap):
             if isinstance(float(config.MF_Z), float):
                 magnetic_field_Z_indices = [i for i in range(config.N)]
                 magnetic_field_Z = [config.MF_Z] * config.N
+            else:
+                print("=" * 50)
+                print("⚠️  Error: MF_Z should be .dat file or float.")
+                print("=" * 50)
+                exit()
 
     ion_anisotropy_indices = None
     ion_anisotropy = None
     if not isinstance(config.SIA, DotMap):
-        if Path(config.SIA).suffix == ".dat":
+        if Path(str(config.SIA)).suffix == ".dat":
             ion_anisotropy_csv = pd.read_csv(config.SIA, delimiter=",", header=None)
             ion_anisotropy_indices = ion_anisotropy_csv.iloc[:, 0].values
             ion_anisotropy = ion_anisotropy_csv.iloc[:, 1].values
@@ -105,6 +120,11 @@ def hamiltonian(config: DotMap):
             if isinstance(float(config.SIA), float):
                 ion_anisotropy_indices = [i for i in range(config.N)]
                 ion_anisotropy = [config.SIA] * config.N
+            else:
+                print("=" * 50)
+                print("⚠️  Error: SIA should be .dat file or float.")
+                print("=" * 50)
+                exit()
 
     # dzyaloshinskii_moriya_X
     dzyaloshinskii_moriya_X_indices = None
@@ -125,6 +145,11 @@ def hamiltonian(config: DotMap):
                 )
                 print("=" * 50)
                 exit()
+        else:
+            print("=" * 50)
+            print("⚠️  Error: DM_X should be .dat file.")
+            print("=" * 50)
+            exit()
 
     # dzyaloshinskii_moriya_Y
     dzyaloshinskii_moriya_Y_indices = None
@@ -145,6 +170,11 @@ def hamiltonian(config: DotMap):
                 )
                 print("=" * 50)
                 exit()
+        else:
+            print("=" * 50)
+            print("⚠️  Error: DM_Y should be .dat file.")
+            print("=" * 50)
+            exit()
 
     # dzyaloshinskii_moriya_Y
     dzyaloshinskii_moriya_Z_indices = None
@@ -165,6 +195,11 @@ def hamiltonian(config: DotMap):
                 )
                 print("=" * 50)
                 exit()
+        else:
+            print("=" * 50)
+            print("⚠️  Error: DM_Y should be .dat file.")
+            print("=" * 50)
+            exit()
 
     if config.model.type == "XXZ":
         if interaction_coefs.shape[1] == 2:

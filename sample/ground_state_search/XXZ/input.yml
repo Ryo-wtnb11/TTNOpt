@@ -18,7 +18,6 @@ numerics:
     entanglement_degeneracy_threshold: 0.01
     opt_structure:
         type: 1
-        temperature: [0.01, 0.001] # if type is 1, temperature is set by this values and structure is chosen stochastically. that is always 0 by default (select always minimum EE)..
 
 output:
     dir: data_nonopt

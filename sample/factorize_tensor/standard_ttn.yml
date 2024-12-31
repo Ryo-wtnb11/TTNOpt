@@ -4,7 +4,6 @@ numerics:
     fidelity:
         opt_structure:
             type: 1
-            beta: [0.04, 0.02]
         init_random: 0
         max_bond_dimensions: [4, 8, 16] # Maximum bond dimension for each repetition
         max_num_sweeps: [100, 50, 25]

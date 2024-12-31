@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Union, List
+from typing import Dict, Tuple, Union
 
 import numpy as np
 import tensornetwork as tn
@@ -70,7 +70,8 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
         eval_onesite_expval: bool = False,
         eval_twosite_expval: bool = False,
         sz_sign: int = 0,
-        beta: List[float] = [0.0, 0.0],
+        temperature: float = 0.0,
+        tau: int = 1,
     ):
         """Run Ground State Search algorithm using Sparse Tensor with total spin.
 
@@ -94,9 +95,10 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
 
         converged_num = 0
 
-        beta_values = np.linspace(beta[0], beta[1], max_num_sweep)
-
+        if tau == 0:
+            tau = max_num_sweep // 2
         for sweep_num in range(max_num_sweep):
+            temp = temperature * (2 ** (-sweep_num / tau))
             if converged_num > converged_count:
                 break
             # energy
@@ -156,7 +158,7 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
                     ground_state,
                     self.max_bond_dim,
                     opt_structure=opt_structure,
-                    beta=beta_values[sweep_num],
+                    temperature=temp,
                     epsilon=entanglement_convergence_threshold,
                     delta=self.entanglement_degeneracy_threshold,
                 )

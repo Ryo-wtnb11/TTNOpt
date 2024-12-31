@@ -366,14 +366,15 @@ class PhysicsEngine(TwoSiteUpdater):
                     if np.abs(e[0] - e_old) < np.max([1.0, np.abs(e)[0]]) * lanczos_tol:
                         d += 1
                     if j > dim_n or d > 3:
-                        max_e, _ = eigh_tridiagonal(
-                            np.real(alpha[: j + 1]),
-                            np.real(beta[1 : j + 1]),
-                            select="a",
-                        )
-                        max_e = max_e[-1]
                         break
                     e_old = energy
+
+        max_e, _ = eigh_tridiagonal(
+            np.real(alpha[: j + 1]),
+            np.real(beta[1 : j + 1]),
+            select="a",
+        )
+        max_e = max_e[-1]
 
         v_tilda = np.array(v_tilda.flatten(), dtype=np.complex128)
         v = v_tilda[0] * psi_0.tensor
@@ -836,7 +837,12 @@ class PhysicsEngine(TwoSiteUpdater):
             eye_r = np.eye(
                 self.psi.edge_dims[self.psi.edges[tensor_id][1]], dtype=np.complex128
             )
-            block_hams.append(np.kron(eye_l, eye_r))
+            block_ham = tn.ncon(
+                [eye_l, eye_r],
+                [["-b0", "-k0"], ["-b1", "-k1"]],
+                out_order=["-b0", "-b1", "-k0", "-k1"],
+            )
+            block_hams.append(block_ham)
 
         block_hams = np.sum(block_hams, axis=0)
         return block_hams
@@ -856,14 +862,14 @@ class PhysicsEngine(TwoSiteUpdater):
                     ind -= 1
                 else:
                     break
-        if ind == 1:
-            print("-" * 50)
-            print("Fail on RG: bond dimension is too small.")
-            print(
-                "Set more larger bond dimension to run correctly on numerics.initial_bond_dimensions."
-            )
-            print("-" * 50)
-            exit()
+            if ind == 1:
+                print("-" * 50)
+                print("Fail on RG: bond dimension is too small.")
+                print(
+                    "Set more larger bond dimension to run correctly on numerics.initial_bond_dimensions."
+                )
+                print("-" * 50)
+                exit()
         isometry = eigenvectors[:, :ind]
         isometry = eigenvectors[:, :ind].reshape(lower_edge_dims + (ind,))
         self.psi.tensors[tensor_id] = isometry

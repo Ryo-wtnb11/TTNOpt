@@ -1,21 +1,18 @@
 system:
-    N: 15 # Number of spins
-    # Spin size configuration
-    spin_size: 1/2 # Spin size (used only if uniform is 1)
+    N: 15
+    spin_size: 1/2
 
-    # Exchange coupling for the XXZ or XYZ model
     model:
-        type: XXZ # Choose XXZ or XYZ
-        file: XXZ.dat # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
+        type: XXZ
+        file: XXZ.dat
 
 numerics:
     init_tree: 0
-    U1_symmetry: 1/2
+    U1_symmetry: 5/2
     opt_structure:
-        type: 2
-        # beta: [0.01, 1.0]
+        type: 1
     initial_bond_dimension: 4
-    max_bond_dimensions: [60, 80] # Maximum bond dimension for each repetition
+    max_bond_dimensions: [60, 80]
     max_num_sweeps: [20, 10]
     energy_convergence_threshold: 1e-11
     entanglement_convergence_threshold: 1e-10

@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple
 
 import numpy as np
 import tensornetwork as tn
@@ -60,7 +60,8 @@ class GroundStateSearch(PhysicsEngine):
         converged_count: int = 2,
         eval_onesite_expval: bool = False,
         eval_twosite_expval: bool = False,
-        beta: List[float] = [0.0, 0.0],
+        temperature: float = 0.0,
+        tau: int = 0,
     ):
         """Run DMRG algorithm.
 
@@ -84,9 +85,10 @@ class GroundStateSearch(PhysicsEngine):
 
         converged_num = 0
 
-        beta_values = np.linspace(beta[0], beta[1], max_num_sweep)
-
+        if tau == 0:
+            tau = max_num_sweep // 2 + 1
         for sweep_num in range(max_num_sweep):
+            temp = temperature * (2 ** (-sweep_num / tau))
             if converged_num > converged_count:
                 break
 
@@ -136,7 +138,7 @@ class GroundStateSearch(PhysicsEngine):
                     ground_state,
                     self.max_bond_dim,
                     opt_structure=opt_structure,
-                    beta=beta_values[sweep_num],
+                    temperature=temp,
                     operate_degeneracy=True,
                     epsilon=entanglement_convergence_threshold,
                     delta=self.entanglement_degeneracy_threshold,

@@ -1,5 +1,3 @@
-from typing import List
-
 # ground_state_search.py
 from ttnopt.src import TreeTensorNetwork
 from ttnopt.src import GroundStateSearch
@@ -29,7 +27,7 @@ def ground_state_search():
     config = DotMap(config)
 
     psi = TreeTensorNetwork.mps(config.system.N)
-    if config.numerics.init_tree:
+    if config.numerics.init_tree == 1:
         if config.system.N > 0 and (config.system.N & (config.system.N - 1)) == 0:
             psi = TreeTensorNetwork.tree(config.system.N)
         else:
@@ -92,18 +90,32 @@ def ground_state_search():
         print("=" * 50)
         exit()
 
-    opt_structure = numerics.opt_structure.type
-    beta = (
-        numerics.opt_structure.beta
-        if isinstance(numerics.opt_structure.beta, List)
-        else [0.0, 0.0]
+    opt_structure = (
+        numerics.opt_structure.type
+        if (isinstance(numerics.opt_structure.type, int))
+        else 0
+    )
+
+    temperature = (
+        float(numerics.opt_structure.temperature)
+        if (
+            isinstance(numerics.opt_structure.temperature, float)
+            or isinstance(numerics.opt_structure.temperature, int)
+        )
+        else 0.0
     )
     seed = (
         numerics.opt_structure.seed
-        if isinstance(numerics.opt_structure.beta, int)
+        if isinstance(numerics.opt_structure.seed, int)
         else 0
     )
     np.random.seed(seed)
+
+    tau = (
+        numerics.opt_structure.tau
+        if isinstance(numerics.opt_structure.tau, int)
+        else numerics.max_bond_dimensions[0] // 2
+    )
 
     if u1_symmetry:
         gss = GroundStateSearchSparse(
@@ -140,7 +152,7 @@ def ground_state_search():
         zip(numerics.max_bond_dimensions, numerics.max_num_sweeps)
     ):
         gss.max_bond_dim = max_bond_dim
-        if opt_structure:
+        if i == 0:
             gss.run(
                 opt_structure=opt_structure,
                 energy_convergence_threshold=float(
@@ -150,7 +162,8 @@ def ground_state_search():
                     numerics.entanglement_convergence_threshold
                 ),
                 max_num_sweep=max_num_sweep,
-                beta=beta,
+                temperature=temperature,
+                tau=tau,
             )
             print("Calculating the expectation values for the initial structure")
             # re-run the first iteration to save the expectation values
@@ -160,6 +173,10 @@ def ground_state_search():
                 eval_onesite_expval=save_onesite_expval,
                 eval_twosite_expval=save_twosite_expval,
             )
+            edges = []
+            for es in gss.psi.edges:
+                print(es)
+            exit()
         else:
             gss.run(
                 opt_structure=0,
