@@ -1,4 +1,4 @@
-from typing import Dict, Union, List
+from typing import Dict, Union
 
 import numpy as np
 import tensornetwork as tn
@@ -21,7 +21,6 @@ class FactorizeTensor(DataEngine):
     def __init__(
         self,
         psi: TreeTensorNetwork,
-        target: Union[np.ndarray, None] = None,
         max_bond_dim: int = 16,
     ):
         """Initialize a FactorizeTensor object.
@@ -31,7 +30,6 @@ class FactorizeTensor(DataEngine):
             target (np.ndarray): Target tensor.
             init_bond_dim (int, optional): Initial bond dimension. Defaults to 4.
             max_bond_dim (int, optional): Maximum bond dimension. Defaults to 16.
-            truncated_singularvalues (float, optional): Maximum truncation error. Defaults to 1e-11.
         """
         self.entanglement: Dict[int, float] = {}
         self.fidelity: Dict[int, float] = {}
@@ -41,15 +39,16 @@ class FactorizeTensor(DataEngine):
 
     def run(
         self,
-        target=None,
+        target: Union[np.ndarray, None] = None,
         opt_fidelity=False,
-        opt_structure=False,
+        opt_structure=0,
         fidelity_convergence_threshold=1e-8,
         entanglement_convergence_threshold=1e-8,
         max_num_sweep=5,
         converged_count=2,
-        truncated_singularvalues=0.0,
-        beta: List[float] = [0.0, 0.0],
+        max_truncation_error=0.0,
+        temperature: float = 0.0,
+        tau: int = 0,
     ):
         """Run FactorizingTensor algorithm.
 
@@ -61,7 +60,7 @@ class FactorizeTensor(DataEngine):
             entanglement_convergence_threshold (float, optional): Entanglement entropy threshold for automatic optimization. Defaults to 1e-8.
             max_num_sweep (int, optional): Maximum number of sweeps. Defaults to 5.
             converged_count (int, optional): Converged count. Defaults to 2.
-            truncated_singularvalues (float, optimal): .
+            max_truncation_error (float, optimal): .
         """
 
         _ee_at_edge: Dict[int, float] = {}
@@ -75,8 +74,8 @@ class FactorizeTensor(DataEngine):
 
         converged_num = 0
 
-        beta_values = np.linspace(beta[0], beta[1], max_num_sweep)
         for sweep_num in range(max_num_sweep):
+            temp = temperature * (2 ** (-sweep_num / tau))
             if converged_num > converged_count:
                 break
 
@@ -129,9 +128,9 @@ class FactorizeTensor(DataEngine):
                     new_tensor,
                     self.max_bond_dim,
                     opt_structure=opt_structure,
-                    beta=beta_values[sweep_num],
+                    temperature=temp,
                     operate_degeneracy=False,
-                    truncated_singularvalues=truncated_singularvalues,
+                    max_truncation_error=max_truncation_error,
                 )
 
                 self.psi.tensors[selected_tensor_id] = u
@@ -159,8 +158,6 @@ class FactorizeTensor(DataEngine):
                     )
                     print("Fidelity:", fidelity)
                     _fidelity_at_edge[self.psi.canonical_center_edge_id] = fidelity
-                else:
-                    print("Error:", error)
                 ee = self.entanglement_entropy(probability)
                 _ee_at_edge[self.psi.canonical_center_edge_id] = ee
                 ee_dict = self.entanglement_entropy_at_physical_bond(

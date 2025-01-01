@@ -127,7 +127,7 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         operate_degeneracy=False,
         epsilon=1e-8,
         delta=0.1,
-        truncated_singularvalues=0.0,
+        max_truncation_error=0.0,
         temperature=0.0,
         e=1e-13,
     ):
@@ -167,10 +167,10 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
                 p_ = np.diagonal(s_.get_tensor())
                 ps.append(p_)
                 ind = np.min([max_bond_dim, len(p_)])
-                if truncated_singularvalues > 0.0:
-                    p_max = p[0]
+                if max_truncation_error > 0.0:
+                    p_max = p_[0]
                     for i in range(1, ind):
-                        if p[i] / p_max < truncated_singularvalues:
+                        if p_[i] / p_max < max_truncation_error:
                             ind = i
                             break
                 if operate_degeneracy:
@@ -199,7 +199,7 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
                 candidate_index = np.argmin(errors)
                 if (
                     np.isclose(errors[candidate_index], errors[0], atol=1e-14)
-                    or truncated_singularvalues > 0.0
+                    or max_truncation_error > 0.0
                 ):
                     candidate_index = np.argmin(ees)
 
@@ -207,6 +207,7 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
                 candidate_index = 0
             edge_order = candidates[candidate_index]
             p = ps[candidate_index]
+            ind = inds[candidate_index]
         # Degeneracy
         a = psi[edge_order[0]]
         b = psi[edge_order[1]]

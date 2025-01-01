@@ -33,6 +33,13 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
             p = s.tensor.data
             p = np.sort(p)[::-1]
             p = p[p > 0.0]
+            ind = np.min([max_bond_dim, len(p)])
+            if ind < len(p):
+                while ind > 1:
+                    if (np.abs(p[ind] - p[ind - 1]) / (p[ind - 1] + e)) < delta:
+                        ind -= 1
+                    else:
+                        break
         else:
             candidates = [[0, 1, 2, 3], [2, 1, 0, 3], [0, 2, 1, 3]]
             candidate_index = 0
@@ -53,9 +60,9 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
                 ps.append(p_)
                 # diagonal
                 ind = np.min([max_bond_dim, len(p_)])
-                if ind < len(p):
+                if ind < len(p_):
                     while ind > 1:
-                        if (np.abs(p[ind] - p[ind - 1]) / p[ind]) < delta:
+                        if (np.abs(p_[ind] - p_[ind - 1]) / p_[ind]) < delta:
                             ind -= 1
                         else:
                             break
@@ -81,6 +88,7 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
                 candidate_index = 0
             edge_order = candidates[candidate_index]
             p = ps[candidate_index]
+            ind = inds[candidate_index]
 
         a = psi_last[edge_order[0]]
         b = psi_last[edge_order[1]]

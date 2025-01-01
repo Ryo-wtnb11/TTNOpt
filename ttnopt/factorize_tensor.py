@@ -1,4 +1,3 @@
-from typing import List
 from ttnopt.src import TreeTensorNetwork
 from ttnopt.src import FactorizeTensor
 
@@ -23,68 +22,186 @@ def factorize_tensor():
     config = DotMap(config)
     numerics = config.numerics
 
-    path = Path(config.output.dir)
+    path = (
+        Path(config.output.dir)
+        if not isinstance(config.output.dir, DotMap)
+        else Path("./")
+    )
     os.makedirs(path, exist_ok=True)
 
-    if not isinstance(config.target, DotMap):
-        if not os.path.exists(str(config.target)):
-            raise FileNotFoundError(f"{str(config.target)} does not exist.")
-        else:
-            quantum_state = np.load(config.target)
-            state_norm = np.linalg.norm(quantum_state)
-            quantum_state = quantum_state / state_norm
-            N = len(quantum_state.shape)
-            psi = TreeTensorNetwork.mps(
-                N,
-                target=quantum_state,
-                max_bond_dimension=numerics.initial_bond_dimension,
+    if isinstance(config.target.tensor, DotMap):
+        print("=" * 50)
+        print("⚠️  Error:")
+        print("     Please set file or folder of the target.")
+        print("=" * 50)
+        exit()
+    if not os.path.exists(str(config.target.tensor)):
+        print("=" * 50)
+        print("⚠️  Error:")
+        print("     Please guarantee the file or folder of the target exist.")
+        print("=" * 50)
+        exit()
+
+    save_tensors = (
+        config.output.tensors
+        if not isinstance(config.output.tensors, DotMap)
+        else False
+    )
+
+    if os.path.isfile(str(config.target.tensor)):
+        quantum_state = np.load(config.target.tensor)
+        state_norm = np.linalg.norm(quantum_state)
+        quantum_state = quantum_state / state_norm
+        N = len(quantum_state.shape)
+        psi = TreeTensorNetwork.mps(
+            N,
+            target=quantum_state,
+            max_bond_dimension=numerics.initial_bond_dimension,
+        )
+
+        init_bond_dim = 4
+        if not isinstance(numerics.initial_bond_dimension, DotMap):
+            init_bond_dim = int(numerics.initial_bond_dimension)
+
+        max_truncation_error = 0.0
+        if not isinstance(numerics.max_truncation_error, DotMap):
+            max_truncation_error = float(numerics.max_truncation_error)
+
+        ft = FactorizeTensor(
+            psi,
+            max_bond_dim=init_bond_dim,
+        )
+
+        if not isinstance(numerics.opt_structure.type, DotMap):
+            temperature = (
+                float(numerics.opt_structure.temperature)
+                if (
+                    isinstance(numerics.opt_structure.temperature, float)
+                    or isinstance(numerics.opt_structure.temperature, int)
+                )
+                else 0.0
+            )
+            seed = (
+                numerics.opt_structure.seed
+                if isinstance(numerics.opt_structure.seed, int)
+                else 0
+            )
+            np.random.seed(seed)
+
+            tau = (
+                numerics.opt_structure.tau
+                if isinstance(numerics.opt_structure.tau, int)
+                else numerics.max_bond_dimension // 2
             )
 
-            init_bond_dim = 4
-            if not isinstance(numerics.initial_bond_dimension, DotMap):
-                init_bond_dim = int(numerics.initial_bond_dimension)
+            if numerics.opt_structure.type:
+                max_num_sweep = 1
+                if not isinstance(numerics.max_num_sweep, DotMap):
+                    max_num_sweep = numerics.max_num_sweep
+                ft.run(
+                    target=quantum_state,
+                    opt_fidelity=False,
+                    opt_structure=numerics.opt_structure.type,
+                    temperature=temperature,
+                    tau=tau,
+                    max_num_sweep=max_num_sweep,
+                    max_truncation_error=max_truncation_error,
+                )
+            else:
+                ft.run(
+                    target=quantum_state,
+                    opt_fidelity=False,
+                    opt_structure=0,
+                    max_num_sweep=1,
+                    max_truncation_error=max_truncation_error,
+                )
+            nodes_list = {}
+            for edge_id in ft.fidelity.keys():
+                tmp = []
+                for node_id, edges in enumerate(psi.edges):
+                    node_id += N
+                    if edge_id in edges:
+                        tmp.append(node_id)
+                nodes_list[edge_id] = tmp
 
-            truncated_singularvalues = 0.0
-            if not isinstance(numerics.truncated_singularvalues, DotMap):
-                truncated_singularvalues = float(numerics.truncated_singularvalues)
+            for edge_id in psi.physical_edges:
+                tmp = []
+                tmp.append(edge_id)
+                for node_id, edges in enumerate(psi.edges):
+                    node_id += N
+                    if edge_id in edges:
+                        tmp.append(node_id)
+                nodes_list[edge_id] = tmp
+                ft.fidelity[edge_id] = 0.0
+                ft.error[edge_id] = 0.0
 
-            ft = FactorizeTensor(
-                psi,
-                max_bond_dim=init_bond_dim,
+            all_keys = set(nodes_list.keys())
+            df = pd.DataFrame(
+                [nodes_list[k] for k in all_keys],
+                columns=["node1", "node2"],
+                index=None,
+            )
+            df["entanglement"] = [ft.entanglement[k] for k in all_keys]
+            df["fidelity"] = [ft.fidelity[k] for k in all_keys]
+            df["error"] = [ft.error[k] for k in all_keys]
+            df.to_csv(path / "basic.csv", header=True, index=None)
+
+        np.savetxt(path / "graph.dat", ft.psi.edges, fmt="%d", delimiter=",")
+        if save_tensors:
+            file_psi = path / "tensors_info"
+            os.makedirs(file_psi, exist_ok=True)
+            for i, iso in enumerate(ft.psi.tensors):
+                np.save(file_psi / f"tensor{i}.npy", iso)
+            np.save(file_psi / "singular_values.npy", ft.psi.gauge_tensor)
+            np.save(file_psi / "norm.npy", state_norm)
+
+        opt_fidelity = (
+            True
+            if not isinstance(numerics.fidelity.opt_structure.type, DotMap)
+            else False
+        )
+
+        if opt_fidelity:
+            opt_structure = numerics.fidelity.opt_structure.type
+            temperature = (
+                float(numerics.fidelity.opt_structure.temperature)
+                if (
+                    isinstance(numerics.fidelity.opt_structure.temperature, float)
+                    or isinstance(numerics.fidelity.opt_structure.temperature, int)
+                )
+                else 0.0
+            )
+            seed = (
+                numerics.opt_structure.seed
+                if isinstance(numerics.fidelity.opt_structure.seed, int)
+                else 0
+            )
+            np.random.seed(seed)
+
+            tau = (
+                numerics.fidelity.opt_structure.tau
+                if isinstance(numerics.fidelity.opt_structure.tau, int)
+                else numerics.fidelity.max_bond_dimensions[0] // 2
             )
 
-            if not isinstance(numerics.opt_structure.type, DotMap):
-                beta = (
-                    numerics.opt_structure.beta
-                    if isinstance(numerics.opt_structure.beta, List)
-                    else [0.0, 0.0]
+            for i, (max_bond_dim, max_num_sweep) in enumerate(
+                zip(
+                    numerics.fidelity.max_bond_dimensions,
+                    numerics.fidelity.max_num_sweeps,
                 )
-                seed = (
-                    numerics.opt_structure.seed
-                    if isinstance(numerics.opt_structure.beta, int)
-                    else 0
+            ):
+                ft.max_bond_dim = max_bond_dim
+                ft.run(
+                    target=quantum_state,
+                    opt_fidelity=True,
+                    opt_structure=opt_structure,
+                    temperature=temperature,
+                    tau=tau,
+                    max_num_sweep=max_num_sweep,
+                    max_truncation_error=max_truncation_error,
                 )
-                np.random.seed(seed)
-                if numerics.opt_structure.type:
-                    max_num_sweep = 1
-                    if not isinstance(numerics.max_num_sweep, DotMap):
-                        max_num_sweep = numerics.max_num_sweep
-                    ft.run(
-                        target=quantum_state,
-                        opt_fidelity=False,
-                        opt_structure=numerics.opt_structure.type,
-                        beta=beta,
-                        max_num_sweep=max_num_sweep,
-                        truncated_singularvalues=truncated_singularvalues,
-                    )
-                else:
-                    ft.run(
-                        target=quantum_state,
-                        opt_fidelity=False,
-                        opt_structure=0,
-                        max_num_sweep=1,
-                        truncated_singularvalues=truncated_singularvalues,
-                    )
+                opt_structure = 0
+
                 nodes_list = {}
                 for edge_id in ft.fidelity.keys():
                     tmp = []
@@ -104,6 +221,7 @@ def factorize_tensor():
                     nodes_list[edge_id] = tmp
                     ft.fidelity[edge_id] = 0.0
                     ft.error[edge_id] = 0.0
+                    ft.bond_dim[edge_id] = quantum_state.shape[edge_id]
 
                 all_keys = set(nodes_list.keys())
                 df = pd.DataFrame(
@@ -114,123 +232,46 @@ def factorize_tensor():
                 df["entanglement"] = [ft.entanglement[k] for k in all_keys]
                 df["fidelity"] = [ft.fidelity[k] for k in all_keys]
                 df["error"] = [ft.error[k] for k in all_keys]
-                df.to_csv(path / "basic.csv", header=True, index=None)
+                df["bond"] = [ft.bond_dim[k] for k in all_keys]
 
-            file_psi = path / "tensors"
-            os.makedirs(file_psi, exist_ok=True)
-            for i, iso in enumerate(ft.psi.tensors):
-                np.save(file_psi / f"isometry{i}.npy", iso)
-            np.save(file_psi / "singular_values.npy", ft.psi.gauge_tensor)
-            np.save(file_psi / "norm.npy", state_norm)
-            np.savetxt(file_psi / "edges.dat", ft.psi.edges, fmt="%d", delimiter=",")
+                path_ = path / f"run{i + 1}"
+                os.makedirs(path_, exist_ok=True)
+                df.to_csv(path_ / "basic.csv", header=True, index=None)
 
-            opt_fidelity = (
-                True
-                if not isinstance(numerics.fidelity.opt_structure.type, DotMap)
-                else False
-            )
-
-            if opt_fidelity:
-                opt_structure = numerics.fidelity.opt_structure.type
-                beta = (
-                    numerics.fidelity.opt_structure.beta
-                    if isinstance(numerics.fidelity.opt_structure.beta, List)
-                    else [0.0, 0.0]
+                np.savetxt(
+                    path_ / "graph.dat",
+                    ft.psi.edges,
+                    fmt="%d",
+                    delimiter=",",
                 )
-                seed = (
-                    numerics.opt_structure.seed
-                    if isinstance(numerics.fidelity.opt_structure.beta, int)
-                    else 0
-                )
-                np.random.seed(seed)
-                for i, (max_bond_dim, max_num_sweep) in enumerate(
-                    zip(
-                        numerics.fidelity.max_bond_dimensions,
-                        numerics.fidelity.max_num_sweeps,
-                    )
-                ):
-                    ft.max_bond_dim = max_bond_dim
-                    ft.run(
-                        target=quantum_state,
-                        opt_fidelity=True,
-                        opt_structure=opt_structure,
-                        beta=beta,
-                        max_num_sweep=max_num_sweep,
-                        truncated_singularvalues=truncated_singularvalues,
-                    )
-                    opt_structure = 0
-
-                    nodes_list = {}
-                    for edge_id in ft.fidelity.keys():
-                        tmp = []
-                        for node_id, edges in enumerate(psi.edges):
-                            node_id += N
-                            if edge_id in edges:
-                                tmp.append(node_id)
-                        nodes_list[edge_id] = tmp
-
-                    for edge_id in psi.physical_edges:
-                        tmp = []
-                        tmp.append(edge_id)
-                        for node_id, edges in enumerate(psi.edges):
-                            node_id += N
-                            if edge_id in edges:
-                                tmp.append(node_id)
-                        nodes_list[edge_id] = tmp
-                        ft.fidelity[edge_id] = 0.0
-                        ft.error[edge_id] = 0.0
-                        ft.bond_dim[edge_id] = quantum_state.shape[edge_id]
-
-                    all_keys = set(nodes_list.keys())
-                    df = pd.DataFrame(
-                        [nodes_list[k] for k in all_keys],
-                        columns=["node1", "node2"],
-                        index=None,
-                    )
-                    df["entanglement"] = [ft.entanglement[k] for k in all_keys]
-                    df["fidelity"] = [ft.fidelity[k] for k in all_keys]
-                    df["error"] = [ft.error[k] for k in all_keys]
-                    df["bond"] = [ft.bond_dim[k] for k in all_keys]
-
-                    path_ = path / f"run{i + 1}"
-                    os.makedirs(path_, exist_ok=True)
-                    df.to_csv(path_ / "basic.csv", header=True, index=None)
-
-                    file_psi = Path(path_) / "tensors"
+                if save_tensors:
+                    file_psi = Path(path_) / "tensors_info"
                     os.makedirs(file_psi, exist_ok=True)
                     for i, iso in enumerate(ft.psi.tensors):
                         np.save(file_psi / f"isometry{i}.npy", iso)
                     np.save(file_psi / "singular_values.npy", ft.psi.gauge_tensor)
                     np.save(file_psi / "norm.npy", state_norm)
-                    np.savetxt(
-                        file_psi / "edges.dat",
-                        ft.psi.edges,
-                        fmt="%d",
-                        delimiter=",",
-                    )
 
-    elif not isinstance(config.target.dir, DotMap):
-        if not os.path.exists(str(config.target.dir)):
-            raise FileNotFoundError(f"{str(config.target.dir)} does not exist.")
-        if not isinstance(config.target.tensors_name, str):
-            raise ValueError("Please specify the name of tensor files.")
-        input_path = Path(config.target.dir)
-        isometries = list(input_path.glob(f"{config.target.tensors_name}*.npy"))
+    elif os.path.isdir(str(config.target.tensor)):
+        input_path = Path(config.target.tensor)
+        isometries = list(input_path.glob("isometry*.npy"))
         if isometries == []:
             raise FileNotFoundError(
-                f"No files found files named as {str(config.target.tensors_name)} in {str(config.target.dir)}"
+                f"No files found files named as 'tensor' in {str(config.target.tensor)}"
             )
-        isometries.sort(
-            key=lambda x: int(x.stem.split(f"{config.target.tensors_name}")[-1])
-        )
+        isometries.sort(key=lambda x: int(x.stem.split("isometry")[-1]))
         isometries = [np.load(iso) for iso in isometries]
         singular_values = np.load(input_path / "singular_values.npy")
         state_norm = np.load(input_path / "norm.npy")
-        if not isinstance(config.target.graph_file, str):
-            raise ValueError("Please specify the name of connectivity file")
-        edges = pd.read_csv(
-            input_path / config.target.graph_file, delimiter=",", header=None
-        ).values
+        graph_file = config.target.graph
+        if os.path.isfile(str(config.target.graph)):
+            edges = pd.read_csv(graph_file, delimiter=",", header=None).values
+        else:
+            print("=" * 50)
+            print("⚠️  Error:")
+            print("     target.graph is must be graph file.")
+            print("=" * 50)
+            exit()
         edges = [list(edge.tolist()) for edge in edges]
         psi = TreeTensorNetwork(
             edges, tensors=isometries, gauge_tensor=singular_values, norm=state_norm
@@ -243,20 +284,45 @@ def factorize_tensor():
         if not isinstance(numerics.initial_bond_dimension, DotMap):
             init_bond_dim = int(numerics.initial_bond_dimension)
 
-        truncated_singularvalues = 0.0
-        if not isinstance(numerics.truncated_singularvalues, DotMap):
-            truncated_singularvalues = float(numerics.truncated_singularvalues)
+        max_truncation_error = 0.0
+        if not isinstance(numerics.max_truncation_error, DotMap):
+            max_truncation_error = float(numerics.max_truncation_error)
 
         ft = FactorizeTensor(
             psi,
             max_bond_dim=max_bond_dim,
         )
 
+        opt_structure = numerics.fidelity.opt_structure.type
+
+        temperature = (
+            float(numerics.opt_structure.temperature)
+            if (
+                isinstance(numerics.opt_structure.temperature, float)
+                or isinstance(numerics.opt_structure.temperature, int)
+            )
+            else 0.0
+        )
+        seed = (
+            numerics.opt_structure.seed
+            if isinstance(numerics.opt_structure.seed, int)
+            else 0
+        )
+        np.random.seed(seed)
+
+        tau = (
+            numerics.opt_structure.tau
+            if isinstance(numerics.opt_structure.tau, int)
+            else numerics.max_num_sweep // 2
+        )
+
         ft.run(
             opt_fidelity=False,
-            opt_structure=1,
+            opt_structure=opt_structure,
+            temperature=temperature,
+            tau=tau,
             max_num_sweep=numerics.max_num_sweep,
-            truncated_singularvalues=truncated_singularvalues,
+            max_truncation_error=max_truncation_error,
         )
         nodes_list = {}
         for edge_id in ft.error.keys():
@@ -291,14 +357,17 @@ def factorize_tensor():
         df["entanglement"] = [ft.entanglement[k] for k in all_keys]
         df["error"] = [ft.error[k] for k in all_keys]
         df["bond"] = [ft.bond_dim[k] for k in all_keys]
-        df.to_csv(path / "basic.csv", header=True, index=None)
 
-        file_psi = path / "tensors"
-        os.makedirs(file_psi, exist_ok=True)
-        for i, iso in enumerate(ft.psi.tensors):
-            np.save(file_psi / f"isometry{i}.npy", iso)
-        np.save(file_psi / "singular_values.npy", ft.psi.gauge_tensor)
-        np.save(file_psi / "norm.npy", state_norm)
-        np.savetxt(file_psi / "edges.dat", ft.psi.edges, fmt="%d", delimiter=",")
+        path
+        df.to_csv(path / "basic.csv", header=True, index=None)
+        np.savetxt(path / "graph.dat", ft.psi.edges, fmt="%d", delimiter=",")
+
+        if save_tensors:
+            file_psi = path / "tensors_info"
+            os.makedirs(file_psi, exist_ok=True)
+            for i, iso in enumerate(ft.psi.tensors):
+                np.save(file_psi / f"isometry{i}.npy", iso)
+            np.save(file_psi / "singular_values.npy", ft.psi.gauge_tensor)
+            np.save(file_psi / "norm.npy", state_norm)
 
     return 0

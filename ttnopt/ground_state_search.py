@@ -45,6 +45,7 @@ def ground_state_search():
         if not isinstance(config.output.dir, DotMap)
         else Path("./")
     )
+    os.makedirs(path, exist_ok=True)
 
     save_onesite_expval = (
         config.output.single_site
@@ -173,10 +174,6 @@ def ground_state_search():
                 eval_onesite_expval=save_onesite_expval,
                 eval_twosite_expval=save_twosite_expval,
             )
-            edges = []
-            for es in gss.psi.edges:
-                print(es)
-            exit()
         else:
             gss.run(
                 opt_structure=0,
@@ -224,6 +221,7 @@ def ground_state_search():
         path_ = path / f"run{i + 1}"
         os.makedirs(path_, exist_ok=True)
         df.to_csv(path_ / "basic.csv", header=True, index=None)
+        np.savetxt(path_ / "graph.dat", gss.psi.edges, fmt="%d", delimiter=",")
 
         if save_onesite_expval:
             df = pd.DataFrame(psi.physical_edges, columns=["site"], index=None)

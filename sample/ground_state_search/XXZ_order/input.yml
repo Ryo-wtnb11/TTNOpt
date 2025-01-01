@@ -12,6 +12,7 @@ numerics:
     initial_bond_dimension: 4
     max_bond_dimensions: [40, 80] # Maximum bond dimension for each repetition
     max_num_sweeps: [25, 10]
+    U1_symmetry: 0
     energy_convergence_threshold: 1e-11
     entanglement_convergence_threshold: 1e-10
     energy_degeneracy_threshold: 1e-13
