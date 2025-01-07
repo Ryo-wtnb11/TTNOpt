@@ -23,6 +23,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
+    'sphinxcontrib.bibtex',
 ]
 
 autodoc_member_order = 'groupwise'
@@ -30,7 +31,7 @@ autodoc_member_order = 'groupwise'
 templates_path = ['_templates']
 exclude_patterns = []
 
-
+bibtex_bibfiles = ['watanabe.bib']
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
