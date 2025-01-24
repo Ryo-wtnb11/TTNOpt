@@ -20,7 +20,7 @@ def calculate_f(index, cov, l):
     x_max = l/2
     space = (x_max - x_min) / 2**n
     x = np.array(index) * space + x_min
-    return np.exp(-np.dot(x, np.dot(np.linalg.inv(cov), x)))
+    return np.exp(-np.dot(x, np.dot(np.linalg.inv(cov), x))/2.0)
 
 def create_candidates(I_before, pdim, add_last=True):
     candidates = []

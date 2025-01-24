@@ -25,12 +25,10 @@ def plot(D, save_dir, max_ee=0.015):
 
     # read csv file
     df = pd.read_csv(f"{save_dir}/basic.csv")
-    print(df)
 
     # create networkx tree graph
     G = nx.Graph()
     nodes = set(np.concatenate([df["node1"].values, df["node2"].values]))
-    print(nodes)
     leaf_nodes, default_nodes = [], []
     for node in nodes:
         G.add_node(node, label=node)
