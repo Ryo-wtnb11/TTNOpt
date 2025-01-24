@@ -1,0 +1,12 @@
+target:
+    dir: normal_distribution_data
+    tensors_name: isometry
+    graph_file: edges.dat
+
+numerics:
+    opt_structure: 1
+    max_num_sweep: 20
+    truncation_error: 1e-8
+
+output:
+    dir: normal_distribution_data/after

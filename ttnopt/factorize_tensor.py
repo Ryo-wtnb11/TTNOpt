@@ -254,7 +254,7 @@ def factorize_tensor():
 
         ft.run(
             opt_fidelity=False,
-            opt_structure=1,
+            opt_structure=numerics.opt_structure,
             max_num_sweep=numerics.max_num_sweep,
             truncated_singularvalues=truncated_singularvalues,
         )

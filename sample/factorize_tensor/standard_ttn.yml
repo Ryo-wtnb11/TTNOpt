@@ -7,7 +7,7 @@ numerics:
             beta: [0.04, 0.02]
         init_random: 0
         max_bond_dimensions: [4, 8, 16] # Maximum bond dimension for each repetition
-        max_num_sweeps: [100, 50, 25]
+-        max_num_sweeps: [100, 50, 25]
         truncation_error: 0.0
         fidelity_convergence_threshold: 1e-10
         entanglement_convergence_threshold: 1e-14
