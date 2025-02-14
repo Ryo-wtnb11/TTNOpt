@@ -54,13 +54,13 @@ class GroundStateSearch(PhysicsEngine):
     def run(
         self,
         opt_structure: int = 0,
-        energy_convergence_threshold: float = 1e-10,
-        entanglement_convergence_threshold: float = 1e-10,
+        energy_convergence_threshold: float = 1e-8,
+        entanglement_convergence_threshold: float = 1e-8,
         max_num_sweep: int = 10,
         converged_count: int = 2,
         eval_onesite_expval: bool = False,
         eval_twosite_expval: bool = False,
-        beta: List[float] = [0.0, 0.0],
+        temperature: List[float] = [0.0, 0.0],
     ):
         """Run DMRG algorithm.
 

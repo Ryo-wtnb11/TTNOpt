@@ -91,18 +91,61 @@ def ground_state_search():
         )
         print("=" * 50)
         exit()
+    if u1_symmetry and not isinstance(config.system.SOD_X, DotMap):
+        print("=" * 50)
+        print(
+            "⚠️  Error: U1 symmetry is not allowed for the X term of symmetric off-diagonal exchange interaction."
+        )
+        print("=" * 50)
+        exit()
+    if u1_symmetry and not isinstance(config.system.SOD_Y, DotMap):
+        print("=" * 50)
+        print(
+            "⚠️  Error: U1 symmetry is not allowed for the Y term of symmetric off-diagonal exchange interaction."
+        )
+        print("=" * 50)
+        exit()
+    if u1_symmetry and not isinstance(config.system.SOD_Z, DotMap):
+        print("=" * 50)
+        print(
+            "⚠️  Error: U1 symmetry is not allowed for the Y term of symmetric off-diagonal exchange interaction."
+        )
+        print("=" * 50)
+        exit()
 
     opt_structure = numerics.opt_structure.type
-    beta = (
-        numerics.opt_structure.beta
-        if isinstance(numerics.opt_structure.beta, List)
+    temperature = (
+        numerics.opt_structure.temperature
+        if isinstance(numerics.opt_structure.temperature, List)
         else [0.0, 0.0]
     )
+
     seed = (
         numerics.opt_structure.seed
         if isinstance(numerics.opt_structure.beta, int)
         else 0
     )
+    if isinstance(numerics.energy_degeneracy_threshold, DotMap):
+        energy_degeneracy_threshold = 1.0e-8
+    else:
+        energy_degeneracy_threshold = float(numerics.energy_degeneracy_threshold)
+    if isinstance(numerics.entanglement_degeneracy_threshold, DotMap):
+        entanglement_degeneracy_threshold = 1.0e-8
+    else:
+        entanglement_degeneracy_threshold = float(
+            numerics.entanglement_degeneracy_threshold
+        )
+    if isinstance(numerics.energy_convergence_threshold):
+        energy_convergence_threshold = 1.0e-8
+    else:
+        energy_convergence_threshold = float(numerics.energy_convergence_threshold)
+    if isinstance(numerics.entanglement_convergence_threshold):
+        entanglement_convergence_threshold = 1.0e-8
+    else:
+        entanglement_convergence_threshold = float(
+            numerics.entanglement_convergence_threshold
+        )
+
     np.random.seed(seed)
 
     if u1_symmetry:
@@ -112,8 +155,8 @@ def ground_state_search():
             numerics.U1_symmetry,
             init_bond_dim=numerics.initial_bond_dimension,
             max_bond_dim=numerics.max_bond_dimensions[0],
-            energy_degeneracy_threshold=float(numerics.energy_degeneracy_threshold),
-            entanglement_degeneracy_threshold=numerics.entanglement_degeneracy_threshold,
+            energy_degeneracy_threshold=energy_degeneracy_threshold,
+            entanglement_degeneracy_threshold=entanglement_degeneracy_threshold,
         )
         if gss.init_u1_num != gss.u1_num:
             sz_sign = np.sign(gss.u1_num - gss.init_u1_num)
@@ -132,8 +175,8 @@ def ground_state_search():
             ham,
             init_bond_dim=numerics.initial_bond_dimension,
             max_bond_dim=numerics.initial_bond_dimension,
-            energy_degeneracy_threshold=float(numerics.energy_degeneracy_threshold),
-            entanglement_degeneracy_threshold=numerics.entanglement_degeneracy_threshold,
+            energy_degeneracy_threshold=energy_degeneracy_threshold,
+            entanglement_degeneracy_threshold=entanglement_degeneracy_threshold,
         )
 
     for i, (max_bond_dim, max_num_sweep) in enumerate(
@@ -143,12 +186,8 @@ def ground_state_search():
         if opt_structure:
             gss.run(
                 opt_structure=opt_structure,
-                energy_convergence_threshold=float(
-                    numerics.energy_convergence_threshold
-                ),
-                entanglement_convergence_threshold=float(
-                    numerics.entanglement_convergence_threshold
-                ),
+                energy_convergence_threshold=energy_convergence_threshold,
+                entanglement_convergence_threshold=entanglement_convergence_threshold,
                 max_num_sweep=max_num_sweep,
                 beta=beta,
             )
@@ -163,12 +202,8 @@ def ground_state_search():
         else:
             gss.run(
                 opt_structure=0,
-                energy_convergence_threshold=float(
-                    numerics.energy_convergence_threshold
-                ),
-                entanglement_convergence_threshold=float(
-                    numerics.entanglement_convergence_threshold
-                ),
+                energy_convergence_threshold=energy_convergence_threshold,
+                entanglement_convergence_threshold=entanglement_convergence_threshold,
                 max_num_sweep=max_num_sweep,
                 eval_onesite_expval=save_onesite_expval,
                 eval_twosite_expval=save_twosite_expval,

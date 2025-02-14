@@ -45,8 +45,8 @@ def factorize_tensor():
                 init_bond_dim = int(numerics.initial_bond_dimension)
 
             truncated_singularvalues = 0.0
-            if not isinstance(numerics.truncated_singularvalues, DotMap):
-                truncated_singularvalues = float(numerics.truncated_singularvalues)
+            if not isinstance(numerics.max_truncated_singularvalues, DotMap):
+                truncated_singularvalues = float(numerics.max_truncated_singularvalues)
 
             ft = FactorizeTensor(
                 psi,
@@ -244,8 +244,8 @@ def factorize_tensor():
             init_bond_dim = int(numerics.initial_bond_dimension)
 
         truncated_singularvalues = 0.0
-        if not isinstance(numerics.truncated_singularvalues, DotMap):
-            truncated_singularvalues = float(numerics.truncated_singularvalues)
+        if not isinstance(numerics.max_truncated_singularvalues, DotMap):
+            truncated_singularvalues = float(numerics.max_truncated_singularvalues)
 
         ft = FactorizeTensor(
             psi,
