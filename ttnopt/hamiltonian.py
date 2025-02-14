@@ -201,6 +201,54 @@ def hamiltonian(config: DotMap):
             print("=" * 50)
             exit()
 
+    # sod_x
+    sod_X_indices = None
+    sod_X = None
+    if not isinstance(config.SOD_X, DotMap):
+        if Path(config.SOD_X).suffix == ".dat":
+            sod_x_csv = pd.read_csv(config.SOD_X, delimiter=",", header=None)
+            sod_X_indices = sod_x_csv.iloc[:, :2].values
+            sod_X = sod_x_csv.iloc[:, 2:].values
+            if sod_X_indices.max() >= config.N:
+                print("=" * 50)
+                print(
+                    f"⚠️  Error: SOD_X interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
+                )
+                print("=" * 50)
+                exit()
+
+    # sod_y
+    sod_Y_indices = None
+    sod_Y = None
+    if not isinstance(config.SOD_Y, DotMap):
+        if Path(config.SOD_Y).suffix == ".dat":
+            sod_y_csv = pd.read_csv(config.SOD_Y, delimiter=",", header=None)
+            sod_Y_indices = sod_y_csv.iloc[:, :2].values
+            sod_Y = sod_y_csv.iloc[:, 2:].values
+            if sod_Y_indices.max() >= config.N:
+                print("=" * 50)
+                print(
+                    f"⚠️  Error: SOD_Y interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
+                )
+                print("=" * 50)
+                exit()
+
+    # sod_x
+    sod_Z_indices = None
+    sod_Z = None
+    if not isinstance(config.SOD_Z, DotMap):
+        if Path(config.SOD_Z).suffix == ".dat":
+            sod_z_csv = pd.read_csv(config.SOD_Z, delimiter=",", header=None)
+            sod_Z_indices = sod_z_csv.iloc[:, :2].values
+            sod_Z = sod_z_csv.iloc[:, 2:].values
+            if sod_Z_indices.max() >= config.N:
+                print("=" * 50)
+                print(
+                    f"⚠️  Error: SOD_Z interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
+                )
+                print("=" * 50)
+                exit()
+
     if config.model.type == "XXZ":
         if interaction_coefs.shape[1] == 2:
             hamiltonian = Hamiltonian(
@@ -223,6 +271,12 @@ def hamiltonian(config: DotMap):
                 dzyaloshinskii_moriya_Y=dzyaloshinskii_moriya_Y,
                 dzyaloshinskii_moriya_Z_indices=dzyaloshinskii_moriya_Z_indices,
                 dzyaloshinskii_moriya_Z=dzyaloshinskii_moriya_Z,
+                sod_X_indices=sod_X_indices,
+                sod_X=sod_X,
+                sod_Y_indices=sod_Y_indices,
+                sod_Y=sod_Y,
+                sod_Z_indices=sod_Z_indices,
+                sod_Z=sod_Z,
             )
         else:
             print("=" * 50)
@@ -251,6 +305,12 @@ def hamiltonian(config: DotMap):
                 dzyaloshinskii_moriya_Y=dzyaloshinskii_moriya_Y,
                 dzyaloshinskii_moriya_Z_indices=dzyaloshinskii_moriya_Z_indices,
                 dzyaloshinskii_moriya_Z=dzyaloshinskii_moriya_Z,
+                sod_X_indices=sod_X_indices,
+                sod_X=sod_X,
+                sod_Y_indices=sod_Y_indices,
+                sod_Y=sod_Y,
+                sod_Z_indices=sod_Z_indices,
+                sod_Z=sod_Z,
             )
         else:
             print("=" * 50)
