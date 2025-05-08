@@ -31,5 +31,7 @@ setup(
         "pydot",
         "pyyaml",
         "dotmap",
+        "matplotlib",
+        "scipy",
     ],
 )
