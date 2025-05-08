@@ -8,7 +8,7 @@ Creating Input Files
 ------------------------
 
 First, specify the model and parameters of the Hamiltonian and set up the computational method.  
-Each file should be written according to :ref:`file_format_gss`.
+Each file should be written according to the paper.
 
 Samples of the input files are provided in the `sample` directory.
 
@@ -27,4 +27,3 @@ Execution Results
 ------------------------
 
 The execution results are output to the specified folder.  
-For details about the output files, please refer to :ref:`file_format_gss_output` section.

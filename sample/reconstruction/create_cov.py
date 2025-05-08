@@ -1,5 +1,4 @@
 import numpy as np
-import random
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -60,7 +59,8 @@ def create_tree_distance_matrix(D, seed=0, save_dir=None):
     free_edges = [[0, 0], [0, 1]]
 
     while len(tree) < D-1:
-        edge = random.choice(free_edges)
+        #edge = random.choice(free_edges)
+        edge = free_edges[np.random.randint(len(free_edges))]
         free_edges.remove(edge)
         node, child = edge
         k = len(tree)
