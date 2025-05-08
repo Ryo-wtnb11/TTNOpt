@@ -9,7 +9,6 @@ setup(
     url="https://github.com/Watayo/TTNOpt",
     packages=find_packages(),
     zip_safe=False,
-    install_requires=[],
     python_requires=">=3.6",
     license="Apache-2.0",
     classifiers=[
