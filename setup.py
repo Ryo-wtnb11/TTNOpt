@@ -33,5 +33,6 @@ setup(
         "dotmap",
         "matplotlib",
         "scipy",
+        "pandas",
     ],
 )
