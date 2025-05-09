@@ -1,11 +1,11 @@
 target:
-    tensor: ./MPS_input/run1/tensors
-    graph: ./MPS_input/run1/tensors/edges.dat
+    tensor: MPS_/run1/tensors_info
+    graph: MPS_/run1/graph.dat
 numerics:
     opt_structure:
         type: 1
     max_num_sweep: 20
     max_truncation_error: 1e-14
 output:
-    dir: ReducedTTN
+    dir: MPS_reduced
     tensors: 1

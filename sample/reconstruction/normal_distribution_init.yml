@@ -1,10 +1,11 @@
 target:
-    dir: normal_distribution_data
+    tensor: normal_distribution_data
     tensors_name: isometry
-    graph_file: edges.dat
+    graph: normal_distribution_data/edges.dat
 
 numerics:
-    opt_structure: 0
+    opt_structure:
+        type: 0
     max_num_sweep: 1
     truncation_error: 1e-8
 

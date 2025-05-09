@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 np.random.seed(12345)
 
@@ -64,6 +65,7 @@ for batch in range(num_batches):
 quantum_state_standard = quantum_state_standard.reshape((2,) * (L * 3))
 quantum_state_interleaved = quantum_state_interleaved.reshape((2,) * (L * 3))
 
+os.makedirs("input_data", exist_ok=True)
 np.save("input_data/quantum_state_standard.npy", quantum_state_standard)
 np.save("input_data/quantum_state_interleaved.npy", quantum_state_interleaved)
 

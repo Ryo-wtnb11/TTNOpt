@@ -10,8 +10,6 @@ system:
 
 numerics:
     init_tree: 0
-    opt_structure:
-        type: 1
     initial_bond_dimension: 4
     max_bond_dimensions: [20] # Maximum bond dimension for each repetition
     max_num_sweeps: [50]
@@ -24,6 +22,6 @@ numerics:
         temperature: [0.01, 0.001] # if type is 1, temperature is set by this values and structure is chosen stochastically. that is always 0 by default (select always minimum EE)..
 
 output:
-    dir: MPS
+    dir: TTN
     single_site: 1
     two_site: 1

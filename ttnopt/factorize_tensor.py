@@ -293,7 +293,7 @@ def factorize_tensor():
             max_bond_dim=max_bond_dim,
         )
 
-        opt_structure = numerics.fidelity.opt_structure.type
+        opt_structure = numerics.opt_structure.type
 
         temperature = (
             float(numerics.opt_structure.temperature)
@@ -313,7 +313,7 @@ def factorize_tensor():
         tau = (
             numerics.opt_structure.tau
             if isinstance(numerics.opt_structure.tau, int)
-            else numerics.max_num_sweep // 2
+            else numerics.max_num_sweep // 2 + 1
         )
 
         ft.run(
