@@ -180,3 +180,5 @@ sample/factorize_tensor/standard_ttn_reduction.yml
 sample/factorize_tensor/test_ttn.yml
 sample/factorize_tensor/test_ttn_reduction.yml
 sample/reconstruction/normal_distribution_data/
+
+.python-version

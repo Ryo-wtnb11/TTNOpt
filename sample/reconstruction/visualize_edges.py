@@ -15,6 +15,9 @@ def plot(D, save_dir, max_ee=0.015):
 
     # settings
     edge_colormap = "GnBu"
+    edge_colormap_modified = mpl.colormaps.get_cmap("GnBu")
+    edge_colormap_modified = edge_colormap_modified(np.linspace(0.2, 1, 256))
+    edge_colormap = mpl.colors.LinearSegmentedColormap.from_list("GnBu_custom", edge_colormap_modified)
     figsize = (12, 10)
 
     # adjust size settings according to the number of qubits
@@ -25,12 +28,10 @@ def plot(D, save_dir, max_ee=0.015):
 
     # read csv file
     df = pd.read_csv(f"{save_dir}/basic.csv")
-    print(df)
 
     # create networkx tree graph
     G = nx.Graph()
     nodes = set(np.concatenate([df["node1"].values, df["node2"].values]))
-    print(nodes)
     leaf_nodes, default_nodes = [], []
     for node in nodes:
         G.add_node(node, label=node)
@@ -50,7 +51,6 @@ def plot(D, save_dir, max_ee=0.015):
     edge_weights = [G.edges[e]["weight"] for e in G.edges]
     ew_range = 0.0, max_ee
     enorm = mpl.colors.Normalize(*ew_range, clip=True)
-    edge_colormap = getattr(mpl.cm, edge_colormap)
     emapper = mpl.cm.ScalarMappable(norm=enorm, cmap=edge_colormap)
     edge_colors = [emapper.to_rgba(x) for x in edge_weights]
 
@@ -76,7 +76,7 @@ def plot(D, save_dir, max_ee=0.015):
     ax_l.yaxis.tick_left()
     ax_l.set(title="Entanglement\n entropy")
 
-    plt.savefig(f"{save_dir}/TTN.pdf")
+    plt.savefig(f"{save_dir}/TTN.pdf", transparent=True)
 
 
 plot(D, "normal_distribution_data/before", max_ee=0.015)

@@ -22,9 +22,9 @@ documentation for details.
    :maxdepth: 1
    :caption: Tutorials
 
-   tutorials/hierarchical
-   tutorials/decomposition
-   tutorials/network_optimization
+   tutorials/ground_state_search
+   tutorials/factorising
+   tutorials/reconstruction
 
 .. toctree::
    :maxdepth: 2
