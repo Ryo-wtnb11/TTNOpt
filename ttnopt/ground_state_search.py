@@ -140,11 +140,11 @@ def ground_state_search():
         entanglement_degeneracy_threshold = float(
             numerics.entanglement_degeneracy_threshold
         )
-    if isinstance(numerics.energy_convergence_threshold):
+    if isinstance(numerics.energy_convergence_threshold, DotMap):
         energy_convergence_threshold = 1.0e-8
     else:
         energy_convergence_threshold = float(numerics.energy_convergence_threshold)
-    if isinstance(numerics.entanglement_convergence_threshold):
+    if isinstance(numerics.entanglement_convergence_threshold, DotMap):
         entanglement_convergence_threshold = 1.0e-8
     else:
         entanglement_convergence_threshold = float(
@@ -169,11 +169,11 @@ def ground_state_search():
         entanglement_degeneracy_threshold = float(
             numerics.entanglement_degeneracy_threshold
         )
-    if isinstance(numerics.energy_convergence_threshold):
+    if isinstance(numerics.energy_convergence_threshold, DotMap):
         energy_convergence_threshold = 1.0e-8
     else:
         energy_convergence_threshold = float(numerics.energy_convergence_threshold)
-    if isinstance(numerics.entanglement_convergence_threshold):
+    if isinstance(numerics.entanglement_convergence_threshold, DotMap):
         entanglement_convergence_threshold = 1.0e-8
     else:
         entanglement_convergence_threshold = float(
