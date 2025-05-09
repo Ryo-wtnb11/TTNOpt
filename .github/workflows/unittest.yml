@@ -27,8 +27,8 @@ jobs:
               run: |
                   uv venv .venv
                   source .venv/bin/activate
-                  uv pip compile --extra dev > requirements.lock.txt
-                  uv pip sync requirements.lock.txt
+                  uv pip install --r pyproject.toml
+                  uv pip install --extra dev -r pyproject.toml
 
             - name: Run tests
               run: |
