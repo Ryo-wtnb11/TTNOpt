@@ -1,0 +1,29 @@
+[project]
+name = "TTNOpt"
+version = "0.1.0"
+requires-python = ">=3.9"
+
+dependencies = [
+  "numpy >= 1.24",
+  "tensornetwork",
+  "networkx",
+  "matplotlib",
+  "scipy",
+  "pydot",
+  "pyyaml",
+  "dotmap",
+  "pandas"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "mypy",
+  "coverage",
+  "types-PyYAML"
+]
+
+[build-system]
+requires = ["uv"]
+build-backend = "uv"

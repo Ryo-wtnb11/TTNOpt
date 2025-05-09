@@ -13,7 +13,7 @@ class TwoSiteUpdaterMixin:
     def entanglement_entropy(self, probability):
         el = probability**2 / np.sum(probability**2)
         el = el[el > 0.0]
-        ee = -np.sum(el * np.log2(el))
+        ee = -np.sum(el * np.log(el))
         return np.real(ee)
 
     def initial_distance(self):
@@ -127,8 +127,9 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         operate_degeneracy=False,
         epsilon=1e-8,
         delta=0.1,
-        truncated_singularvalues=0.0,
-        beta=0.0,
+        max_truncation_error=0.0,
+        temperature=0.0,
+        e=1e-13,
     ):
         edge_order = [0, 1, 2, 3]
         if opt_structure == 0:
@@ -138,10 +139,20 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
             d = psi[3]
             (u, s, v, _) = tn.split_node_full_svd(psi, [a, b], [c, d])
             p = np.diagonal(s.get_tensor())
+            ind = np.min([max_bond_dim, len(p)])
+            if operate_degeneracy:
+                if ind < len(p):
+                    while ind > 1:
+                        if (np.abs(p[ind] - p[ind - 1]) / (p[ind - 1] + e)) < delta:
+                            ind -= 1
+                        else:
+                            break
         else:
-            candidates = [[0, 1, 2, 3], [0, 2, 1, 3], [1, 2, 3, 0]]
+            candidates = [[0, 1, 2, 3], [2, 1, 0, 3], [0, 2, 1, 3]]
+
             candidate_index = 0
             ps = []
+            inds = []
             for edges in candidates:
                 psi_ = psi.copy()
                 a = psi_[edges[0]]
@@ -155,38 +166,49 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
                 )
                 p_ = np.diagonal(s_.get_tensor())
                 ps.append(p_)
+                ind = np.min([max_bond_dim, len(p_)])
+                if max_truncation_error > 0.0:
+                    p_max = p_[0]
+                    for i in range(1, ind):
+                        if p_[i] / p_max < max_truncation_error:
+                            ind = i
+                            break
+                if operate_degeneracy:
+                    if ind < len(p_):
+                        while ind > 1:
+                            if (
+                                np.abs(p_[ind] - p_[ind - 1]) / (p_[ind - 1] + e)
+                            ) < delta:
+                                ind -= 1
+                            else:
+                                break
+                inds.append(ind)
+
             ees = [self.entanglement_entropy(probability=p) for p in ps]
-            p_truncates = [p[:max_bond_dim] for p in ps]
+            p_truncates = [p[:ind] for p, ind in zip(ps, inds)]
             errors = [1.0 - np.real(np.sum(p_t**2)) for p_t in p_truncates]
             if opt_structure == 1:
-                if beta == 0.0:
+                if temperature == 0.0:
                     candidate_index = np.argmin(ees)
                 else:
-                    weights = np.array(ees) * beta
+                    weights = np.array(ees) / temperature
+                    weights = np.exp(-weights)
                     weights = np.array(weights) / np.sum(weights)
                     candidate_index = np.random.choice(len(ees), p=weights)
             elif opt_structure == 2:
                 candidate_index = np.argmin(errors)
+                if (
+                    np.isclose(errors[candidate_index], errors[0], atol=1e-14)
+                    or max_truncation_error > 0.0
+                ):
+                    candidate_index = np.argmin(ees)
 
             if np.isclose(ees[candidate_index], ees[0], atol=epsilon):
                 candidate_index = 0
             edge_order = candidates[candidate_index]
             p = ps[candidate_index]
+            ind = inds[candidate_index]
         # Degeneracy
-        ind = np.min([max_bond_dim, len(p)])
-        if truncated_singularvalues > 0.0:
-            p_max = p[0]
-            for i in range(1, ind):
-                if p[i] / p_max < truncated_singularvalues:
-                    ind = i
-                    break
-        if operate_degeneracy:
-            if ind < len(p):
-                while ind > 1:
-                    if (np.abs(p[ind] - p[ind - 1]) / (p[ind - 1] + 1e-10)) < delta:
-                        ind -= 1
-                    else:
-                        break
         a = psi[edge_order[0]]
         b = psi[edge_order[1]]
         c = psi[edge_order[2]]

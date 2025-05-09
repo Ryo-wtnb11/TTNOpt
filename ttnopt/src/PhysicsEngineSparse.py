@@ -935,9 +935,14 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
 
         # if there is no hamiltonian within this block
         if block_hams == []:
-            block_hams.append(
-                fuse_ham(np.kron(eye_l, eye_r, backend=self.backend), u1_charges)
+            block_ham = tn.ncon(
+                [eye_l, eye_r],
+                [["-b0", "-k0"], ["-b1", "-k1"]],
+                out_order=["-b0", "-b1", "-k0", "-k1"],
+                backend=self.backend,
             )
+            block_ham = fuse_ham(block_ham, u1_charges)
+            block_hams.append(block_ham)
 
         block_hams = np.sum(block_hams, axis=0)
         return block_hams

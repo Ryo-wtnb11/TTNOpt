@@ -10,26 +10,11 @@ system:
         type: XYZ # Choose XXZ or XYZ
         file: XYZ.dat # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
 
-    # MF_X:
-    #     file: MFx.dat
+    DM_X: DMx.dat
 
-    # MF_Y:
-    #     file: MFy.dat
+    DM_Y: DMy.dat
 
-    # MF_Z:
-    #     file: MFz.dat
-
-    # SIA:
-    #     file: Di.dat
-
-    DM_X:
-        file: DMx.dat
-
-    DM_Y:
-        file: DMy.dat
-
-    DM_Z:
-        file: DMz.dat
+    DM_Z: DMz.dat
 
 numerics:
     init_tree: 0

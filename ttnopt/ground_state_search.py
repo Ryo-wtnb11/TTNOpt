@@ -1,20 +1,16 @@
-from typing import List
-
 # ground_state_search.py
-from ttnopt.src import TreeTensorNetwork
-from ttnopt.src import GroundStateSearch
-from ttnopt.src import GroundStateSearchSparse
-
-from ttnopt.hamiltonian import hamiltonian
+import argparse
+import itertools
+import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import itertools
 import yaml
-import argparse
 from dotmap import DotMap
-from pathlib import Path
-import os
+
+from ttnopt.hamiltonian import hamiltonian
+from ttnopt.src import GroundStateSearch, GroundStateSearchSparse, TreeTensorNetwork
 
 
 def ground_state_search():
@@ -29,7 +25,7 @@ def ground_state_search():
     config = DotMap(config)
 
     psi = TreeTensorNetwork.mps(config.system.N)
-    if config.numerics.init_tree:
+    if config.numerics.init_tree == 1:
         if config.system.N > 0 and (config.system.N & (config.system.N - 1)) == 0:
             psi = TreeTensorNetwork.tree(config.system.N)
         else:
@@ -47,6 +43,7 @@ def ground_state_search():
         if not isinstance(config.output.dir, DotMap)
         else Path("./")
     )
+    os.makedirs(path, exist_ok=True)
 
     save_onesite_expval = (
         config.output.single_site
@@ -94,35 +91,43 @@ def ground_state_search():
     if u1_symmetry and not isinstance(config.system.SOD_X, DotMap):
         print("=" * 50)
         print(
-            "⚠️  Error: U1 symmetry is not allowed for the X term of symmetric off-diagonal exchange interaction."
+            "⚠️  Error: U1 symmetry is not allowed for the X term of symmetric exchange anisotropy interaction."
         )
         print("=" * 50)
         exit()
     if u1_symmetry and not isinstance(config.system.SOD_Y, DotMap):
         print("=" * 50)
         print(
-            "⚠️  Error: U1 symmetry is not allowed for the Y term of symmetric off-diagonal exchange interaction."
+            "⚠️  Error: U1 symmetry is not allowed for the Y term of symmetric exchange anisotropy interaction."
         )
         print("=" * 50)
         exit()
     if u1_symmetry and not isinstance(config.system.SOD_Z, DotMap):
         print("=" * 50)
         print(
-            "⚠️  Error: U1 symmetry is not allowed for the Y term of symmetric off-diagonal exchange interaction."
+            "⚠️  Error: U1 symmetry is not allowed for the Z term of symmetric exchange anisotropy interaction."
         )
         print("=" * 50)
         exit()
 
-    opt_structure = numerics.opt_structure.type
+    opt_structure = (
+        numerics.opt_structure.type
+        if (isinstance(numerics.opt_structure.type, int))
+        else 0
+    )
+
     temperature = (
-        numerics.opt_structure.temperature
-        if isinstance(numerics.opt_structure.temperature, List)
-        else [0.0, 0.0]
+        float(numerics.opt_structure.temperature)
+        if (
+            isinstance(numerics.opt_structure.temperature, float)
+            or isinstance(numerics.opt_structure.temperature, int)
+        )
+        else 0.0
     )
 
     seed = (
         numerics.opt_structure.seed
-        if isinstance(numerics.opt_structure.beta, int)
+        if isinstance(numerics.opt_structure.seed, int)
         else 0
     )
     if isinstance(numerics.energy_degeneracy_threshold, DotMap):
@@ -147,6 +152,33 @@ def ground_state_search():
         )
 
     np.random.seed(seed)
+
+    tau = (
+        numerics.opt_structure.tau
+        if isinstance(numerics.opt_structure.tau, int)
+        else numerics.max_bond_dimensions[0] // 2
+    )
+
+    if isinstance(numerics.energy_degeneracy_threshold, DotMap):
+        energy_degeneracy_threshold = 1.0e-8
+    else:
+        energy_degeneracy_threshold = float(numerics.energy_degeneracy_threshold)
+    if isinstance(numerics.entanglement_degeneracy_threshold, DotMap):
+        entanglement_degeneracy_threshold = 1.0e-8
+    else:
+        entanglement_degeneracy_threshold = float(
+            numerics.entanglement_degeneracy_threshold
+        )
+    if isinstance(numerics.energy_convergence_threshold):
+        energy_convergence_threshold = 1.0e-8
+    else:
+        energy_convergence_threshold = float(numerics.energy_convergence_threshold)
+    if isinstance(numerics.entanglement_convergence_threshold):
+        entanglement_convergence_threshold = 1.0e-8
+    else:
+        entanglement_convergence_threshold = float(
+            numerics.entanglement_convergence_threshold
+        )
 
     if u1_symmetry:
         gss = GroundStateSearchSparse(
@@ -183,13 +215,14 @@ def ground_state_search():
         zip(numerics.max_bond_dimensions, numerics.max_num_sweeps)
     ):
         gss.max_bond_dim = max_bond_dim
-        if opt_structure:
+        if i == 0:
             gss.run(
                 opt_structure=opt_structure,
                 energy_convergence_threshold=energy_convergence_threshold,
                 entanglement_convergence_threshold=entanglement_convergence_threshold,
                 max_num_sweep=max_num_sweep,
-                beta=beta,
+                temperature=temperature,
+                tau=tau,
             )
             print("Calculating the expectation values for the initial structure")
             # re-run the first iteration to save the expectation values
@@ -242,6 +275,7 @@ def ground_state_search():
         path_ = path / f"run{i + 1}"
         os.makedirs(path_, exist_ok=True)
         df.to_csv(path_ / "basic.csv", header=True, index=None)
+        np.savetxt(path_ / "graph.dat", gss.psi.edges, fmt="%d", delimiter=",")
 
         if save_onesite_expval:
             df = pd.DataFrame(psi.physical_edges, columns=["site"], index=None)

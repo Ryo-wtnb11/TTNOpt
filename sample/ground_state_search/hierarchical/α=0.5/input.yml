@@ -10,7 +10,8 @@ system:
 
 numerics:
     init_tree: 0
-    opt_structure: 0
+    opt_structure:
+        type: 1
     initial_bond_dimension: 4
     max_bond_dimensions: [20] # Maximum bond dimension for each repetition
     max_num_sweeps: [50]
