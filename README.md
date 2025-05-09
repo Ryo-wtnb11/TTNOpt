@@ -1,4 +1,4 @@
-# TTNOpt: Tree Tensor Netwokr Package for high-rank tensor compression
+# TTNOpt: Tree Tensor Network Package for high-rank tensor compression
 [![Documentation Status](https://readthedocs.org/projects/ttnopt/badge/?version=latest)](https://ttnopt.readthedocs.io/en/latest/)
 
 TTNOpt is a software package that utilizes tree tensor networks (TTNs) for quantum spin systems and highdimensional data analysis.
