@@ -1,7 +1,9 @@
-from ttnopt.src import Hamiltonian
+from pathlib import Path
+
 import pandas as pd
 from dotmap import DotMap
-from pathlib import Path
+
+from ttnopt.src import Hamiltonian
 
 
 def hamiltonian(config: DotMap):
@@ -233,7 +235,7 @@ def hamiltonian(config: DotMap):
                 print("=" * 50)
                 exit()
 
-    # sod_x
+    # sod_Z
     sod_Z_indices = None
     sod_Z = None
     if not isinstance(config.SOD_Z, DotMap):
@@ -245,38 +247,6 @@ def hamiltonian(config: DotMap):
                 print("=" * 50)
                 print(
                     f"⚠️  Error: SOD_Z interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
-                )
-                print("=" * 50)
-                exit()
-
-    # sod_x
-    sod_x_indices = None
-    sod_x = None
-    if not isinstance(config.SOD_X, DotMap):
-        if Path(config.SOD_X).suffix == ".dat":
-            sod_x_csv = pd.read_csv(config.SOD_X, delimiter=",", header=None)
-            sod_x_indices = sod_x_csv.iloc[:, :2].values
-            sod_x = sod_x_csv.iloc[:, 2:].values
-            if sod_x_indices.max() >= config.N:
-                print("=" * 50)
-                print(
-                    f"⚠️  Error: SOD_X interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
-                )
-                print("=" * 50)
-                exit()
-
-    # sod_y
-    sod_y_indices = None
-    sod_y = None
-    if not isinstance(config.SOD_Y, DotMap):
-        if Path(config.SOD_Y).suffix == ".dat":
-            sod_y_csv = pd.read_csv(config.SOD_Y, delimiter=",", header=None)
-            sod_y_indices = sod_y_csv.iloc[:, :2].values
-            sod_y = sod_y_csv.iloc[:, 2:].values
-            if sod_x_indices.max() >= config.N:
-                print("=" * 50)
-                print(
-                    f"⚠️  Error: SOD_Y interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
                 )
                 print("=" * 50)
                 exit()
