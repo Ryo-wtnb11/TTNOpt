@@ -5,7 +5,6 @@ requires-python = ">=3.9"
 
 dependencies = [
   "numpy == 1.23.5",
-  "jaxlib < 0.4.34",
   "tensornetwork",
   "networkx",
   "matplotlib",
