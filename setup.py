@@ -9,13 +9,11 @@ setup(
     url="https://github.com/Watayo/TTNOpt",
     packages=find_packages(),
     zip_safe=False,
-    install_requires=[],
     python_requires=">=3.6",
-    license="Apache License 2.0",
+    license="Apache-2.0",
     classifiers=[
         "Development Status :: 1 - Planning",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
     ],
     entry_points={
@@ -25,4 +23,16 @@ setup(
             "samplettn=ttnopt:sample",  # Link ttnopt_sample command to your sample function
         ],
     },
+    install_requires=[
+        "numpy>=1.23.5",
+        "jaxlib<0.4.34",
+        "tensornetwork",
+        "networkx",
+        "pydot",
+        "pyyaml",
+        "dotmap",
+        "matplotlib",
+        "scipy",
+        "pandas",
+    ],
 )

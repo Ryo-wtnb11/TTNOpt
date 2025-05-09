@@ -1,13 +1,13 @@
-from ttnopt.src import TreeTensorNetwork
-from ttnopt.src import FactorizeTensor
-
+import argparse
 import os
+from pathlib import Path
+
+import numpy as np
 import pandas as pd
 import yaml
-import argparse
 from dotmap import DotMap
-import numpy as np
-from pathlib import Path
+
+from ttnopt.src import FactorizeTensor, TreeTensorNetwork
 
 
 def factorize_tensor():

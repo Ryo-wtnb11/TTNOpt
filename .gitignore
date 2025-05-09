@@ -165,3 +165,20 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+docs/run_build.sh
+sample-dev
+
+sample/factorize_tensor/input_data_reduction_test/
+sample/factorize_tensor/input_data_test/
+sample/factorize_tensor/make_reduction_testdata.py
+sample/factorize_tensor/make_testdata.py
+sample/factorize_tensor/normal_distribution_data/
+sample/factorize_tensor/show_edges.py
+sample/factorize_tensor/standard_normal_distribution.yml
+sample/factorize_tensor/standard_ttn_reduction.yml
+sample/factorize_tensor/test_ttn.yml
+sample/factorize_tensor/test_ttn_reduction.yml
+sample/reconstruction/normal_distribution_data/
+
+.python-version

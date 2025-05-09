@@ -1,8 +1,7 @@
 system:
     N: 256 # Number of spins
     # Spin size configuration
-    spin_size:
-        S: 1/2 # Spin size (used only if uniform is 1)
+    spin_size: 1/2 # Spin size (used only if uniform is 1)
 
     # Exchange coupling for the XXZ or XYZ model
     model:
@@ -20,6 +19,9 @@ numerics:
     entanglement_convergence_threshold: 1e-10
     energy_degeneracy_threshold: 1e-13
     entanglement_degeneracy_threshold: 0.1
+    opt_structure:
+        type: 1
+        temperature: [0.01, 0.001] # if type is 1, temperature is set by this values and structure is chosen stochastically. that is always 0 by default (select always minimum EE)..
 
 output:
     dir: MPS

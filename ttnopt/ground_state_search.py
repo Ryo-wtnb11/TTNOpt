@@ -1,18 +1,16 @@
 # ground_state_search.py
-from ttnopt.src import TreeTensorNetwork
-from ttnopt.src import GroundStateSearch
-from ttnopt.src import GroundStateSearchSparse
-
-from ttnopt.hamiltonian import hamiltonian
+import argparse
+import itertools
+import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import itertools
 import yaml
-import argparse
 from dotmap import DotMap
-from pathlib import Path
-import os
+
+from ttnopt.hamiltonian import hamiltonian
+from ttnopt.src import GroundStateSearch, GroundStateSearchSparse, TreeTensorNetwork
 
 
 def ground_state_search():
@@ -126,11 +124,33 @@ def ground_state_search():
         )
         else 0.0
     )
+
     seed = (
         numerics.opt_structure.seed
         if isinstance(numerics.opt_structure.seed, int)
         else 0
     )
+    if isinstance(numerics.energy_degeneracy_threshold, DotMap):
+        energy_degeneracy_threshold = 1.0e-8
+    else:
+        energy_degeneracy_threshold = float(numerics.energy_degeneracy_threshold)
+    if isinstance(numerics.entanglement_degeneracy_threshold, DotMap):
+        entanglement_degeneracy_threshold = 1.0e-8
+    else:
+        entanglement_degeneracy_threshold = float(
+            numerics.entanglement_degeneracy_threshold
+        )
+    if isinstance(numerics.energy_convergence_threshold):
+        energy_convergence_threshold = 1.0e-8
+    else:
+        energy_convergence_threshold = float(numerics.energy_convergence_threshold)
+    if isinstance(numerics.entanglement_convergence_threshold):
+        entanglement_convergence_threshold = 1.0e-8
+    else:
+        entanglement_convergence_threshold = float(
+            numerics.entanglement_convergence_threshold
+        )
+
     np.random.seed(seed)
 
     tau = (

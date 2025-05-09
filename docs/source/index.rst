@@ -16,13 +16,21 @@ documentation for details.
    :caption: Getting Started
 
    getting_started/installation
-   getting_started/quick_start
+   getting_started/quick_start_gss
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Tutorials
+
+   tutorials/ground_state_search
+   tutorials/factorising
+   tutorials/reconstruction
 
 .. toctree::
    :maxdepth: 2
-   :caption: Tutorials
+   :caption: File Format
 
-   tutorials/DMRG
+   file_format/file_format_gss
 
 .. toctree::
    :maxdepth: 1

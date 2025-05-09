@@ -1,12 +1,12 @@
+from copy import deepcopy
 from typing import Dict, Tuple
 
 import numpy as np
 import tensornetwork as tn
-from copy import deepcopy
 
+from ttnopt.src.Hamiltonian import Hamiltonian
 from ttnopt.src.PhysicsEngine import PhysicsEngine
 from ttnopt.src.TTN import TreeTensorNetwork
-from ttnopt.src.Hamiltonian import Hamiltonian
 
 
 class GroundStateSearch(PhysicsEngine):
@@ -54,8 +54,8 @@ class GroundStateSearch(PhysicsEngine):
     def run(
         self,
         opt_structure: int = 0,
-        energy_convergence_threshold: float = 1e-10,
-        entanglement_convergence_threshold: float = 1e-10,
+        energy_convergence_threshold: float = 1e-8,
+        entanglement_convergence_threshold: float = 1e-8,
         max_num_sweep: int = 10,
         converged_count: int = 2,
         eval_onesite_expval: bool = False,

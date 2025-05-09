@@ -7,7 +7,7 @@ from pathlib import Path
 def hamiltonian(config: DotMap):
     """_summary_
 
-    Args:
+    Args:e
         config Dict: the configuration of the system
     """
     if isinstance(config.spin_size, DotMap) and isinstance(
@@ -176,7 +176,7 @@ def hamiltonian(config: DotMap):
             print("=" * 50)
             exit()
 
-    # dzyaloshinskii_moriya_Y
+    # dzyaloshinskii_moriya_Z
     dzyaloshinskii_moriya_Z_indices = None
     dzyaloshinskii_moriya_Z = None
     if not isinstance(config.DM_Z, DotMap):
@@ -245,6 +245,38 @@ def hamiltonian(config: DotMap):
                 print("=" * 50)
                 print(
                     f"⚠️  Error: SOD_Z interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
+                )
+                print("=" * 50)
+                exit()
+
+    # sod_x
+    sod_x_indices = None
+    sod_x = None
+    if not isinstance(config.SOD_X, DotMap):
+        if Path(config.SOD_X).suffix == ".dat":
+            sod_x_csv = pd.read_csv(config.SOD_X, delimiter=",", header=None)
+            sod_x_indices = sod_x_csv.iloc[:, :2].values
+            sod_x = sod_x_csv.iloc[:, 2:].values
+            if sod_x_indices.max() >= config.N:
+                print("=" * 50)
+                print(
+                    f"⚠️  Error: SOD_X interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
+                )
+                print("=" * 50)
+                exit()
+
+    # sod_y
+    sod_y_indices = None
+    sod_y = None
+    if not isinstance(config.SOD_Y, DotMap):
+        if Path(config.SOD_Y).suffix == ".dat":
+            sod_y_csv = pd.read_csv(config.SOD_Y, delimiter=",", header=None)
+            sod_y_indices = sod_y_csv.iloc[:, :2].values
+            sod_y = sod_y_csv.iloc[:, 2:].values
+            if sod_x_indices.max() >= config.N:
+                print("=" * 50)
+                print(
+                    f"⚠️  Error: SOD_Y interaction indices exceed the allowed range. All indices must be less than N-1 (N={config.system.N})."
                 )
                 print("=" * 50)
                 exit()
