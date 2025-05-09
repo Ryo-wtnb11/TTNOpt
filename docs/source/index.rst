@@ -6,9 +6,10 @@
 TTNOpt documentation
 ====================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+TTNOpt is a software package that utilizes tree tensor networks (TTNs) for quantum spin systems and highdimensional data analysis. 
+
+TTNOpt provides efficient and powerful TTN computations by **locally optimizing the network structure**,
+guided by the entanglement pattern of the target tensors.
 
 
 .. toctree::
@@ -25,12 +26,6 @@ documentation for details.
    tutorials/ground_state_search
    tutorials/factorising
    tutorials/reconstruction
-
-.. toctree::
-   :maxdepth: 2
-   :caption: File Format
-
-   file_format/file_format_gss
 
 .. toctree::
    :maxdepth: 1

@@ -10,7 +10,6 @@ We consider the ground state search for :math:`S=1/2` hierarchical chain model w
 
 where :math:`J` is the base coupling constant, :math:`0<\mathbf{\alpha}\leq 1.0` is the decay factor for the coupling strength,
 :math:`h \in [0, d-1]` represents the height in the perfect binary tree (PBT) structure, and :math:`I(h)=\left\{i \mid i=2^h(2 k+1)-1,~ {\rm{where}}~k=0, 1, \ldots, 2^{d-h-1}-1\right\}` specifies pairs of adjacent sites :math:`(i, i+1)` according to the PBT structure.
-This model is illustrated in the following figure:
 
 In the case of :math:`\alpha=1.0`, the model is equivalent to the standard one-dimensional Heisenberg model. 
 However, for :math:`\alpha<1.0`, the model have inhomogeneous interactions and its ground state is well-expressed as TTN, rather than MPS :cite:`hikihara_Automatic_2023`.
@@ -23,34 +22,32 @@ First, we set a input file for the Hamiltonian of the model.
     :caption: input.yml
 
     system:
-        N: 8 # Number of spins
-        spin_size: 1/2 # Spin size (used only if uniform is 1)
+        N: 8
+        spin_size: 1/2
 
-        # Exchange coupling for the XXZ or XYZ model
         model:
-            type: XXZ # Choose XXZ or XYZ
-            file: XXZ.dat # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
+            type: XXZ
+            file: XXZ.dat
 
     numerics:
         init_tree: 0
-        opt_structure: 1
+        opt_structure:
+            type: 1 # 0: no optimization, 1: structural optimization
+            temperature: [0.01, 0.001]
         initial_bond_dimension: 4
-        max_bond_dimensions: [20] # Maximum bond dimension for each repetition
+        max_bond_dimensions: [20]
         max_num_sweeps: [50]
         energy_convergence_threshold: 1e-11
         entanglement_convergence_threshold: 1e-10
         energy_degeneracy_threshold: 1e-13
         entanglement_degeneracy_threshold: 0.1
-        opt_structure:
-            type: 1
-            temperature: [0.01, 0.001] # if type is 1, temperature is set by this values and structure is chosen stochastically. that is always 0 by default (select always minimum EE)..
 
     output:
-        dir: TTN
+        dir: data
         single_site: 1
         two_site: 1
 
-XXZ.dat is a file containing the interactions between two sites and their coefficients. In this case, the file contains the following:
+XXZ.dat is a file containing the hierarchical interactions between two sites and their coefficients. In this case, the file contains the following:
 
 .. code-block:: dat
     :caption: XXZ.dat
@@ -76,50 +73,65 @@ The standard output is as follows:
     No initial tensors in TTN object.
     Initialize tensors with real space renormalization.
     Sweep count: 1
-    -3.0592248189324436
-    -3.059224818932444
-    -3.0592249735506445
-    -3.0592369142108216
-    -3.059236914210821
-    -3.0592369151984746
+    -3.040606434114664
+    -3.0406064341146632
+    -3.0406064830544235
+    -3.0423226276018
+    -3.0423226276018
+    -3.042322627756622
     Sweep count: 2
-    -3.0592369151984764
-    -3.059236915198476
-    -3.0592369151984786
-    -3.059236915198477
-    -3.059236915198478
-    -3.059236915198478
+    -3.0423226277566227
+    -3.0423226277566227
+    -3.042322627756622
+    -3.042322627756622
+    -3.04232262775662
+    -3.042322627756622
     Sweep count: 3
-    -3.0592369151984737
-    -3.0592369151984755
-    -3.0592369151984746
-    -3.0592369151984733
-    -3.0592369151984733
-    -3.059236915198475
+    -3.042322627756622
+    -3.042322627756623
+    -3.042322627756621
+    -3.042322627756623
+    -3.042322627756621
+    -3.0423226277566213
     Sweep count: 4
-    -3.059236915198475
-    -3.059236915198477
-    -3.0592369151984724
-    -3.059236915198476
-    -3.059236915198475
-    -3.0592369151984746
+    -3.0423226277566218
+    -3.042322627756621
+    -3.0423226277566195
+    -3.0423226277566213
+    -3.042322627756622
+    -3.0423226277566213
     Sweep count: 5
-    -3.0592369151984737
-    -3.059236915198473
-    -3.059236915198476
-    -3.0592369151984737
-    -3.0592369151984737
-    -3.0592369151984777
+    -3.0423226277566218
+    -3.042322627756623
+    -3.042322627756623
+    -3.0423226277566227
+    -3.042322627756623
+    -3.042322627756622
     Converged
     Calculating the expectation values for the initial structure
     Sweep count: 1
-    -3.0592369151984746
-    -3.0592369151984755
-    -3.059236915198479
-    -3.0592369151984746
-    -3.0592369151984737
-    -3.059236915198477
+    -3.042322627756623
+    -3.042322627756622
+    -3.042322627756625
+    -3.0423226277566218
+    -3.0423226277566227
+    -3.0423226277566218
     Converged
+
+In the output, we can see the results of the variational optimization and the network structure optimization.
+Specifically, the network structure after the optimization is contained in the file `graph.dat`. In this case, the file contains the following:
+
+.. code-block:: dat
+    :caption: graph.dat
+
+    0,1,8
+    3,2,9
+    9,8,10
+    4,5,12
+    12,11,10
+    6,7,11
+
+which indicates the hierarchical structure of the optimized TTN.
 
 .. bibliography::
    :cited:
