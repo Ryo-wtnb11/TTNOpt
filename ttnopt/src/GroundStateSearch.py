@@ -228,7 +228,7 @@ class GroundStateSearch(PhysicsEngine):
             sweep_num += 1
             if sweep_num > 2:
                 diff_energy = [
-                    np.abs(energy_at_edge[key] - _energy_at_edge[key])
+                    np.abs(1 - _energy_at_edge[key] / energy_at_edge[key])
                     for key in energy_at_edge.keys()
                 ]
                 diff_ee = [

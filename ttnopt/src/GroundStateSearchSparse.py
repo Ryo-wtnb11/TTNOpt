@@ -1,13 +1,13 @@
+from copy import deepcopy
 from typing import Dict, Tuple, Union
 
 import numpy as np
 import tensornetwork as tn
-from tensornetwork import Index, U1Charge, BlockSparseTensor
-from copy import deepcopy
+from tensornetwork import BlockSparseTensor, Index, U1Charge
 
+from ttnopt.src.Hamiltonian import Hamiltonian
 from ttnopt.src.PhysicsEngineSparse import PhysicsEngineSparse
 from ttnopt.src.TTN import TreeTensorNetwork
-from ttnopt.src.Hamiltonian import Hamiltonian
 
 # tn.block_sparse.enable_caching()
 
@@ -316,7 +316,7 @@ class GroundStateSearchSparse(PhysicsEngineSparse):
             sweep_num += 1
             if sweep_num > 2:
                 diff_energy = [
-                    np.abs(energy_at_edge[key] - _energy_at_edge[key])
+                    np.abs(1 - _energy_at_edge[key] / energy_at_edge[key])
                     for key in energy_at_edge.keys()
                 ]
                 diff_ee = [

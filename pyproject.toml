@@ -1,10 +1,17 @@
 [project]
-name = "TTNOpt"
+name = "ttnopt"
 version = "0.1.0"
+description = "A Python package for tree tensor network algorithms"
+authors = [
+  { name = "Ryo Watanabe" },
+  { name = "Hidetaka Manabe", email = "manabe@acs.i.kyoto-u.ac.jp" }
+]
+license = { text = "Apache-2.0" }
 requires-python = ">=3.9"
-
+readme = "README.md"
 dependencies = [
   "numpy >= 1.24",
+  "jaxlib < 0.4.34",
   "tensornetwork",
   "networkx",
   "matplotlib",
@@ -13,6 +20,11 @@ dependencies = [
   "pyyaml",
   "dotmap",
   "pandas"
+]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
 ]
 
 [project.optional-dependencies]
@@ -24,6 +36,10 @@ dev = [
   "types-PyYAML"
 ]
 
+[project.scripts]
+gss = "ttnopt:ground_state_search"
+ft = "ttnopt:factorize_tensor"
+
 [build-system]
-requires = ["uv"]
-build-backend = "uv"
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

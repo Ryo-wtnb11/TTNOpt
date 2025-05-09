@@ -27,8 +27,8 @@ numerics:
     opt_structure:
         type: 1
     initial_bond_dimension: 20
-    max_bond_dimensions: [20, 40, 60, 80] # Maximum bond dimension for each repetition
-    max_num_sweeps: [20, 10, 7, 5]
+    max_bond_dimensions: [20] # Maximum bond dimension for each repetition
+    max_num_sweeps: [2]
     energy_convergence_threshold: 1e-11
     entanglement_convergence_threshold: 1e-10
     energy_degeneracy_threshold: 1e-13
