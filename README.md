@@ -69,4 +69,16 @@ The output will be saved in the `data` directory. The output files are:
 - `graph.dat`: The optimized TTN structure.
 
 ## Papers
+We have a [paper](https://arxiv.org/abs/2505.05908) tht describes the algorithm and the usage of TTNOpt.
 When using TTNOpt for research, please cite:
+```
+@misc{watanabe2025ttnopttreetensornetwork,
+      title={TTNOpt: Tree tensor network package for high-rank tensor compression}, 
+      author={Ryo Watanabe and Hidetaka Manabe and Toshiya Hikihara and Hiroshi Ueda},
+      year={2025},
+      eprint={2505.05908},
+      archivePrefix={arXiv},
+      primaryClass={quant-ph},
+      url={https://arxiv.org/abs/2505.05908}, 
+}
+```
