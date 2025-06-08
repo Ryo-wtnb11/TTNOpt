@@ -1,6 +1,6 @@
 import numpy as np
 import tensornetwork as tn
-from tensornetwork import U1Charge, BlockSparseTensor
+from tensornetwork import BlockSparseTensor, U1Charge
 
 from ttnopt.src.TwoSiteUpdater import TwoSiteUpdaterMixin
 
@@ -18,7 +18,7 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
         max_bond_dim,
         opt_structure=0,
         epsilon=1e-8,
-        delta=0.1,
+        delta=1e-8,
         temperature=0.0,
     ):
         edge_order = [0, 1, 2, 3]
@@ -36,7 +36,7 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
             ind = np.min([max_bond_dim, len(p)])
             if ind < len(p):
                 while ind > 1:
-                    if (np.abs(p[ind] - p[ind - 1]) / (p[ind - 1] + e)) < delta:
+                    if np.abs(p[ind] - p[ind - 1]) < delta:
                         ind -= 1
                     else:
                         break
@@ -62,7 +62,7 @@ class TwoSiteUpdaterSparse(TwoSiteUpdaterMixin):
                 ind = np.min([max_bond_dim, len(p_)])
                 if ind < len(p_):
                     while ind > 1:
-                        if (np.abs(p_[ind] - p_[ind - 1]) / p_[ind]) < delta:
+                        if np.abs(p_[ind] - p_[ind - 1]) < delta:
                             ind -= 1
                         else:
                             break

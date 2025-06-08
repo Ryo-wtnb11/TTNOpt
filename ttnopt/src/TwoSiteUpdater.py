@@ -1,7 +1,8 @@
+import itertools
+from collections import defaultdict, deque
+
 import numpy as np
 import tensornetwork as tn
-import itertools
-from collections import deque, defaultdict
 
 
 class TwoSiteUpdaterMixin:
@@ -126,10 +127,9 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
         opt_structure=0,
         operate_degeneracy=False,
         epsilon=1e-8,
-        delta=0.1,
+        delta=1e-8,
         max_truncation_error=0.0,
         temperature=0.0,
-        e=1e-13,
     ):
         edge_order = [0, 1, 2, 3]
         if opt_structure == 0:
@@ -143,7 +143,7 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
             if operate_degeneracy:
                 if ind < len(p):
                     while ind > 1:
-                        if (np.abs(p[ind] - p[ind - 1]) / (p[ind - 1] + e)) < delta:
+                        if np.abs(p[ind] - p[ind - 1]) < delta:
                             ind -= 1
                         else:
                             break
@@ -176,9 +176,7 @@ class TwoSiteUpdater(TwoSiteUpdaterMixin):
                 if operate_degeneracy:
                     if ind < len(p_):
                         while ind > 1:
-                            if (
-                                np.abs(p_[ind] - p_[ind - 1]) / (p_[ind - 1] + e)
-                            ) < delta:
+                            if np.abs(p_[ind] - p_[ind - 1]) < delta:
                                 ind -= 1
                             else:
                                 break

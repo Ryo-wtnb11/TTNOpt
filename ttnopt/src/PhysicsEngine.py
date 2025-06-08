@@ -1,20 +1,21 @@
-import tensornetwork as tn
+from collections import defaultdict
+from copy import deepcopy
+
 import numpy as np
 import scipy
+import tensornetwork as tn
 from scipy.linalg import eigh_tridiagonal
 from scipy.sparse.linalg import expm
-from copy import deepcopy
-from collections import defaultdict
 
-from ttnopt.src.TTN import TreeTensorNetwork
-from ttnopt.src.Hamiltonian import Hamiltonian
-from ttnopt.src.Observable import bare_spin_operator, spin_dof
-from ttnopt.src.TwoSiteUpdater import TwoSiteUpdater
 from ttnopt.src.functionTTN import (
-    get_renormalization_sequence,
     get_bare_edges,
+    get_renormalization_sequence,
     inner_product,
 )
+from ttnopt.src.Hamiltonian import Hamiltonian
+from ttnopt.src.Observable import bare_spin_operator, spin_dof
+from ttnopt.src.TTN import TreeTensorNetwork
+from ttnopt.src.TwoSiteUpdater import TwoSiteUpdater
 
 
 class PhysicsEngine(TwoSiteUpdater):
@@ -25,7 +26,7 @@ class PhysicsEngine(TwoSiteUpdater):
         init_bond_dim: int,
         max_bond_dim: int,
         energy_degeneracy_threshold: float = 1e-13,
-        entanglement_degeneracy_threshold: float = 0.1,
+        entanglement_degeneracy_threshold: float = 1e-8,
     ):
         """Initialize a PhysicsEngine object.
 
@@ -310,7 +311,6 @@ class PhysicsEngine(TwoSiteUpdater):
         inverse_tol=1e-6,
         init_random=False,
     ):
-
         psi_1 = tn.Node(self.psi.tensors[central_tensor_ids[0]])
         psi_2 = tn.Node(self.psi.tensors[central_tensor_ids[1]])
         psi_1[2] ^ psi_2[2]

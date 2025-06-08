@@ -25,7 +25,7 @@ class GroundStateSearch(PhysicsEngine):
         init_bond_dim: int = 4,
         max_bond_dim: int = 16,
         energy_degeneracy_threshold: float = 1e-13,
-        entanglement_degeneracy_threshold: float = 0.1,
+        entanglement_degeneracy_threshold: float = 1e-8,
     ):
         """Initialize a DMRG object.
 

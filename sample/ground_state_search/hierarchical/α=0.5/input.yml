@@ -16,7 +16,7 @@ numerics:
     energy_convergence_threshold: 1e-11
     entanglement_convergence_threshold: 1e-10
     energy_degeneracy_threshold: 1e-13
-    entanglement_degeneracy_threshold: 0.1
+    entanglement_degeneracy_threshold: 1e-8
     opt_structure:
         type: 1
         temperature: [0.01, 0.001] # if type is 1, temperature is set by this values and structure is chosen stochastically. that is always 0 by default (select always minimum EE)..

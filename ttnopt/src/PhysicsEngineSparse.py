@@ -1,20 +1,20 @@
+from collections import defaultdict
+from copy import deepcopy
 from typing import Union
+
 import numpy as np
 import tensornetwork as tn
-from tensornetwork import U1Charge, Index, BlockSparseTensor
 from scipy.linalg import eigh_tridiagonal
-from copy import deepcopy
-from collections import defaultdict
+from tensornetwork import BlockSparseTensor, Index, U1Charge
 
-from ttnopt.src.TTN import TreeTensorNetwork
+from ttnopt.src.functionTTN import get_bare_edges, get_renormalization_sequence
 from ttnopt.src.Hamiltonian import Hamiltonian
 from ttnopt.src.Observable import bare_spin_operator, spin_dof, spin_ind
+from ttnopt.src.TTN import TreeTensorNetwork
 from ttnopt.src.TwoSiteUpdaterSparse import TwoSiteUpdaterSparse
-from ttnopt.src.functionTTN import get_renormalization_sequence, get_bare_edges
 
 
 class PhysicsEngineSparse(TwoSiteUpdaterSparse):
-
     def __init__(
         self,
         psi: TreeTensorNetwork,
@@ -23,7 +23,7 @@ class PhysicsEngineSparse(TwoSiteUpdaterSparse):
         init_bond_dim: int,
         max_bond_dim: int,
         energy_degeneracy_threshold: float = 1e-13,
-        entanglement_degeneracy_threshold: float = 0.1,
+        entanglement_degeneracy_threshold: float = 1e-8,
     ):
         """Initialize a PhysicsEngineSparse object.
 
